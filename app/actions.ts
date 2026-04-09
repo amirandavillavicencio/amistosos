@@ -1,12 +1,14 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { confidenceFromHistory, resolveMatchOutcome, updateElo, BASE_ELO } from '@/lib/elo';
 import { areCompatible, calculateCompatibility } from '@/lib/matching';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import type { Branch, Level, PostRow } from '@/lib/types';
+import type { AvailabilityWithTeam, Branch, Level, MatchType, TeamRow } from '@/lib/types';
 
 const validBranches = new Set<Branch>(['femenina', 'masculina', 'mixta']);
 const validLevels = new Set<Level>(['principiante', 'intermedio', 'avanzado']);
+const validMatchTypes = new Set<MatchType>(['amistoso', 'torneo', 'entrenamiento', 'competitivo']);
 
 function parseTime(value: string) {
   const [h, m] = value.split(':').map(Number);
@@ -21,7 +23,117 @@ function normalizeOptional(value: FormDataEntryValue | null) {
   return v.length ? v : null;
 }
 
-export async function createPost(formData: FormData) {
+function normalizeIdentity(value: string) {
+  return value.trim().toLowerCase().replace(/^@/, '');
+}
+
+async function resolveOrCreateTeam(input: {
+  clubName: string;
+  contactEmail: string;
+  instagram: string;
+  comuna: string;
+  city: string;
+  branch: Branch;
+  level: Level;
+}) {
+  const supabase = getSupabaseAdmin();
+  const clubNameKey = normalizeIdentity(input.clubName);
+  const emailKey = normalizeIdentity(input.contactEmail);
+  const instagramKey = normalizeIdentity(input.instagram);
+
+  const { data: existing } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('club_name_key', clubNameKey)
+    .eq('email_key', emailKey)
+    .eq('instagram_key', instagramKey)
+    .maybeSingle<TeamRow>();
+
+  if (existing) {
+    const { data: updated } = await supabase
+      .from('teams')
+      .update({
+        club_name: input.clubName,
+        contact_email: input.contactEmail,
+        instagram: input.instagram,
+        comuna: input.comuna,
+        city: input.city,
+        branch: input.branch,
+        declared_level: input.level,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', existing.id)
+      .select('*')
+      .single<TeamRow>();
+
+    return updated || existing;
+  }
+
+  const { data: created, error } = await supabase
+    .from('teams')
+    .insert({
+      club_name: input.clubName,
+      club_name_key: clubNameKey,
+      contact_email: input.contactEmail,
+      email_key: emailKey,
+      instagram: input.instagram,
+      instagram_key: instagramKey,
+      comuna: input.comuna,
+      city: input.city,
+      branch: input.branch,
+      declared_level: input.level,
+      current_elo: BASE_ELO
+    })
+    .select('*')
+    .single<TeamRow>();
+
+  if (error || !created) {
+    throw new Error('No pudimos crear o resolver el club. Intenta nuevamente.');
+  }
+
+  return created;
+}
+
+async function refreshMatchesForAvailability(newAvailabilityId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data: inserted } = await supabase
+    .from('availabilities')
+    .select('*, team:teams(*)')
+    .eq('id', newAvailabilityId)
+    .single<AvailabilityWithTeam>();
+
+  if (!inserted) return;
+
+  const { data: candidates } = await supabase
+    .from('availabilities')
+    .select('*, team:teams(*)')
+    .neq('id', newAvailabilityId)
+    .eq('status', 'open');
+
+  const rows = ((candidates || []) as AvailabilityWithTeam[])
+    .filter((candidate) => areCompatible(inserted, candidate))
+    .map((candidate) => {
+      const score = calculateCompatibility(inserted, candidate);
+      return {
+        post_a_id: inserted.id,
+        post_b_id: candidate.id,
+        compatibility_score: score.total,
+        schedule_score: score.schedule,
+        location_score: score.location,
+        level_score: score.level,
+        elo_score: score.elo,
+        status: 'active' as const
+      };
+    })
+    .sort((a, b) => b.compatibility_score - a.compatibility_score)
+    .slice(0, 16);
+
+  if (rows.length > 0) {
+    await supabase.from('suggested_matches').insert(rows);
+  }
+}
+
+export async function createAvailability(formData: FormData) {
   const clubName = String(formData.get('club_name') || '').trim();
   const contactEmail = String(formData.get('contact_email') || '').trim();
   const instagram = String(formData.get('instagram') || '').trim();
@@ -37,16 +149,7 @@ export async function createPost(formData: FormData) {
   const hasCourt = String(formData.get('has_court') || 'false') === 'true';
   const notes = normalizeOptional(formData.get('notes'));
 
-  if (
-    !clubName ||
-    !contactEmail ||
-    !instagram ||
-    !address ||
-    !comuna ||
-    !city ||
-    !startTime ||
-    !endTime
-  ) {
+  if (!clubName || !contactEmail || !instagram || !address || !comuna || !city || !startTime || !endTime) {
     throw new Error('Completa todos los campos requeridos.');
   }
 
@@ -62,14 +165,21 @@ export async function createPost(formData: FormData) {
     throw new Error('La hora de inicio debe ser menor a la hora de término.');
   }
 
-  const supabase = getSupabaseAdmin();
+  const team = await resolveOrCreateTeam({
+    clubName,
+    contactEmail,
+    instagram,
+    comuna,
+    city,
+    branch,
+    level
+  });
 
-  const { data: inserted, error: insertError } = await supabase
-    .from('posts')
+  const supabase = getSupabaseAdmin();
+  const { data: inserted, error } = await supabase
+    .from('availabilities')
     .insert({
-      club_name: clubName,
-      contact_email: contactEmail,
-      instagram: instagram,
+      team_id: team.id,
       address,
       comuna,
       city,
@@ -78,42 +188,156 @@ export async function createPost(formData: FormData) {
       start_time: startTime,
       end_time: endTime,
       branch,
-      level,
+      desired_level: level,
       has_court: hasCourt,
       notes,
       status: 'open'
     })
-    .select('*')
-    .single<PostRow>();
+    .select('id')
+    .single<{ id: string }>();
 
-  if (insertError || !inserted) {
+  if (error || !inserted) {
     throw new Error('No pudimos guardar la publicación. Intenta nuevamente.');
   }
 
-  const { data: candidates, error: candidatesError } = await supabase
-    .from('posts')
-    .select('*')
-    .neq('id', inserted.id)
-    .eq('status', 'open')
-    .returns<PostRow[]>();
+  await refreshMatchesForAvailability(inserted.id);
 
-  if (!candidatesError && candidates) {
-    const matches = candidates
-      .filter((candidate) => areCompatible(inserted, candidate))
-      .map((candidate) => ({
-        post_a_id: inserted.id,
-        post_b_id: candidate.id,
-        compatibility_score: calculateCompatibility(inserted, candidate),
-        status: 'active' as const
-      }))
-      .sort((a, b) => b.compatibility_score - a.compatibility_score)
-      .slice(0, 12);
+  revalidatePath('/');
+  revalidatePath('/explorar');
+  revalidatePath('/ranking');
 
-    if (matches.length > 0) {
-      await supabase.from('suggested_matches').insert(matches);
-    }
+  return { ok: true };
+}
+
+export async function registerMatchResult(formData: FormData) {
+  const clubId = String(formData.get('club_id') || '').trim();
+  const opponentClubIdRaw = normalizeOptional(formData.get('opponent_club_id'));
+  const opponentName = normalizeOptional(formData.get('opponent_name'));
+  const matchDate = String(formData.get('match_date') || '').trim();
+  const branch = String(formData.get('branch') || '').trim() as Branch;
+  const matchType = String(formData.get('match_type') || '').trim() as MatchType;
+  const setsWon = Number(formData.get('sets_won') || 0);
+  const setsLost = Number(formData.get('sets_lost') || 0);
+  const setScores = normalizeOptional(formData.get('set_scores'));
+  const location = normalizeOptional(formData.get('location'));
+  const notes = normalizeOptional(formData.get('notes'));
+
+  if (!clubId || !matchDate || !validBranches.has(branch) || !validMatchTypes.has(matchType)) {
+    throw new Error('Completa los datos requeridos del resultado.');
+  }
+
+  if (Number.isNaN(setsWon) || Number.isNaN(setsLost) || setsWon < 0 || setsLost < 0) {
+    throw new Error('Los sets ganados/perdidos deben ser números válidos.');
+  }
+
+  if (!opponentClubIdRaw && !opponentName) {
+    throw new Error('Debes seleccionar un rival existente o ingresar un nombre manual.');
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  const { data: club } = await supabase.from('teams').select('*').eq('id', clubId).maybeSingle<TeamRow>();
+  if (!club) throw new Error('No encontramos el club principal.');
+
+  const opponentClubId = opponentClubIdRaw || null;
+  const { data: opponent } = opponentClubId
+    ? await supabase.from('teams').select('*').eq('id', opponentClubId).maybeSingle<TeamRow>()
+    : { data: null as TeamRow | null };
+
+  const ownActual = resolveMatchOutcome(setsWon, setsLost);
+  const ownConfidence = confidenceFromHistory(club.matches_played);
+
+  const opponentRating = opponent?.current_elo ?? BASE_ELO;
+  const rivalConfidence = opponent ? confidenceFromHistory(opponent.matches_played) : 0.75;
+
+  const ownUpdate = updateElo({
+    ownRating: club.current_elo,
+    opponentRating,
+    actualScore: ownActual,
+    setsWon,
+    setsLost,
+    confidenceMultiplier: ownConfidence * rivalConfidence
+  });
+
+  const { error: insertResultError } = await supabase.from('match_results').insert({
+    club_id: club.id,
+    opponent_club_id: opponent?.id ?? null,
+    opponent_name: opponent ? opponent.club_name : opponentName,
+    match_date: matchDate,
+    branch,
+    match_type: matchType,
+    sets_won: setsWon,
+    sets_lost: setsLost,
+    set_scores: setScores,
+    location,
+    notes,
+    elo_before: club.current_elo,
+    elo_after: ownUpdate.newRating,
+    elo_delta: ownUpdate.delta
+  });
+
+  if (insertResultError) {
+    throw new Error('No pudimos guardar el resultado.');
+  }
+
+  await supabase
+    .from('teams')
+    .update({
+      current_elo: ownUpdate.newRating,
+      matches_played: club.matches_played + 1,
+      wins: club.wins + (ownActual === 1 ? 1 : 0),
+      losses: club.losses + (ownActual === 0 ? 1 : 0),
+      draws: club.draws + (ownActual === 0.5 ? 1 : 0),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', club.id);
+
+  if (opponent) {
+    const oppActual = ownActual === 1 ? 0 : ownActual === 0 ? 1 : 0.5;
+    const opponentUpdate = updateElo({
+      ownRating: opponent.current_elo,
+      opponentRating: club.current_elo,
+      actualScore: oppActual,
+      setsWon: setsLost,
+      setsLost: setsWon,
+      confidenceMultiplier: ownConfidence * rivalConfidence
+    });
+
+    await supabase.from('match_results').insert({
+      club_id: opponent.id,
+      opponent_club_id: club.id,
+      opponent_name: club.club_name,
+      match_date: matchDate,
+      branch,
+      match_type: matchType,
+      sets_won: setsLost,
+      sets_lost: setsWon,
+      set_scores: setScores,
+      location,
+      notes,
+      elo_before: opponent.current_elo,
+      elo_after: opponentUpdate.newRating,
+      elo_delta: opponentUpdate.delta
+    });
+
+    await supabase
+      .from('teams')
+      .update({
+        current_elo: opponentUpdate.newRating,
+        matches_played: opponent.matches_played + 1,
+        wins: opponent.wins + (oppActual === 1 ? 1 : 0),
+        losses: opponent.losses + (oppActual === 0 ? 1 : 0),
+        draws: opponent.draws + (oppActual === 0.5 ? 1 : 0),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', opponent.id);
   }
 
   revalidatePath('/');
+  revalidatePath('/ranking');
+  revalidatePath(`/club/${club.id}`);
+  if (opponent?.id) revalidatePath(`/club/${opponent.id}`);
+  revalidatePath('/resultados');
+
   return { ok: true };
 }
