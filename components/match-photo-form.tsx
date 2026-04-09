@@ -21,7 +21,7 @@ export default function MatchPhotoForm() {
           setError(err instanceof Error ? err.message : 'No pudimos subir la foto.');
         }
       }}
-      className="card-panel grid gap-4 p-6"
+      className="card-panel grid gap-4 p-4 sm:p-6"
     >
       <div className="grid gap-4 md:grid-cols-2">
         <input
@@ -41,7 +41,7 @@ export default function MatchPhotoForm() {
           type="file"
           required
           accept="image/png,image/jpeg,image/webp,image/jpg"
-          className="field file:mr-3 file:rounded-lg file:border file:border-line file:bg-sand file:px-3 file:py-2 file:text-ink"
+          className="field file:mr-2 file:mt-1 file:rounded-lg file:border file:border-line file:bg-sand file:px-3 file:py-2 file:text-ink sm:file:mr-3 sm:file:mt-0"
         />
       </div>
 
@@ -49,7 +49,7 @@ export default function MatchPhotoForm() {
 
       <p className="text-xs text-muted">Formato recomendado: JPG o WEBP. Máximo 6MB.</p>
 
-      <button type="submit" className="btn-accent w-full md:w-auto">
+      <button type="submit" className="btn-accent w-full justify-center md:w-auto">
         Subir foto del partido
       </button>
 

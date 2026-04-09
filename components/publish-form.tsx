@@ -23,7 +23,7 @@ export default function PublishForm() {
           setError(err instanceof Error ? err.message : 'Ocurrió un error inesperado');
         }
       }}
-      className="card-panel grid gap-5 p-6 md:p-7"
+      className="card-panel grid gap-5 p-4 sm:p-6 md:p-7"
     >
       <div className="grid gap-4 md:grid-cols-2">
         <input

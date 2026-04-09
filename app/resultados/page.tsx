@@ -9,10 +9,10 @@ export default async function ResultadosPage() {
 
   return (
     <main className="section">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <p className="text-sm text-accent">Carga de historial</p>
-          <h1 className="display-serif text-5xl text-ink">Registrar resultado</h1>
+          <h1 className="display-serif text-4xl text-ink sm:text-5xl">Registrar resultado</h1>
         </div>
         <Link href="/" className="rounded-xl border border-line bg-ivory px-4 py-2 text-sm text-ink">
           Volver al inicio
@@ -22,7 +22,7 @@ export default async function ResultadosPage() {
       <ResultForm teams={teams} />
 
       <section className="mt-10">
-        <h2 className="display-serif text-4xl text-ink">Historial reciente</h2>
+        <h2 className="display-serif text-3xl text-ink sm:text-4xl">Historial reciente</h2>
         <div className="mt-4 grid gap-3">
           {recent.map((result) => (
             <article key={result.id} className="card-panel p-4">

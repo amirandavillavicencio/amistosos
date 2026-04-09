@@ -4,8 +4,8 @@ export default function Footer() {
    * los amigos del voley pueden desaparcer , la persona que amas puede desaparecer, pero los arreboles van a desaparecer
    */
   return (
-    <footer className="border-t border-line/80 bg-ivory/80 py-5 text-center text-xs text-muted backdrop-blur-sm">
-      <p>
+    <footer className="border-t border-line/80 bg-ivory/80 px-4 py-5 text-center text-xs text-muted backdrop-blur-sm sm:px-6">
+      <p className="mx-auto max-w-4xl leading-relaxed">
         Desarrollado por{' '}
         <a
           href="https://youtu.be/XD00TJ-6WSw?t=9"

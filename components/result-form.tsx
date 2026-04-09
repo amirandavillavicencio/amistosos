@@ -26,7 +26,7 @@ export default function ResultForm({ teams }: ResultFormProps) {
           setError(err instanceof Error ? err.message : 'Error inesperado al guardar.');
         }
       }}
-      className="card-panel grid gap-4 p-6"
+      className="card-panel grid gap-4 p-4 sm:p-6"
     >
       <div className="grid gap-4 md:grid-cols-2">
         <select name="club_id" className="field" required>
@@ -76,7 +76,10 @@ export default function ResultForm({ teams }: ResultFormProps) {
 
       <textarea name="notes" className="field min-h-20" placeholder="Notas adicionales (opcional)" />
 
-      <button type="submit" className="rounded-xl border border-accent/30 bg-accent px-5 py-3 text-sm font-semibold text-white">
+      <button
+        type="submit"
+        className="w-full rounded-xl border border-accent/30 bg-accent px-5 py-3 text-sm font-semibold text-white md:w-fit"
+      >
         Registrar resultado
       </button>
 

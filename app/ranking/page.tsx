@@ -10,10 +10,10 @@ export default async function RankingPage() {
 
   return (
     <main className="section">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <p className="text-sm text-accent">Ranking de equipos</p>
-          <h1 className="display-serif text-5xl text-ink">Equipos con más victorias</h1>
+          <h1 className="display-serif text-4xl text-ink sm:text-5xl">Equipos con más victorias</h1>
           <p className="mt-2 text-muted">Se actualiza con fotos que incluyan resultado válido (por ejemplo 3-1).</p>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">
             El ranking se basa en un sistema ELO. Cada equipo tiene un puntaje que sube cuando gana y baja cuando
