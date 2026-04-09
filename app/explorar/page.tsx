@@ -9,18 +9,18 @@ export default async function ExplorarPage() {
 
   return (
     <main className="section">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex items-center justify-between gap-3">
         <div>
           <p className="text-sm text-accent">Explorar equipos</p>
-          <h1 className="text-4xl font-bold">Disponibilidades abiertas</h1>
+          <h1 className="display-serif text-5xl text-ink">Disponibilidades abiertas</h1>
         </div>
-        <Link href="/" className="rounded-xl border border-white/10 px-4 py-2 text-sm">
+        <Link href="/" className="rounded-xl border border-line bg-ivory px-4 py-2 text-sm text-ink">
           Volver al inicio
         </Link>
       </div>
 
       {posts.length === 0 ? (
-        <p className="text-slate-400">No hay publicaciones abiertas por ahora.</p>
+        <p className="text-muted">No hay publicaciones abiertas por ahora.</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {posts.map((post) => (

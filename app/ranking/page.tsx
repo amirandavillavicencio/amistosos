@@ -13,26 +13,26 @@ export default async function RankingPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <p className="text-sm text-accent">Ranking de equipos</p>
-          <h1 className="text-4xl font-bold">Equipos con más victorias</h1>
-          <p className="mt-2 text-slate-400">Se actualiza con fotos que incluyan resultado válido (por ejemplo 3-1).</p>
+          <h1 className="display-serif text-5xl text-ink">Equipos con más victorias</h1>
+          <p className="mt-2 text-muted">Se actualiza con fotos que incluyan resultado válido (por ejemplo 3-1).</p>
         </div>
-        <Link href="/" className="rounded-xl border border-white/10 px-4 py-2 text-sm">
+        <Link href="/" className="rounded-xl border border-line bg-ivory px-4 py-2 text-sm text-ink">
           Ir al inicio
         </Link>
       </div>
 
       <div className="mb-8 grid gap-4 md:grid-cols-3">
         {mostActive.map((team) => (
-          <article key={team.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs text-slate-400">Equipo más activo</p>
-            <p className="mt-2 font-semibold">{team.club_name}</p>
-            <p className="text-sm text-slate-400">{team.matches_played} partidos registrados</p>
+          <article key={team.id} className="card-panel p-4">
+            <p className="text-xs text-muted">Equipo más activo</p>
+            <p className="mt-2 display-serif text-2xl text-ink">{team.club_name}</p>
+            <p className="text-sm text-muted">{team.matches_played} partidos registrados</p>
           </article>
         ))}
       </div>
 
       {teams.length === 0 ? (
-        <p className="text-slate-400">Todavía no hay ranking. Sube una foto con resultado para iniciar la tabla.</p>
+        <p className="text-muted">Todavía no hay ranking. Sube una foto con resultado para iniciar la tabla.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {teams.map((team, index) => (
