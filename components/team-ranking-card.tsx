@@ -2,11 +2,11 @@ import type { ClubStatsCard } from '@/lib/types';
 
 export default function TeamRankingCard({ team, position }: { team: ClubStatsCard; position?: number }) {
   return (
-    <article className="card-panel p-5">
+    <article className="card-panel p-4 sm:p-5">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-xs uppercase tracking-wide text-muted">{position ? `#${position}` : 'Equipo'}</p>
-          <h3 className="display-serif text-2xl font-semibold text-ink">{team.club_name}</h3>
+          <h3 className="display-serif break-words text-xl font-semibold text-ink sm:text-2xl">{team.club_name}</h3>
           {team.comuna && <p className="text-sm text-muted">{team.comuna}</p>}
         </div>
         <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm font-medium text-accent">{team.win_rate}%</span>

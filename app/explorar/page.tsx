@@ -9,10 +9,10 @@ export default async function ExplorarPage() {
 
   return (
     <main className="section">
-      <div className="mb-8 flex items-center justify-between gap-3">
+      <div className="mb-8 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <p className="text-sm text-accent">Explorar equipos</p>
-          <h1 className="display-serif text-5xl text-ink">Disponibilidades abiertas</h1>
+          <h1 className="display-serif text-4xl text-ink sm:text-5xl">Disponibilidades abiertas</h1>
         </div>
         <Link href="/" className="rounded-xl border border-line bg-ivory px-4 py-2 text-sm text-ink">
           Volver al inicio

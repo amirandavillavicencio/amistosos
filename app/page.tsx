@@ -40,13 +40,13 @@ export default async function HomePage() {
 
   return (
     <main className="pb-16">
-      <header className="mx-auto mt-6 w-full max-w-6xl px-6 md:mt-8 md:px-8">
+      <header className="mx-auto mt-4 w-full max-w-6xl px-4 sm:mt-6 sm:px-6 md:mt-8 md:px-8">
         <nav className="nav-shell">
-          <div>
+          <div className="pr-2">
             <p className="text-xs uppercase tracking-[0.2em] text-muted">Amistosos Vóley</p>
             <p className="text-sm text-muted">Comunidad para coordinar partidos</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          <div className="hidden items-center gap-2 md:flex md:gap-3">
             <Link href="/explorar" className="nav-link">
               Explorar
             </Link>
@@ -60,36 +60,56 @@ export default async function HomePage() {
               Publicar
             </a>
           </div>
+          <details className="group ml-auto w-full md:hidden">
+            <summary className="ml-auto flex w-fit cursor-pointer list-none items-center gap-2 rounded-full border border-line bg-white/80 px-4 py-2 text-sm text-ink">
+              Menú
+              <span className="text-xs text-muted transition group-open:rotate-180">▾</span>
+            </summary>
+            <div className="mt-3 grid gap-2 border-t border-line/80 pt-3">
+              <Link href="/explorar" className="nav-link text-center">
+                Explorar
+              </Link>
+              <Link href="/ranking" className="nav-link text-center">
+                Ranking
+              </Link>
+              <Link href="/resultados" className="nav-link text-center">
+                Resultados
+              </Link>
+              <a href="#publicar" className="btn-accent text-center">
+                Publicar
+              </a>
+            </div>
+          </details>
         </nav>
       </header>
 
-      <section className="section pt-10 md:pt-14">
+      <section className="section pt-6 sm:pt-10 md:pt-14">
         <div className="hero-shell">
           <div>
             <p className="eyebrow">Coordina amistosos sin vueltas</p>
-            <h1 className="display-serif mt-4 text-5xl leading-[0.95] text-ink md:text-7xl">
+            <h1 className="display-serif mt-4 text-4xl leading-[0.95] text-ink sm:text-5xl md:text-7xl">
               Organiza partidos de vóley
               <br />
               con equipos reales
             </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-muted sm:mt-6 sm:text-lg">
               Publica disponibilidad, encuentra rivales por zona y registra resultados para mantener activa la comunidad.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a href="#publicar" className="btn-accent">
+            <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
+              <a href="#publicar" className="btn-accent text-center">
                 Publica tu disponibilidad
               </a>
-              <a href="#publicaciones" className="btn-secondary">
+              <a href="#publicaciones" className="btn-secondary text-center">
                 Ver equipos disponibles
               </a>
             </div>
           </div>
 
-          <div className="grid gap-3">
+          <div className="grid gap-3 sm:gap-4">
             {howItWorks.map((item) => (
               <article key={item.step} className="step-card">
                 <p className="text-xs tracking-[0.15em] text-muted">PASO {item.step}</p>
-                <h3 className="mt-1 display-serif text-2xl text-ink">{item.title}</h3>
+                <h3 className="mt-1 display-serif text-xl text-ink sm:text-2xl">{item.title}</h3>
                 <p className="mt-1 text-sm text-muted">{item.description}</p>
               </article>
             ))}
@@ -108,8 +128,8 @@ export default async function HomePage() {
       </section>
 
       <section id="publicaciones" className="section">
-        <div className="mb-6 flex items-end justify-between gap-3">
-          <h2 className="display-serif text-4xl text-ink">Publicaciones disponibles</h2>
+        <div className="mb-6 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-end sm:gap-3">
+          <h2 className="display-serif text-3xl text-ink sm:text-4xl">Publicaciones disponibles</h2>
           <Link href="/explorar" className="editorial-link">
             Ver todas las publicaciones
           </Link>
@@ -126,13 +146,13 @@ export default async function HomePage() {
       </section>
 
       <section id="publicar" className="section pt-0">
-        <h2 className="mb-6 display-serif text-4xl text-ink">Publica cuándo puedes jugar</h2>
+        <h2 className="mb-6 display-serif text-3xl text-ink sm:text-4xl">Publica cuándo puedes jugar</h2>
         <PublishForm />
       </section>
 
       <section id="partidos-reales" className="section pt-0">
-        <div className="mb-6 flex items-end justify-between gap-3">
-          <h2 className="display-serif text-4xl text-ink">Galería de partidos reales</h2>
+        <div className="mb-6 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-end sm:gap-3">
+          <h2 className="display-serif text-3xl text-ink sm:text-4xl">Galería de partidos reales</h2>
           <Link href="/ranking" className="editorial-link">
             Ver equipos con más victorias
           </Link>
@@ -152,9 +172,9 @@ export default async function HomePage() {
       </section>
 
       <section className="section pt-0">
-        <div className="mb-6 flex items-end justify-between gap-3">
+        <div className="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end">
           <div>
-            <h2 className="display-serif text-4xl text-ink">Ranking de equipos</h2>
+            <h2 className="display-serif text-3xl text-ink sm:text-4xl">Ranking de equipos</h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
               El ranking se basa en un sistema ELO. Cada equipo tiene un puntaje que sube cuando gana y baja cuando
               pierde. Si ganas contra un equipo fuerte, subes más puntos. Si pierdes contra uno más débil, bajas más.
@@ -178,11 +198,11 @@ export default async function HomePage() {
       <section className="section pt-4">
         <div className="cta-shell">
           <p className="eyebrow">Comunidad activa</p>
-          <h2 className="display-serif mt-3 text-4xl text-ink md:text-5xl">¿Listos para coordinar su próximo amistoso?</h2>
+          <h2 className="display-serif mt-3 text-3xl text-ink sm:text-4xl md:text-5xl">¿Listos para coordinar su próximo amistoso?</h2>
           <p className="mt-3 max-w-2xl text-muted">
             Si tu equipo tiene horario disponible, publíquenlo y conecten con otros clubes de su ciudad.
           </p>
-          <a href="#publicar" className="btn-accent mt-7 inline-flex">
+          <a href="#publicar" className="btn-accent mt-7 inline-flex w-full justify-center sm:w-auto">
             Ir al formulario de publicación
           </a>
         </div>
