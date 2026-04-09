@@ -6,6 +6,7 @@ import { createAvailability } from '@/app/actions';
 const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
 export default function PublishForm() {
+  const [clubName, setClubName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -16,15 +17,23 @@ export default function PublishForm() {
         setSuccess(null);
         try {
           await createAvailability(formData);
+          setClubName('');
           setSuccess('¡Disponibilidad publicada! Ya aparece en equipos disponibles.');
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Ocurrió un error inesperado');
         }
       }}
-      className="grid gap-4 rounded-2xl border border-white/10 bg-panel/70 p-6 shadow-glow"
+      className="card-panel grid gap-5 p-6 md:p-7"
     >
       <div className="grid gap-4 md:grid-cols-2">
-        <input name="club_name" required placeholder="Nombre del club o equipo" className="field" />
+        <input
+          name="club_name"
+          required
+          placeholder="Nombre del club o equipo"
+          className="field"
+          value={clubName}
+          onChange={(event) => setClubName(event.target.value)}
+        />
         <input name="contact_email" required type="email" placeholder="Correo de contacto" className="field" />
         <input name="instagram" required placeholder="Instagram (@equipo)" className="field" />
         <input name="address" required placeholder="Dirección" className="field" />
@@ -67,13 +76,13 @@ export default function PublishForm() {
 
       <button
         type="submit"
-        className="rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110"
+        className="rounded-xl border border-accent/30 bg-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-copper"
       >
         Publicar disponibilidad
       </button>
 
-      {error && <p className="text-sm text-red-300">{error}</p>}
-      {success && <p className="text-sm text-emerald-300">{success}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
+      {success && <p className="text-sm text-emerald-700">{success}</p>}
     </form>
   );
 }

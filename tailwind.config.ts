@@ -8,13 +8,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: '#07090f',
-        panel: '#111523',
-        accent: '#7c5cff',
-        muted: '#98a1bd'
+        bg: '#f7f1e8',
+        ivory: '#fffaf2',
+        sand: '#efe4d3',
+        line: '#ddceb8',
+        ink: '#2f2419',
+        muted: '#736458',
+        accent: '#bb6b3f',
+        copper: '#995333'
       },
       boxShadow: {
-        glow: '0 0 0 1px rgba(124,92,255,0.2), 0 8px 36px rgba(0,0,0,0.45)'
+        soft: '0 16px 45px rgba(77, 56, 36, 0.08)'
       }
     }
   },

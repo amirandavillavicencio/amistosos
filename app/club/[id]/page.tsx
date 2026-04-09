@@ -10,14 +10,14 @@ export default async function ClubProfilePage({ params }: { params: { id: string
 
   return (
     <main className="section">
-      <Link href="/ranking" className="text-sm text-accent">
+      <Link href="/ranking" className="editorial-link">
         ← Volver al ranking
       </Link>
 
-      <section className="mt-4 rounded-3xl border border-white/10 bg-panel/70 p-6">
-        <p className="text-sm text-slate-400">Resumen del equipo</p>
-        <h1 className="mt-1 text-4xl font-bold">{profile.club_name}</h1>
-        <p className="mt-2 text-slate-300">
+      <section className="mt-4 rounded-3xl border border-line bg-ivory p-6 shadow-soft">
+        <p className="text-sm text-muted">Resumen del equipo</p>
+        <h1 className="mt-1 display-serif text-5xl text-ink">{profile.club_name}</h1>
+        <p className="mt-2 text-muted">
           {profile.comuna}, {profile.city} · {profile.branch} · Nivel declarado {profile.declared_level}
         </p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -27,7 +27,7 @@ export default async function ClubProfilePage({ params }: { params: { id: string
           <Stat label="Derrotas" value={String(profile.losses)} />
           <Stat label="Win rate" value={`${profile.win_rate}%`} />
         </div>
-        <p className="mt-4 text-sm text-slate-400">
+        <p className="mt-4 text-sm text-muted">
           {profile.matches_played < HISTORY_MINIMUM
             ? 'Equipo con pocos resultados cargados todavía.'
             : 'Resultados actualizados según los partidos registrados.'}
@@ -35,25 +35,21 @@ export default async function ClubProfilePage({ params }: { params: { id: string
       </section>
 
       <section className="mt-8">
-        <h2 className="text-2xl font-semibold">Últimos resultados</h2>
+        <h2 className="display-serif text-4xl text-ink">Últimos resultados</h2>
         <div className="mt-4 grid gap-3">
           {profile.latest_results.slice(0, 10).map((result) => (
-            <article key={result.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <article key={result.id} className="card-panel p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="font-semibold">
+                <p className="font-semibold text-ink">
                   {result.sets_won > result.sets_lost ? '✅ Victoria' : result.sets_won < result.sets_lost ? '❌ Derrota' : '➖ Empate'} · {result.sets_won}-{result.sets_lost}
                 </p>
-                <p className="text-sm text-slate-400">{result.match_date}</p>
+                <p className="text-sm text-muted">{result.match_date}</p>
               </div>
-              <p className="mt-1 text-sm text-slate-300">
-                Rival: {result.opponent_name || 'Club en plataforma'} · {result.match_type}
-              </p>
-              {result.set_scores && <p className="mt-1 text-xs text-slate-400">Sets: {result.set_scores}</p>}
+              <p className="mt-1 text-sm text-muted">Rival: {result.opponent_name || 'Club en plataforma'} · {result.match_type}</p>
+              {result.set_scores && <p className="mt-1 text-xs text-muted">Sets: {result.set_scores}</p>}
             </article>
           ))}
-          {profile.latest_results.length === 0 && (
-            <p className="text-slate-400">Aún no hay resultados registrados para este equipo.</p>
-          )}
+          {profile.latest_results.length === 0 && <p className="text-muted">Aún no hay resultados registrados para este equipo.</p>}
         </div>
       </section>
     </main>
@@ -62,9 +58,9 @@ export default async function ClubProfilePage({ params }: { params: { id: string
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="mt-1 text-xl font-semibold">{value}</p>
+    <div className="rounded-2xl border border-line bg-sand/35 p-3">
+      <p className="text-xs text-muted">{label}</p>
+      <p className="mt-1 text-xl font-semibold text-ink">{value}</p>
     </div>
   );
 }
