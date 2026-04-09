@@ -1,17 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { createPost } from '@/app/actions';
+import { createAvailability } from '@/app/actions';
 
-const weekdays = [
-  'lunes',
-  'martes',
-  'miércoles',
-  'jueves',
-  'viernes',
-  'sábado',
-  'domingo'
-];
+const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
 export default function PublishForm() {
   const [error, setError] = useState<string | null>(null);
@@ -23,8 +15,8 @@ export default function PublishForm() {
         setError(null);
         setSuccess(null);
         try {
-          await createPost(formData);
-          setSuccess('¡Publicación creada! Ya aparece en el listado y en sugerencias.');
+          await createAvailability(formData);
+          setSuccess('¡Disponibilidad publicada! Ya aparece en explorar y sugerencias.');
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Ocurrió un error inesperado');
         }
@@ -56,7 +48,7 @@ export default function PublishForm() {
           <option value="mixta">Mixta</option>
         </select>
         <select name="level" required className="field">
-          <option value="">Nivel</option>
+          <option value="">Nivel declarado</option>
           <option value="principiante">Principiante</option>
           <option value="intermedio">Intermedio</option>
           <option value="avanzado">Avanzado</option>

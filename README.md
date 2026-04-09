@@ -1,22 +1,26 @@
-# Amistosos Vóley MVP (sin login)
+# Amistosos Vóley (MVP+ competitivo sin login obligatorio)
 
-Aplicación web en **Next.js 14 + TypeScript + Tailwind + Supabase** para coordinar amistosos de vóley entre clubes/equipos sin cuentas de usuario.
+Aplicación web en **Next.js 14 + TypeScript + Tailwind + Supabase** para coordinar amistosos de vóley entre clubes/equipos, con historial de resultados y ranking ELO.
 
-## Funcionalidades del MVP
+## Funcionalidades
 
-- Landing dark premium de una página.
-- Formulario público para publicar disponibilidad.
-- Listado público de publicaciones recientes.
-- Matching automático por criterios de compatibilidad.
-- Sección de coincidencias sugeridas.
-- Contacto directo por correo e Instagram.
+- Landing dark premium + publicación rápida de disponibilidad.
+- Exploración pública de disponibilidades abiertas.
+- Matching automático con score desglosado:
+  - fecha/horario
+  - ubicación
+  - rama + nivel declarado + cancha
+  - cercanía de ELO (con fallback neutro para equipos nuevos)
+- Registro de resultados históricos (amistoso/torneo/entrenamiento/competitivo).
+- Perfil de club con ficha competitiva y últimos resultados.
+- Ranking general por ELO y destacados de actividad.
 
 ## Stack
 
 - Next.js 14 (App Router)
 - TypeScript
 - Tailwind CSS
-- Supabase (DB PostgreSQL)
+- Supabase (PostgreSQL)
 
 ## 1) Configurar base de datos en Supabase
 
@@ -26,6 +30,14 @@ Aplicación web en **Next.js 14 + TypeScript + Tailwind + Supabase** para coordi
 ```sql
 -- archivo: supabase/schema.sql
 ```
+
+### Nota de migración
+
+El esquema incluye backfill automático para instalaciones antiguas que solo tenían `posts`:
+
+- Normaliza clubes en `teams`.
+- Migra publicaciones a `availabilities` sin perder publicaciones previas.
+- Mantiene identidad de club por `club_name + email + instagram` normalizados.
 
 ## 2) Variables de entorno
 
@@ -37,7 +49,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
 SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
 ```
 
-> `SUPABASE_SERVICE_ROLE_KEY` se usa en acciones de servidor para insertar posts y matches sin requerir auth.
+> `SUPABASE_SERVICE_ROLE_KEY` se usa en server actions para escribir en DB sin requerir auth de usuario final.
 
 ## 3) Correr local
 
@@ -48,29 +60,18 @@ npm run dev
 
 Abrir `http://localhost:3000`.
 
-## 4) Deploy en Vercel
+## 4) Rutas principales
 
-1. Sube el repo a GitHub/GitLab/Bitbucket.
-2. Importa el proyecto en Vercel.
-3. Define las mismas variables de entorno.
-4. Deploy.
+- `/`: landing + destacados + publicación + sugerencias
+- `/explorar`: disponibilidades abiertas
+- `/ranking`: ranking ELO + equipos activos
+- `/club/[id]`: ficha competitiva + historial
+- `/resultados`: formulario para registrar partidos
 
-## Reglas de negocio del matching
+## 5) Módulos clave
 
-Al crear una publicación, el sistema compara contra publicaciones abiertas y sugiere matches compatibles, priorizando:
-
-1. Comuna (o ciudad si no coincide comuna).
-2. Fecha exacta o día de semana.
-3. Traslape horario.
-4. Rama.
-5. Nivel similar.
-6. Disponibilidad de cancha.
-
-## Estructura principal
-
-- `app/page.tsx`: landing + listado + matches + CTA.
-- `components/publish-form.tsx`: formulario público conectado a server action.
-- `app/actions.ts`: validaciones, creación de post y generación de matches.
-- `lib/matching.ts`: reglas de compatibilidad.
-- `supabase/schema.sql`: esquema DB.
+- `lib/elo.ts`: fórmula ELO, expected score, K y ajustes por sets/confianza.
+- `lib/matching.ts`: motor de compatibilidad con score por bloques + ELO.
+- `app/actions.ts`: creación de disponibilidad normalizada + registro de resultados.
+- `supabase/schema.sql`: esquema completo y migración desde modelo legacy.
 
