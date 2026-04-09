@@ -220,6 +220,17 @@ export default async function HomePage() {
           </div>
         )}
       </section>
+
+      <section className="section pt-0">
+        <div className="rounded-3xl border border-line bg-sand/45 p-8 text-center">
+          <h2 className="display-serif text-4xl text-ink">¿Listos para el próximo amistoso?</h2>
+          <p className="mt-2 text-muted">Publica tu horario y conecta con equipos que sí están jugando esta semana.</p>
+          <a href="#publicar" className="mt-6 inline-flex rounded-xl border border-accent/30 bg-accent px-5 py-3 text-sm font-semibold text-white">
+            Empezar ahora
+          </a>
+        </div>
+      </section>
+
     </main>
   );
 }
