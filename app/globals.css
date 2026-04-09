@@ -8,12 +8,12 @@
 
 body {
   @apply bg-bg text-ink antialiased;
-  background-image: radial-gradient(circle at 12% 10%, rgba(187, 107, 63, 0.08), transparent 28%),
-    radial-gradient(circle at 90% 0%, rgba(153, 83, 51, 0.07), transparent 24%);
+  background-image: radial-gradient(circle at 8% 8%, rgba(131, 163, 189, 0.16), transparent 30%),
+    radial-gradient(circle at 90% 3%, rgba(157, 183, 206, 0.16), transparent 30%);
 }
 
 .section {
-  @apply mx-auto w-full max-w-6xl px-6 py-14 md:px-8 md:py-20;
+  @apply mx-auto w-full max-w-6xl px-6 py-14 md:px-10 md:py-20;
 }
 
 .display-serif {
@@ -26,7 +26,7 @@ body {
 }
 
 .nav-shell {
-  @apply flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line/80 bg-ivory/80 px-4 py-3 shadow-soft backdrop-blur md:px-5;
+  @apply flex flex-wrap items-center justify-between gap-3 rounded-[1.75rem] border border-line/80 bg-ivory/90 px-4 py-3 shadow-soft backdrop-blur md:px-6;
 }
 
 .nav-link {
@@ -34,23 +34,23 @@ body {
 }
 
 .hero-shell {
-  @apply grid gap-10 rounded-[2rem] border border-line bg-ivory p-7 shadow-soft md:grid-cols-[1.08fr_0.92fr] md:p-10;
+  @apply grid gap-10 rounded-[2.2rem] border border-line bg-ivory p-7 shadow-soft md:grid-cols-[1.1fr_0.9fr] md:p-12;
 }
 
 .step-card {
-  @apply rounded-2xl border border-line/90 bg-[#fffdf9] px-4 py-4;
+  @apply rounded-2xl border border-line/90 bg-white/70 px-4 py-4;
 }
 
 .feature-strip {
-  @apply flex flex-col justify-between gap-4 rounded-3xl border border-line/80 bg-ivory p-6 md:flex-row md:items-center md:p-8;
+  @apply flex flex-col justify-between gap-4 rounded-3xl border border-line/80 bg-ivory p-7 md:flex-row md:items-center md:p-9;
 }
 
 .card-panel {
-  @apply rounded-2xl border border-line bg-ivory shadow-soft;
+  @apply rounded-2xl border border-line bg-ivory/95 shadow-soft;
 }
 
 .field {
-  @apply rounded-xl border border-line bg-[#fffdf9] px-3 py-2.5 text-sm text-ink outline-none transition placeholder:text-stone-400 focus:border-accent focus:ring-2 focus:ring-accent/20;
+  @apply rounded-xl border border-line bg-white/80 px-3 py-2.5 text-sm text-ink outline-none transition placeholder:text-slate-400 focus:border-accent focus:ring-2 focus:ring-accent/20;
 }
 
 .editorial-link {
@@ -62,13 +62,9 @@ body {
 }
 
 .btn-secondary {
-  @apply rounded-full border border-line bg-[#fffdf9] px-5 py-2.5 text-sm font-medium text-ink transition hover:border-accent/50 hover:text-accent;
+  @apply rounded-full border border-line bg-white/80 px-5 py-2.5 text-sm font-medium text-ink transition hover:border-accent/50 hover:text-accent;
 }
 
 .cta-shell {
   @apply rounded-[2rem] border border-line bg-ivory p-8 shadow-soft md:p-10;
-}
-
-.footer-shell {
-  @apply border-t border-line/90 pt-6;
 }

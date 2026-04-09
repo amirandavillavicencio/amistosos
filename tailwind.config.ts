@@ -8,17 +8,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: '#f7f1e8',
-        ivory: '#fffaf2',
-        sand: '#efe4d3',
-        line: '#ddceb8',
-        ink: '#2f2419',
-        muted: '#736458',
-        accent: '#bb6b3f',
-        copper: '#995333'
+        bg: '#eef3f6',
+        ivory: '#fdfcf9',
+        sand: '#e5edf3',
+        line: '#cfdae4',
+        ink: '#1f3342',
+        muted: '#5f7384',
+        accent: '#1f4d79',
+        copper: '#173c5e'
       },
       boxShadow: {
-        soft: '0 16px 45px rgba(77, 56, 36, 0.08)'
+        soft: '0 18px 42px rgba(31, 51, 66, 0.10)'
       }
     }
   },
