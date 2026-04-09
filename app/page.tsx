@@ -153,7 +153,13 @@ export default async function HomePage() {
 
       <section className="section pt-0">
         <div className="mb-6 flex items-end justify-between gap-3">
-          <h2 className="display-serif text-4xl text-ink">Ranking de equipos</h2>
+          <div>
+            <h2 className="display-serif text-4xl text-ink">Ranking de equipos</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+              El ranking se basa en un sistema ELO. Cada equipo tiene un puntaje que sube cuando gana y baja cuando
+              pierde. Si ganas contra un equipo fuerte, subes más puntos. Si pierdes contra uno más débil, bajas más.
+            </p>
+          </div>
           <Link href="/ranking" className="editorial-link">
             Ver ranking completo
           </Link>
@@ -181,24 +187,6 @@ export default async function HomePage() {
           </a>
         </div>
       </section>
-
-      <footer className="section pb-6 pt-2">
-        <div className="footer-shell">
-          <p className="display-serif text-2xl text-ink">Amistosos Vóley</p>
-          <p className="text-sm text-muted">Plataforma comunitaria para coordinar amistosos, registrar partidos y seguir el ranking.</p>
-          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
-            <Link href="/explorar" className="hover:text-ink">
-              Explorar
-            </Link>
-            <Link href="/ranking" className="hover:text-ink">
-              Ranking
-            </Link>
-            <Link href="/resultados" className="hover:text-ink">
-              Resultados
-            </Link>
-          </div>
-        </div>
-      </footer>
     </main>
   );
 }

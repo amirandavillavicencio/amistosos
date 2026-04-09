@@ -15,6 +15,10 @@ export default async function RankingPage() {
           <p className="text-sm text-accent">Ranking de equipos</p>
           <h1 className="display-serif text-5xl text-ink">Equipos con más victorias</h1>
           <p className="mt-2 text-muted">Se actualiza con fotos que incluyan resultado válido (por ejemplo 3-1).</p>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">
+            El ranking se basa en un sistema ELO. Cada equipo tiene un puntaje que sube cuando gana y baja cuando
+            pierde. Si ganas contra un equipo fuerte, subes más puntos. Si pierdes contra uno más débil, bajas más.
+          </p>
         </div>
         <Link href="/" className="rounded-xl border border-line bg-ivory px-4 py-2 text-sm text-ink">
           Ir al inicio
