@@ -7,29 +7,68 @@
 }
 
 body {
-  @apply bg-[#f2f4f8] text-ink antialiased;
-  background-image:
-    radial-gradient(circle at 10% 8%, rgba(31, 111, 255, 0.08), transparent 35%),
-    radial-gradient(circle at 85% 2%, rgba(31, 111, 255, 0.1), transparent 32%);
+  @apply bg-bg text-ink antialiased;
+  background-image: radial-gradient(circle at 12% 10%, rgba(187, 107, 63, 0.08), transparent 28%),
+    radial-gradient(circle at 90% 0%, rgba(153, 83, 51, 0.07), transparent 24%);
 }
 
 .section {
-  @apply mx-auto w-full max-w-6xl px-6 py-14 md:py-20;
+  @apply mx-auto w-full max-w-6xl px-6 py-14 md:px-8 md:py-20;
 }
 
 .display-serif {
-  font-family: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
-  letter-spacing: -0.015em;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', ui-serif, Georgia, serif;
+  letter-spacing: -0.01em;
 }
 
-.field {
-  @apply rounded-xl border border-line bg-ivory px-3 py-2 text-sm text-ink outline-none transition placeholder:text-stone-400 focus:border-accent focus:ring-2 focus:ring-accent/20;
+.eyebrow {
+  @apply text-xs uppercase tracking-[0.2em] text-accent;
+}
+
+.nav-shell {
+  @apply flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line/80 bg-ivory/80 px-4 py-3 shadow-soft backdrop-blur md:px-5;
+}
+
+.nav-link {
+  @apply rounded-full border border-transparent px-3 py-1.5 text-sm text-muted transition hover:border-line hover:text-ink;
+}
+
+.hero-shell {
+  @apply grid gap-10 rounded-[2rem] border border-line bg-ivory p-7 shadow-soft md:grid-cols-[1.08fr_0.92fr] md:p-10;
+}
+
+.step-card {
+  @apply rounded-2xl border border-line/90 bg-[#fffdf9] px-4 py-4;
+}
+
+.feature-strip {
+  @apply flex flex-col justify-between gap-4 rounded-3xl border border-line/80 bg-ivory p-6 md:flex-row md:items-center md:p-8;
 }
 
 .card-panel {
   @apply rounded-2xl border border-line bg-ivory shadow-soft;
 }
 
+.field {
+  @apply rounded-xl border border-line bg-[#fffdf9] px-3 py-2.5 text-sm text-ink outline-none transition placeholder:text-stone-400 focus:border-accent focus:ring-2 focus:ring-accent/20;
+}
+
 .editorial-link {
-  @apply text-sm text-accent transition hover:text-copper;
+  @apply text-sm text-accent underline-offset-4 transition hover:text-copper hover:underline;
+}
+
+.btn-accent {
+  @apply rounded-full border border-accent/30 bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-copper;
+}
+
+.btn-secondary {
+  @apply rounded-full border border-line bg-[#fffdf9] px-5 py-2.5 text-sm font-medium text-ink transition hover:border-accent/50 hover:text-accent;
+}
+
+.cta-shell {
+  @apply rounded-[2rem] border border-line bg-ivory p-8 shadow-soft md:p-10;
+}
+
+.footer-shell {
+  @apply border-t border-line/90 pt-6;
 }
