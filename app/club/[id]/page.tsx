@@ -11,17 +11,17 @@ export default async function ClubProfilePage({ params }: { params: { id: string
   return (
     <main className="section">
       <Link href="/ranking" className="text-sm text-accent">
-        ← Volver a ranking
+        ← Volver al ranking
       </Link>
 
       <section className="mt-4 rounded-3xl border border-white/10 bg-panel/70 p-6">
-        <p className="text-sm text-slate-400">Ficha competitiva</p>
+        <p className="text-sm text-slate-400">Resumen del equipo</p>
         <h1 className="mt-1 text-4xl font-bold">{profile.club_name}</h1>
         <p className="mt-2 text-slate-300">
           {profile.comuna}, {profile.city} · {profile.branch} · Nivel declarado {profile.declared_level}
         </p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <Stat label="ELO actual" value={String(profile.current_elo)} />
+          <Stat label="Puntaje actual" value={String(profile.current_elo)} />
           <Stat label="Partidos" value={String(profile.matches_played)} />
           <Stat label="Victorias" value={String(profile.wins)} />
           <Stat label="Derrotas" value={String(profile.losses)} />
@@ -29,8 +29,8 @@ export default async function ClubProfilePage({ params }: { params: { id: string
         </div>
         <p className="mt-4 text-sm text-slate-400">
           {profile.matches_played < HISTORY_MINIMUM
-            ? 'Sin historial suficiente: el sistema usa score ELO neutro en matching.'
-            : 'Nivel estimado por resultados: ELO influye en sugerencias deportivas.'}
+            ? 'Equipo con pocos resultados cargados todavía.'
+            : 'Resultados actualizados según los partidos registrados.'}
         </p>
       </section>
 
@@ -46,7 +46,7 @@ export default async function ClubProfilePage({ params }: { params: { id: string
                 <p className="text-sm text-slate-400">{result.match_date}</p>
               </div>
               <p className="mt-1 text-sm text-slate-300">
-                Rival: {result.opponent_name || 'Club en plataforma'} · {result.match_type} · ELO {result.elo_before} → {result.elo_after} ({result.elo_delta >= 0 ? '+' : ''}{result.elo_delta})
+                Rival: {result.opponent_name || 'Club en plataforma'} · {result.match_type}
               </p>
               {result.set_scores && <p className="mt-1 text-xs text-slate-400">Sets: {result.set_scores}</p>}
             </article>

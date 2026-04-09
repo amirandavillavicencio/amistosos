@@ -341,3 +341,145 @@ export async function registerMatchResult(formData: FormData) {
 
   return { ok: true };
 }
+
+function parseResultScore(value: string): { ownSets: number; rivalSets: number; ownWon: boolean } | null {
+  const clean = value.trim();
+  const match = clean.match(/^(\d)\s*-\s*(\d)$/);
+  if (!match) return null;
+
+  const ownSets = Number(match[1]);
+  const rivalSets = Number(match[2]);
+
+  const validOwnWinner = ownSets === 3 && rivalSets >= 0 && rivalSets <= 2;
+  const validRivalWinner = rivalSets === 3 && ownSets >= 0 && ownSets <= 2;
+
+  if (!validOwnWinner && !validRivalWinner) return null;
+
+  return { ownSets, rivalSets, ownWon: ownSets > rivalSets };
+}
+
+async function upsertClubStats(input: {
+  clubName: string;
+  clubNameKey: string;
+  matchDate: string;
+  ownWon: boolean;
+}) {
+  const supabase = getSupabaseAdmin();
+
+  const { data: existing } = await supabase
+    .from('club_stats')
+    .select('*')
+    .eq('club_name_key', input.clubNameKey)
+    .maybeSingle<{
+      id: string;
+      matches_played: number;
+      wins: number;
+      losses: number;
+      last_match_date: string | null;
+    }>();
+
+  if (!existing) {
+    await supabase.from('club_stats').insert({
+      club_name: input.clubName,
+      club_name_key: input.clubNameKey,
+      matches_played: 1,
+      wins: input.ownWon ? 1 : 0,
+      losses: input.ownWon ? 0 : 1,
+      last_match_date: input.matchDate
+    });
+    return;
+  }
+
+  await supabase
+    .from('club_stats')
+    .update({
+      club_name: input.clubName,
+      matches_played: existing.matches_played + 1,
+      wins: existing.wins + (input.ownWon ? 1 : 0),
+      losses: existing.losses + (input.ownWon ? 0 : 1),
+      last_match_date: input.matchDate,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', existing.id);
+}
+
+export async function uploadMatchPhoto(formData: FormData) {
+  const clubName = String(formData.get('club_name') || '').trim();
+  const opponentName = String(formData.get('opponent_name') || '').trim();
+  const matchDate = String(formData.get('match_date') || '').trim();
+  const comuna = String(formData.get('comuna') || '').trim();
+  const result = normalizeOptional(formData.get('result'));
+  const comment = normalizeOptional(formData.get('comment'));
+  const image = formData.get('image');
+
+  if (!clubName || !opponentName || !matchDate || !comuna) {
+    throw new Error('Completa los campos requeridos.');
+  }
+
+  if (!(image instanceof File) || image.size === 0) {
+    throw new Error('Debes subir una imagen del partido.');
+  }
+
+  if (image.size > 6 * 1024 * 1024) {
+    throw new Error('La imagen debe pesar menos de 6MB.');
+  }
+
+  const allowedMime = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+  if (!allowedMime.has(image.type)) {
+    throw new Error('Formato de imagen no permitido. Usa JPG, PNG o WEBP.');
+  }
+
+  const parsed = result ? parseResultScore(result) : null;
+  if (result && !parsed) {
+    throw new Error('Resultado inválido. Usa formato como 3-0 o 3-2.');
+  }
+
+  const supabase = getSupabaseAdmin();
+  const clubNameKey = normalizeIdentity(clubName);
+  const ext = image.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const safeExt = ['jpg', 'jpeg', 'png', 'webp'].includes(ext) ? ext : 'jpg';
+  const path = `${clubNameKey}/${Date.now()}-${crypto.randomUUID()}.${safeExt}`;
+
+  const fileBuffer = Buffer.from(await image.arrayBuffer());
+
+  const { error: storageError } = await supabase.storage.from('match-photos').upload(path, fileBuffer, {
+    contentType: image.type,
+    cacheControl: '3600',
+    upsert: false
+  });
+
+  if (storageError) {
+    throw new Error('No pudimos subir la foto. Intenta con otra imagen.');
+  }
+
+  const { data: publicUrlData } = supabase.storage.from('match-photos').getPublicUrl(path);
+
+  const { error: insertError } = await supabase.from('match_photos').insert({
+    club_name: clubName,
+    club_name_key: clubNameKey,
+    opponent_name: opponentName,
+    match_date: matchDate,
+    comuna,
+    result,
+    comment,
+    image_url: publicUrlData.publicUrl
+  });
+
+  if (insertError) {
+    throw new Error('La imagen se subió, pero no pudimos guardar el partido.');
+  }
+
+  if (parsed) {
+    await upsertClubStats({
+      clubName,
+      clubNameKey,
+      matchDate,
+      ownWon: parsed.ownWon
+    });
+  }
+
+  revalidatePath('/');
+  revalidatePath('/ranking');
+
+  return { ok: true };
+}

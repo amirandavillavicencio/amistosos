@@ -11,7 +11,7 @@ export default async function ExplorarPage() {
     <main className="section">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <p className="text-sm text-accent">Explorar marketplace</p>
+          <p className="text-sm text-accent">Explorar equipos</p>
           <h1 className="text-4xl font-bold">Disponibilidades abiertas</h1>
         </div>
         <Link href="/" className="rounded-xl border border-white/10 px-4 py-2 text-sm">

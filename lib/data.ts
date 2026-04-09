@@ -2,6 +2,9 @@ import { getSupabasePublic } from '@/lib/supabase';
 import type {
   AvailabilityRow,
   AvailabilityWithTeam,
+  ClubStatsCard,
+  ClubStatsRow,
+  MatchPhotoRow,
   MatchResultRow,
   SuggestedMatchCard,
   SuggestedMatchRow,
@@ -63,6 +66,56 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
       };
     })
     .filter((value): value is SuggestedMatchCard => Boolean(value));
+}
+
+export async function getRecentMatchPhotos(limit = 12): Promise<MatchPhotoRow[]> {
+  const supabase = getSupabasePublic();
+  const { data } = await supabase
+    .from('match_photos')
+    .select('*')
+    .order('match_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit)
+    .returns<MatchPhotoRow[]>();
+
+  return data || [];
+}
+
+export async function getClubStatsRanking(limit = 20): Promise<ClubStatsCard[]> {
+  const supabase = getSupabasePublic();
+  const { data: stats } = await supabase
+    .from('club_stats')
+    .select('*')
+    .order('wins', { ascending: false })
+    .order('matches_played', { ascending: false })
+    .order('last_match_date', { ascending: false })
+    .limit(limit)
+    .returns<ClubStatsRow[]>();
+
+  const base = stats || [];
+  if (!base.length) return [];
+
+  const { data: photos } = await supabase
+    .from('match_photos')
+    .select('club_name_key, comuna, created_at')
+    .in(
+      'club_name_key',
+      base.map((item) => item.club_name_key)
+    )
+    .order('created_at', { ascending: false });
+
+  const comunaByClub = new Map<string, string>();
+  for (const photo of photos || []) {
+    if (!comunaByClub.has(photo.club_name_key)) {
+      comunaByClub.set(photo.club_name_key, photo.comuna);
+    }
+  }
+
+  return base.map((item) => ({
+    ...item,
+    comuna: comunaByClub.get(item.club_name_key) || null,
+    win_rate: item.matches_played > 0 ? Math.round((item.wins / item.matches_played) * 100) : 0
+  }));
 }
 
 export async function getTopTeams(limit = 8): Promise<TeamRow[]> {

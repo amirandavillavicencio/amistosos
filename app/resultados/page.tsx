@@ -33,7 +33,7 @@ export default async function ResultadosPage() {
                 <p className="text-sm text-slate-400">{result.match_date}</p>
               </div>
               <p className="mt-1 text-sm text-slate-300">
-                Rival: {result.opponent_name || 'Club registrado'} · {result.match_type} · ELO {result.elo_before} → {result.elo_after} ({result.elo_delta >= 0 ? '+' : ''}{result.elo_delta})
+                Rival: {result.opponent_name || 'Club registrado'} · {result.match_type}
               </p>
             </article>
           ))}

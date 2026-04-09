@@ -154,3 +154,37 @@ begin
     on conflict (legacy_post_id) do nothing;
   end if;
 end $$;
+
+insert into storage.buckets (id, name, public)
+values ('match-photos', 'match-photos', true)
+on conflict (id) do update set public = true;
+
+create table if not exists match_photos (
+  id uuid primary key default gen_random_uuid(),
+  club_name text not null,
+  club_name_key text not null,
+  opponent_name text not null,
+  match_date date not null,
+  comuna text not null,
+  result text,
+  comment text,
+  image_url text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_match_photos_match_date on match_photos(match_date desc);
+create index if not exists idx_match_photos_club_key on match_photos(club_name_key);
+
+create table if not exists club_stats (
+  id uuid primary key default gen_random_uuid(),
+  club_name text not null,
+  club_name_key text not null unique,
+  matches_played integer not null default 0 check (matches_played >= 0),
+  wins integer not null default 0 check (wins >= 0),
+  losses integer not null default 0 check (losses >= 0),
+  last_match_date date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_club_stats_ranking on club_stats(wins desc, matches_played desc);

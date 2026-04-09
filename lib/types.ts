@@ -89,3 +89,33 @@ export interface TeamProfile extends TeamRow {
   win_rate: number;
   latest_results: MatchResultRow[];
 }
+
+export interface MatchPhotoRow {
+  id: string;
+  club_name: string;
+  club_name_key: string;
+  opponent_name: string;
+  match_date: string;
+  comuna: string;
+  result: string | null;
+  comment: string | null;
+  image_url: string;
+  created_at: string;
+}
+
+export interface ClubStatsRow {
+  id: string;
+  club_name: string;
+  club_name_key: string;
+  matches_played: number;
+  wins: number;
+  losses: number;
+  last_match_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClubStatsCard extends ClubStatsRow {
+  comuna: string | null;
+  win_rate: number;
+}
