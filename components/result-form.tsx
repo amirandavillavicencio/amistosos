@@ -21,7 +21,7 @@ export default function ResultForm({ teams }: ResultFormProps) {
         setSuccess(null);
         try {
           await registerMatchResult(formData);
-          setSuccess('Resultado guardado y ELO actualizado correctamente.');
+          setSuccess('Resultado guardado correctamente.');
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Error inesperado al guardar.');
         }

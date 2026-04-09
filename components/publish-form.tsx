@@ -16,7 +16,7 @@ export default function PublishForm() {
         setSuccess(null);
         try {
           await createAvailability(formData);
-          setSuccess('¡Disponibilidad publicada! Ya aparece en explorar y sugerencias.');
+          setSuccess('¡Disponibilidad publicada! Ya aparece en equipos disponibles.');
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Ocurrió un error inesperado');
         }
