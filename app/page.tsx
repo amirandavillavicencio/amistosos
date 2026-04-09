@@ -8,22 +8,26 @@ import { getClubStatsRanking, getOpenAvailabilities, getRecentMatchPhotos } from
 
 export const dynamic = 'force-dynamic';
 
-const innovationCards = [
+const howItWorks = [
   {
-    title: 'COCKTAIL SGD',
-    body: 'Optimizamos rutas de entrenamiento para que los equipos publiquen y encuentren amistosos con menos fricción.'
+    step: '01',
+    title: 'Encuentra equipos para jugar',
+    description: 'Revisa disponibilidades reales por comuna, horario y rama.'
   },
   {
-    title: 'FLASHATTENTION 2',
-    body: 'El flujo de coordinación ahora prioriza respuestas rápidas, historial reciente y compatibilidad de nivel.'
+    step: '02',
+    title: 'Publica tu disponibilidad',
+    description: 'Comparte cuándo pueden jugar y cómo contactar a tu equipo.'
   },
   {
-    title: 'SUB-QUADRATIC ARCHITECTURES',
-    body: 'La plataforma soporta más publicaciones activas con filtros simples por comuna, horario y categoría.'
+    step: '03',
+    title: 'Sube partidos reales',
+    description: 'Comparte fotos y resultados para dar visibilidad a la actividad.'
   },
   {
-    title: 'REDPAJAMA',
-    body: 'Hicimos la experiencia más editorial para destacar partidos reales y equipos con actividad verificada.'
+    step: '04',
+    title: 'Sigue el ranking',
+    description: 'La tabla se actualiza con resultados publicados por la comunidad.'
   }
 ];
 
@@ -36,132 +40,76 @@ export default async function HomePage() {
 
   return (
     <main className="pb-16">
-      <div className="mx-auto mt-8 w-full max-w-5xl overflow-hidden rounded-[26px] border border-[#d7dbe3] bg-white shadow-[0_24px_70px_rgba(12,25,52,0.16)]">
-        <p className="bg-[#1f6fff] px-6 py-2 text-center text-[11px] font-medium text-white/90">
-          Tu red para coordinar amistosos de vóley con datos reales y equipos activos.
-        </p>
-
-        <header className="border-b border-[#edf0f5] px-6 py-4 md:px-10">
-          <nav className="flex flex-wrap items-center justify-between gap-3 text-sm text-[#4f5d77]">
-            <div className="flex items-center gap-3">
-              <span className="rounded-full border border-[#dbe2f0] px-3 py-1 text-xs">amistosos.ai</span>
-              <span className="text-xs text-[#7a859b]">plataforma comunitaria</span>
-            </div>
-            <div className="flex items-center gap-5">
-              <Link href="/explorar" className="hover:text-[#1f6fff]">
-                Explorar
-              </Link>
-              <Link href="/ranking" className="hover:text-[#1f6fff]">
-                Ranking
-              </Link>
-              <Link href="/resultados" className="hover:text-[#1f6fff]">
-                Resultados
-              </Link>
-              <a href="#publicar" className="rounded-full bg-[#1f6fff] px-3 py-1.5 text-xs font-medium text-white">
-                Empezar
-              </a>
-            </div>
-          </nav>
-        </header>
-
-        <section className="grid gap-10 px-6 py-12 md:grid-cols-[1.03fr_1fr] md:px-10">
+      <header className="mx-auto mt-6 w-full max-w-6xl px-6 md:mt-8 md:px-8">
+        <nav className="nav-shell">
           <div>
-            <h1 className="text-6xl font-semibold leading-[0.95] tracking-[-0.04em] text-[#0f172a] md:text-7xl">
-              together
+            <p className="text-xs uppercase tracking-[0.2em] text-muted">Amistosos Vóley</p>
+            <p className="text-sm text-muted">Comunidad para coordinar partidos</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
+            <Link href="/explorar" className="nav-link">
+              Explorar
+            </Link>
+            <Link href="/ranking" className="nav-link">
+              Ranking
+            </Link>
+            <Link href="/resultados" className="nav-link">
+              Resultados
+            </Link>
+            <a href="#publicar" className="btn-accent">
+              Publicar
+            </a>
+          </div>
+        </nav>
+      </header>
+
+      <section className="section pt-10 md:pt-14">
+        <div className="hero-shell">
+          <div>
+            <p className="eyebrow">Coordina amistosos sin vueltas</p>
+            <h1 className="display-serif mt-4 text-5xl leading-[0.95] text-ink md:text-7xl">
+              Organiza partidos de vóley
               <br />
-              <span className="text-[#1f6fff]">.we grow</span>
+              con equipos reales
             </h1>
-            <p className="mt-9 max-w-sm text-[29px] leading-[1.12] tracking-[-0.03em] text-[#18243b]">
-              La red más rápida para cerrar amistosos con información real.
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
+              Publica disponibilidad, encuentra rivales por zona y registra resultados para mantener activa la comunidad.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href="#publicar" className="rounded-full bg-[#1f6fff] px-5 py-2 text-sm font-medium text-white">
-                Start building now
+              <a href="#publicar" className="btn-accent">
+                Publica tu disponibilidad
               </a>
-              <a href="#publicaciones" className="rounded-full border border-[#d7deeb] px-5 py-2 text-sm text-[#32425f]">
-                Contact teams
-              </a>
-            </div>
-          </div>
-
-          <div className="space-y-3 pt-1 text-[#1a253b]">
-            {[ 
-              ['01', 'MATCH DISCOVERY', 'Encuentra clubes disponibles por horario, nivel y zona.'],
-              ['02', 'TEAM FINE-TUNING', 'Publica una solicitud precisa y recibe respuestas mejor filtradas.'],
-              ['03', 'REAL GAME FEED', 'Sube resultados y fotos para validar actividad semanal.'],
-              ['04', 'OPEN RANKING', 'El ranking se construye solo con partidos compartidos por la comunidad.']
-            ].map((item) => (
-              <article key={item[0]} className="rounded-2xl border border-[#e9edf5] px-4 py-4">
-                <p className="text-xs tracking-[0.16em] text-[#76839c]">{item[0]}</p>
-                <h3 className="mt-1 text-sm font-semibold tracking-[0.04em]">{item[1]}</h3>
-                <p className="mt-1 text-sm text-[#607089]">{item[2]}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="border-y border-[#edf0f5] px-6 py-9 md:px-10">
-          <p className="text-sm text-[#61708a]">Trusted by</p>
-          <div className="mt-4 grid grid-cols-2 gap-4 text-lg font-semibold text-[#0f172a] md:grid-cols-5">
-            <span>Pika</span>
-            <span>Latitude</span>
-            <span>iam+</span>
-            <span>WOODWARE</span>
-            <span>VolleyHub</span>
-          </div>
-        </section>
-
-        <section className="px-6 py-16 md:px-10">
-          <div className="relative mx-auto grid max-w-3xl place-items-center text-center">
-            <div className="absolute h-64 w-64 rounded-full bg-[radial-gradient(circle_at_35%_35%,#f8f9fd,#e7ebf4)]" />
-            <p className="relative text-5xl font-semibold leading-[1.05] tracking-[-0.04em] text-[#0f172a]">
-              THE FASTEST CLOUD FOR GEN AI.
-            </p>
-            <p className="relative mt-2 text-5xl font-semibold leading-[1.05] tracking-[-0.04em] text-[#1f6fff]">
-              BUILT ON LEADING AI RESEARCH.
-            </p>
-          </div>
-
-          <div className="mt-20 grid gap-4 md:grid-cols-[1fr_1fr] md:items-end">
-            <h2 className="text-3xl font-semibold tracking-[-0.03em] text-[#1a253b]">Innovations</h2>
-            <div className="md:justify-self-end md:text-right">
-              <p className="max-w-sm text-sm text-[#64758f]">
-                Mejoramos el flujo para que coordinadores y capitanes puedan concretar partidos sin cadenas eternas de mensajes.
-              </p>
-              <a href="#publicaciones" className="mt-3 inline-block rounded-full border border-[#d8deea] px-4 py-1.5 text-sm text-[#32425f]">
-                See all research
+              <a href="#publicaciones" className="btn-secondary">
+                Ver equipos disponibles
               </a>
             </div>
           </div>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            {innovationCards.map((card) => (
-              <article key={card.title} className="rounded-2xl border border-[#e8ecf4] p-6">
-                <h3 className="text-sm font-semibold tracking-[0.08em] text-[#1a2438]">{card.title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-[#65758f]">{card.body}</p>
-                <a href="#publicaciones" className="mt-4 inline-block text-xs font-semibold text-[#1f6fff]">
-                  Read more →
-                </a>
+          <div className="grid gap-3">
+            {howItWorks.map((item) => (
+              <article key={item.step} className="step-card">
+                <p className="text-xs tracking-[0.15em] text-muted">PASO {item.step}</p>
+                <h3 className="mt-1 display-serif text-2xl text-ink">{item.title}</h3>
+                <p className="mt-1 text-sm text-muted">{item.description}</p>
               </article>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="px-6 pb-6 md:px-10">
-          <div className="rounded-3xl border border-[#e6ebf5] bg-[#f9fbff] p-8">
-            <h2 className="text-6xl font-semibold leading-[0.95] tracking-[-0.05em] text-[#111827] md:text-7xl">
-              <span className="rounded-full bg-[#1f6fff] px-4 text-white">100+</span> OPEN <span className="rounded-full bg-[#111827] px-4 text-white">MODELS</span>
-            </h2>
-            <p className="mt-4 max-w-2xl text-sm text-[#607089]">
-              Adaptamos este estilo visual de producto tecnológico para una experiencia más moderna, clara y editorial en Amistosos Vóley.
-            </p>
-          </div>
-        </section>
-      </div>
+      <section className="section pt-2 md:pt-4">
+        <div className="feature-strip">
+          <p className="display-serif text-2xl text-ink md:text-3xl">Cómo funciona</p>
+          <p className="max-w-2xl text-sm leading-relaxed text-muted md:text-base">
+            Esta plataforma está pensada para clubes y equipos que quieren cerrar amistosos de forma simple: publicar,
+            coordinar y dejar registro de partidos reales.
+          </p>
+        </div>
+      </section>
 
       <section id="publicaciones" className="section">
         <div className="mb-6 flex items-end justify-between gap-3">
-          <h2 className="display-serif text-4xl text-ink">Equipos disponibles</h2>
+          <h2 className="display-serif text-4xl text-ink">Publicaciones disponibles</h2>
           <Link href="/explorar" className="editorial-link">
             Ver todas las publicaciones
           </Link>
@@ -184,7 +132,7 @@ export default async function HomePage() {
 
       <section id="partidos-reales" className="section pt-0">
         <div className="mb-6 flex items-end justify-between gap-3">
-          <h2 className="display-serif text-4xl text-ink">Partidos reales</h2>
+          <h2 className="display-serif text-4xl text-ink">Galería de partidos reales</h2>
           <Link href="/ranking" className="editorial-link">
             Ver equipos con más victorias
           </Link>
@@ -205,7 +153,7 @@ export default async function HomePage() {
 
       <section className="section pt-0">
         <div className="mb-6 flex items-end justify-between gap-3">
-          <h2 className="display-serif text-4xl text-ink">Equipos con más victorias</h2>
+          <h2 className="display-serif text-4xl text-ink">Ranking de equipos</h2>
           <Link href="/ranking" className="editorial-link">
             Ver ranking completo
           </Link>
@@ -221,16 +169,36 @@ export default async function HomePage() {
         )}
       </section>
 
-      <section className="section pt-0">
-        <div className="rounded-3xl border border-line bg-sand/45 p-8 text-center">
-          <h2 className="display-serif text-4xl text-ink">¿Listos para el próximo amistoso?</h2>
-          <p className="mt-2 text-muted">Publica tu horario y conecta con equipos que sí están jugando esta semana.</p>
-          <a href="#publicar" className="mt-6 inline-flex rounded-xl border border-accent/30 bg-accent px-5 py-3 text-sm font-semibold text-white">
-            Empezar ahora
+      <section className="section pt-4">
+        <div className="cta-shell">
+          <p className="eyebrow">Comunidad activa</p>
+          <h2 className="display-serif mt-3 text-4xl text-ink md:text-5xl">¿Listos para coordinar su próximo amistoso?</h2>
+          <p className="mt-3 max-w-2xl text-muted">
+            Si tu equipo tiene horario disponible, publíquenlo y conecten con otros clubes de su ciudad.
+          </p>
+          <a href="#publicar" className="btn-accent mt-7 inline-flex">
+            Ir al formulario de publicación
           </a>
         </div>
       </section>
 
+      <footer className="section pb-6 pt-2">
+        <div className="footer-shell">
+          <p className="display-serif text-2xl text-ink">Amistosos Vóley</p>
+          <p className="text-sm text-muted">Plataforma comunitaria para coordinar amistosos, registrar partidos y seguir el ranking.</p>
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
+            <Link href="/explorar" className="hover:text-ink">
+              Explorar
+            </Link>
+            <Link href="/ranking" className="hover:text-ink">
+              Ranking
+            </Link>
+            <Link href="/resultados" className="hover:text-ink">
+              Resultados
+            </Link>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

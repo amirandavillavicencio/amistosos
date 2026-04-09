@@ -49,7 +49,7 @@ export default function MatchPhotoForm() {
 
       <p className="text-xs text-muted">Formato recomendado: JPG o WEBP. Máximo 6MB.</p>
 
-      <button type="submit" className="rounded-xl border border-accent/30 bg-accent px-5 py-3 text-sm font-semibold text-white">
+      <button type="submit" className="btn-accent w-full md:w-auto">
         Subir foto del partido
       </button>
 

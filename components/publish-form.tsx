@@ -74,10 +74,7 @@ export default function PublishForm() {
         className="field min-h-24"
       />
 
-      <button
-        type="submit"
-        className="rounded-xl border border-accent/30 bg-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-copper"
-      >
+      <button type="submit" className="btn-accent w-full justify-center md:w-auto">
         Publicar disponibilidad
       </button>
 

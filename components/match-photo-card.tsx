@@ -11,8 +11,8 @@ export default function MatchPhotoCard({ photo }: { photo: MatchPhotoRow }) {
         <p className="text-sm text-muted">
           {photo.match_date} · {photo.comuna}
         </p>
-        {photo.result && <p className="text-sm text-accent">Resultado: {photo.result}</p>}
-        {photo.comment && <p className="text-sm text-muted">{photo.comment}</p>}
+        {photo.result && <p className="text-sm font-medium text-accent">Resultado: {photo.result}</p>}
+        {photo.comment && <p className="border-t border-line/80 pt-2 text-sm text-muted">{photo.comment}</p>}
       </div>
     </article>
   );
