@@ -171,11 +171,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <footer className="section pt-0">
-        <p className="border-t border-line pt-5 text-sm text-muted">
-          Amistosos Vóley · Comunidad abierta para coordinar partidos reales.
-        </p>
-      </footer>
     </main>
   );
 }
