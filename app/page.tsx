@@ -33,6 +33,20 @@ const howItWorks = [
   }
 ];
 
+const branchLabel: Record<string, string> = {
+  femenina: 'Femenina',
+  masculina: 'Masculina',
+  mixta: 'Mixta'
+};
+
+function groupByBranch<T extends { branch: string }>(items: T[]) {
+  return {
+    femenina: items.filter((item) => item.branch === 'femenina'),
+    mixta: items.filter((item) => item.branch === 'mixta'),
+    masculina: items.filter((item) => item.branch === 'masculina')
+  };
+}
+
 export default async function HomePage() {
   let posts: AvailabilityWithTeam[] = [];
   let photos: MatchPhotoRow[] = [];
@@ -77,6 +91,13 @@ export default async function HomePage() {
     }
     return isValid;
   });
+
+  const groupedPosts = groupByBranch(posts);
+  const groupedMatches = {
+    femenina: safeSuggestedMatches.filter((m) => m.a.branch === 'femenina'),
+    mixta: safeSuggestedMatches.filter((m) => m.a.branch === 'mixta'),
+    masculina: safeSuggestedMatches.filter((m) => m.a.branch === 'masculina')
+  };
 
   return (
     <main className="pb-16">
@@ -177,10 +198,21 @@ export default async function HomePage() {
         {posts.length === 0 ? (
           <p className="text-muted">Aún no hay publicaciones. ¡Sé el primero en publicar!</p>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
+          <div className="space-y-6">
+            {(['femenina', 'mixta', 'masculina'] as const).map((branch) => {
+              const branchPosts = groupedPosts[branch];
+              if (!branchPosts.length) return null;
+              return (
+                <div key={branch}>
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-muted">{branchLabel[branch]}</h3>
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {branchPosts.map((post) => (
+                      <PostCard key={post.id} post={post} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
@@ -200,23 +232,34 @@ export default async function HomePage() {
         {safeSuggestedMatches.length === 0 ? (
           <p className="text-muted">Todavía no hay coincidencias suficientes. Publica tu disponibilidad para activar el matching.</p>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {safeSuggestedMatches.map((match) => {
-              const confidence = match.totalScore >= 18 ? 'Coincidencia alta' : match.totalScore >= 13 ? 'Coincidencia media' : 'Coincidencia baja';
+          <div className="space-y-6">
+            {(['femenina', 'mixta', 'masculina'] as const).map((branch) => {
+              const branchMatches = groupedMatches[branch];
+              if (!branchMatches.length) return null;
               return (
-                <article key={match.id} className="card-panel p-4">
-                  <p className="text-xs text-accent">{confidence}</p>
-                  <h3 className="mt-1 display-serif text-xl text-ink">
-                    {match.a.club_name} vs {match.b.club_name}
-                  </h3>
-                  <p className="mt-1 text-sm text-muted">
-                    {match.a.age_category} · {match.a.branch} · {match.a.level}
-                  </p>
-                  <p className="mt-2 text-sm text-muted">
-                    {match.a.comuna || 'Sin comuna'} ↔ {match.b.comuna || 'Sin comuna'} ·{' '}
-                    {match.a.start_time?.slice(0, 5) || '--:--'} - {match.a.end_time?.slice(0, 5) || '--:--'}
-                  </p>
-                </article>
+                <div key={branch}>
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-muted">{branchLabel[branch]}</h3>
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {branchMatches.map((match) => {
+                      const confidence = match.totalScore >= 18 ? 'Coincidencia alta' : match.totalScore >= 13 ? 'Coincidencia media' : 'Coincidencia baja';
+                      return (
+                        <article key={match.id} className="card-panel p-4">
+                          <p className="text-xs text-accent">{confidence}</p>
+                          <h3 className="mt-1 display-serif text-xl text-ink">
+                            {match.a.club_name} ({match.a.level}) vs {match.b.club_name} ({match.b.level})
+                          </h3>
+                          <p className="mt-1 text-sm text-muted">
+                            {match.a.age_category} · Rama {match.a.branch}
+                          </p>
+                          <p className="mt-2 text-sm text-muted">
+                            {match.a.comuna || 'Sin comuna'} ↔ {match.b.comuna || 'Sin comuna'} ·{' '}
+                            {match.a.start_time?.slice(0, 5) || '--:--'} - {match.a.end_time?.slice(0, 5) || '--:--'}
+                          </p>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
           </div>

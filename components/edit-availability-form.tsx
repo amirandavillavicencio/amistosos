@@ -1,0 +1,105 @@
+'use client';
+
+import { useState } from 'react';
+import { updateAvailability } from '@/app/actions';
+import type { AvailabilityWithTeam } from '@/lib/types';
+
+const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+
+export default function EditAvailabilityForm({ post }: { post: AvailabilityWithTeam }) {
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <form
+      action={async (formData) => {
+        setMessage(null);
+        setError(null);
+        const result = await updateAvailability(formData);
+        if (!result.ok) {
+          setError(result.message || 'No se pudo actualizar la publicación.');
+          return;
+        }
+        setMessage('Disponibilidad actualizada correctamente.');
+      }}
+      className="card-panel mt-5 grid gap-4 p-4 sm:p-6"
+    >
+      <input type="hidden" name="id" value={post.id} />
+      <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
+
+      <div>
+        <label className="mb-1 block text-sm text-muted">Correo de contacto (verificación obligatoria)</label>
+        <input name="contact_email" type="email" required className="field" placeholder="correo usado al publicar" />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm text-muted">Comuna</label>
+          <input name="comuna" defaultValue={post.comuna} required className="field" />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm text-muted">Cancha</label>
+          <select name="has_court" defaultValue={post.has_court ? 'true' : 'false'} className="field">
+            <option value="false">No tenemos cancha</option>
+            <option value="true">Sí, ponemos cancha</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid gap-3 rounded-xl border border-line/80 p-3">
+        <p className="text-sm text-muted">Días disponibles</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {weekdays.map((day) => (
+            <label key={day} className="flex items-center gap-2 text-sm text-ink">
+              <input type="checkbox" name="weekdays" value={day} defaultChecked={post.weekdays?.includes(day)} className="h-4 w-4" />
+              <span className="capitalize">{day}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm text-muted">Hora inicio</label>
+          <input name="start_time" type="time" required defaultValue={post.start_time?.slice(0, 5)} className="field" />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm text-muted">Hora término</label>
+          <input name="end_time" type="time" required defaultValue={post.end_time?.slice(0, 5)} className="field" />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <select name="age_category" required defaultValue={post.age_category} className="field">
+          <option value="sub-12">Sub-12</option>
+          <option value="sub-14">Sub-14</option>
+          <option value="sub-16">Sub-16</option>
+          <option value="sub-18">Sub-18</option>
+          <option value="sub-20">Sub-20</option>
+          <option value="tc">Todo Competidor (TC)</option>
+        </select>
+        <select name="branch" required defaultValue={post.branch} className="field">
+          <option value="femenina">Femenina</option>
+          <option value="masculina">Masculina</option>
+          <option value="mixta">Mixta</option>
+        </select>
+        <select name="level" required defaultValue={post.level} className="field">
+          <option value="principiante">Principiante</option>
+          <option value="novato">Novato</option>
+          <option value="intermedio">Intermedio</option>
+          <option value="avanzado">Avanzado</option>
+          <option value="competitivo">Competitivo</option>
+        </select>
+      </div>
+
+      <textarea name="notes" defaultValue={post.notes || ''} placeholder="Observaciones" className="field min-h-24" />
+
+      <button type="submit" className="btn-accent w-full justify-center md:w-auto">
+        Guardar cambios
+      </button>
+
+      {error && <p className="text-sm text-red-700">{error}</p>}
+      {message && <p className="text-sm text-emerald-700">{message}</p>}
+    </form>
+  );
+}

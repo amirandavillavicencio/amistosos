@@ -8,6 +8,8 @@ const levelWeight: Record<Level, number> = {
   competitivo: 5
 };
 
+const MAX_LEVEL_DISTANCE = 2;
+
 function minutes(value: string): number {
   const [h, m] = value.split(':').map(Number);
   return h * 60 + m;
@@ -39,7 +41,7 @@ export function calculateCompatibility(a: AvailabilityWithTeam, b: AvailabilityW
   const sameCategory = a.age_category === b.age_category;
   const sameBranch = a.branch === b.branch;
   const levelDistance = Math.abs(levelWeight[a.level] - levelWeight[b.level]);
-  const compatibleLevel = levelDistance <= 1;
+  const compatibleLevel = levelDistance <= MAX_LEVEL_DISTANCE;
   const compatibleSchedule = hasScheduleCompatibility(a, b);
   const hasCourt = a.has_court || b.has_court;
 
@@ -64,7 +66,7 @@ export function areCompatible(a: AvailabilityWithTeam, b: AvailabilityWithTeam):
   return (
     a.age_category === b.age_category &&
     a.branch === b.branch &&
-    levelDistance <= 1 &&
+    levelDistance <= MAX_LEVEL_DISTANCE &&
     hasScheduleCompatibility(a, b) &&
     (a.has_court || b.has_court)
   );
