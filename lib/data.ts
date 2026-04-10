@@ -18,6 +18,7 @@ export interface AvailabilityFilters {
   branch?: string;
   level?: string;
   weekday?: string;
+  ageCategory?: string;
 }
 
 export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFilters): Promise<AvailabilityWithTeam[]> {
@@ -30,7 +31,8 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
 
   if (filters?.branch) query = query.eq('branch', filters.branch);
   if (filters?.level) query = query.eq('desired_level', filters.level);
-  if (filters?.weekday) query = query.eq('weekday', filters.weekday);
+  if (filters?.weekday) query = query.contains('weekdays', [filters.weekday]);
+  if (filters?.ageCategory) query = query.eq('age_category', filters.ageCategory);
 
   const { data } = await query.limit(limit);
 

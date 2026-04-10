@@ -5,10 +5,11 @@ import { revalidatePath } from 'next/cache';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo, BASE_ELO } from '@/lib/elo';
 import { areCompatible, calculateCompatibility } from '@/lib/matching';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import type { AvailabilityWithTeam, Branch, Level, MatchType, TeamRow } from '@/lib/types';
+import type { AgeCategory, AvailabilityWithTeam, Branch, Level, MatchType, TeamRow } from '@/lib/types';
 
 const validBranches = new Set<Branch>(['femenina', 'masculina', 'mixta']);
-const validLevels = new Set<Level>(['principiante', 'intermedio', 'avanzado']);
+const validLevels = new Set<Level>(['principiante', 'novato', 'intermedio', 'avanzado', 'competitivo']);
+const validAgeCategories = new Set<AgeCategory>(['sub-12', 'sub-14', 'sub-16', 'sub-18', 'sub-20', 'tc']);
 const validMatchTypes = new Set<MatchType>(['amistoso', 'torneo', 'entrenamiento', 'competitivo']);
 const requestStore = new Map<string, number[]>();
 const RATE_LIMIT_MAX = 5;
@@ -62,24 +63,24 @@ async function assertRateLimit(scope: 'publish' | 'results') {
 
 async function resolveOrCreateTeam(input: {
   clubName: string;
+  responsibleName: string;
   contactEmail: string;
-  instagram: string;
   comuna: string;
   city: string;
   branch: Branch;
+  ageCategory: AgeCategory;
   level: Level;
 }) {
   const supabase = getSupabaseAdmin();
   const clubNameKey = normalizeIdentity(input.clubName);
   const emailKey = normalizeIdentity(input.contactEmail);
-  const instagramKey = normalizeIdentity(input.instagram);
+  const instagramFallback = `sin-instagram-${clubNameKey}-${emailKey}`;
 
   const { data: existing } = await supabase
     .from('teams')
     .select('*')
     .eq('club_name_key', clubNameKey)
     .eq('email_key', emailKey)
-    .eq('instagram_key', instagramKey)
     .maybeSingle<TeamRow>();
 
   if (existing) {
@@ -87,11 +88,12 @@ async function resolveOrCreateTeam(input: {
       .from('teams')
       .update({
         club_name: input.clubName,
+        responsible_name: input.responsibleName,
         contact_email: input.contactEmail,
-        instagram: input.instagram,
         comuna: input.comuna,
         city: input.city,
         branch: input.branch,
+        age_category: input.ageCategory,
         declared_level: input.level,
         updated_at: new Date().toISOString()
       })
@@ -107,13 +109,15 @@ async function resolveOrCreateTeam(input: {
     .insert({
       club_name: input.clubName,
       club_name_key: clubNameKey,
+      responsible_name: input.responsibleName,
       contact_email: input.contactEmail,
       email_key: emailKey,
-      instagram: input.instagram,
-      instagram_key: instagramKey,
+      instagram: '',
+      instagram_key: instagramFallback,
       comuna: input.comuna,
       city: input.city,
       branch: input.branch,
+      age_category: input.ageCategory,
       declared_level: input.level,
       current_elo: BASE_ELO
     })
@@ -171,30 +175,30 @@ export async function createAvailability(formData: FormData) {
   await assertRateLimit('publish');
 
   const clubName = String(formData.get('club_name') || '').trim();
+  const responsibleName = String(formData.get('responsible_name') || '').trim();
   const contactEmail = String(formData.get('contact_email') || '').trim();
-  const instagram = String(formData.get('instagram') || '').trim();
-  const address = String(formData.get('address') || '').trim();
+  const address = normalizeOptional(formData.get('address'));
   const comuna = String(formData.get('comuna') || '').trim();
-  const city = String(formData.get('city') || '').trim();
-  const playDate = normalizeOptional(formData.get('play_date'));
-  const weekday = normalizeOptional(formData.get('weekday'));
+  const city = 'Santiago';
+  const weekdays = formData.getAll('weekdays').map((day) => String(day || '').trim()).filter(Boolean);
   const startTime = String(formData.get('start_time') || '').trim();
   const endTime = String(formData.get('end_time') || '').trim();
   const branch = String(formData.get('branch') || '').trim() as Branch;
+  const ageCategory = String(formData.get('age_category') || '').trim() as AgeCategory;
   const level = String(formData.get('level') || '').trim() as Level;
   const hasCourt = String(formData.get('has_court') || 'false') === 'true';
   const notes = normalizeOptional(formData.get('notes'));
 
-  if (!clubName || !contactEmail || !instagram || !address || !comuna || !city || !startTime || !endTime) {
+  if (!clubName || !responsibleName || !contactEmail || !comuna || !startTime || !endTime) {
     throw new Error('Completa todos los campos requeridos.');
   }
 
-  if (!playDate && !weekday) {
-    throw new Error('Debes ingresar fecha específica o día de la semana.');
+  if (!weekdays.length) {
+    throw new Error('Debes seleccionar al menos un día disponible.');
   }
 
-  if (!validBranches.has(branch) || !validLevels.has(level)) {
-    throw new Error('Rama o nivel inválidos.');
+  if (!validBranches.has(branch) || !validLevels.has(level) || !validAgeCategories.has(ageCategory)) {
+    throw new Error('Clasificación inválida. Revisa categoría, rama y nivel.');
   }
 
   if (parseTime(startTime) >= parseTime(endTime)) {
@@ -203,11 +207,12 @@ export async function createAvailability(formData: FormData) {
 
   const team = await resolveOrCreateTeam({
     clubName,
+    responsibleName,
     contactEmail,
-    instagram,
     comuna,
     city,
     branch,
+    ageCategory,
     level
   });
 
@@ -219,11 +224,13 @@ export async function createAvailability(formData: FormData) {
       address,
       comuna,
       city,
-      play_date: playDate,
-      weekday,
+      play_date: null,
+      weekday: weekdays[0],
+      weekdays,
       start_time: startTime,
       end_time: endTime,
       branch,
+      age_category: ageCategory,
       desired_level: level,
       has_court: hasCourt,
       notes,
