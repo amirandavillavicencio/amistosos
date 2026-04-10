@@ -107,7 +107,6 @@ export async function createAvailability(formData: FormData) {
   const clubName = String(formData.get('club_name') || '').trim();
   const responsibleName = String(formData.get('responsible_name') || '').trim();
   const contactEmail = String(formData.get('contact_email') || '').trim();
-  const address = normalizeOptional(formData.get('address'));
   const comuna = String(formData.get('comuna') || '').trim();
   const city = 'Santiago';
   const weekdays = formData.getAll('weekdays').map((day) => String(day || '').trim()).filter(Boolean);
@@ -138,13 +137,9 @@ export async function createAvailability(formData: FormData) {
   const supabase = getSupabaseAdmin();
   const payload = {
     club_name: clubName,
-    responsible_name: responsibleName,
-    contact_email: contactEmail,
-    address,
     comuna,
     city,
-    play_date: null,
-    weekday: weekdays[0],
+    weekday: weekdays[0] ?? null,
     weekdays,
     start_time: startTime,
     end_time: endTime,
@@ -167,17 +162,19 @@ export async function createAvailability(formData: FormData) {
       message: error?.message || 'No row returned after insert',
       details: error || null,
       payload: {
-        clubName,
+        club_name: clubName,
         comuna,
         city,
+        weekday: weekdays[0] ?? null,
         weekdays,
-        startTime,
-        endTime,
+        start_time: startTime,
+        end_time: endTime,
         branch,
-        ageCategory,
+        age_category: ageCategory,
         level,
-        hasCourt,
-        notes
+        has_court: hasCourt,
+        notes,
+        status: 'open'
       }
     });
 
