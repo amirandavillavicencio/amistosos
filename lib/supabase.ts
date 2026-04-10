@@ -18,8 +18,7 @@ export function getSupabasePublic() {
 export function getSupabaseAdmin() {
   return createClient(
     assertEnv('NEXT_PUBLIC_SUPABASE_URL', process.env.NEXT_PUBLIC_SUPABASE_URL),
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      assertEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    assertEnv('SUPABASE_SERVICE_ROLE_KEY', process.env.SUPABASE_SERVICE_ROLE_KEY),
     { auth: { persistSession: false } }
   );
 }
