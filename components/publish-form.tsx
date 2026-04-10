@@ -4,22 +4,29 @@ import { useMemo, useState } from 'react';
 import { createAvailability } from '@/app/actions';
 
 const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+const ageCategories = [
+  { value: 'sub-12', label: 'Sub-12' },
+  { value: 'sub-14', label: 'Sub-14' },
+  { value: 'sub-16', label: 'Sub-16' },
+  { value: 'sub-18', label: 'Sub-18' },
+  { value: 'sub-20', label: 'Sub-20' },
+  { value: 'tc', label: 'Todo Competidor (TC)' }
+];
 
 const requiredFields = [
   'club_name',
+  'responsible_name',
   'contact_email',
-  'instagram',
-  'address',
   'comuna',
-  'city',
   'start_time',
   'end_time',
   'branch',
+  'age_category',
   'level',
   'has_court'
 ] as const;
 
-type FieldErrors = Partial<Record<(typeof requiredFields)[number] | 'play_date_weekday', string>>;
+type FieldErrors = Partial<Record<(typeof requiredFields)[number] | 'weekdays', string>>;
 
 function fieldClass(hasError: boolean) {
   return `field ${hasError ? 'border-red-500 ring-2 ring-red-200 focus:border-red-600 focus:ring-red-200' : ''}`;
@@ -46,10 +53,9 @@ export default function PublishForm() {
           }
         }
 
-        const playDate = String(formData.get('play_date') || '').trim();
-        const weekday = String(formData.get('weekday') || '').trim();
-        if (!playDate && !weekday) {
-          nextErrors.play_date_weekday = 'Debes ingresar fecha específica o día de la semana.';
+        const selectedDays = formData.getAll('weekdays').map((day) => String(day).trim()).filter(Boolean);
+        if (!selectedDays.length) {
+          nextErrors.weekdays = 'Selecciona al menos un día disponible.';
         }
 
         if (Object.keys(nextErrors).length > 0) {
@@ -63,7 +69,7 @@ export default function PublishForm() {
         try {
           await createAvailability(formData);
           setClubName('');
-          setSuccess('¡Disponibilidad publicada! Ya aparece en equipos disponibles.');
+          setSuccess('¡Disponibilidad publicada! Ya aparece en equipos compatibles.');
           setTimeout(() => setSuccess(null), 3000);
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Ocurrió un error inesperado');
@@ -73,92 +79,94 @@ export default function PublishForm() {
     >
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
-          <input
-            name="club_name"
-            required
-            placeholder="Nombre del club o equipo"
-            className={fieldClass(Boolean(fieldErrors.club_name))}
-            value={clubName}
-            onChange={(event) => setClubName(event.target.value)}
-          />
-          {fieldErrors.club_name && <p className="mt-1 text-xs text-red-600">{fieldErrors.club_name}</p>}
+      <section className="grid gap-3">
+        <h3 className="text-sm font-semibold text-ink">Identidad</h3>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <input
+              name="club_name"
+              required
+              placeholder="Nombre del club"
+              className={fieldClass(Boolean(fieldErrors.club_name))}
+              value={clubName}
+              onChange={(event) => setClubName(event.target.value)}
+            />
+          </div>
+          <div>
+            <input name="responsible_name" required placeholder="Responsable" className={fieldClass(Boolean(fieldErrors.responsible_name))} />
+          </div>
+          <div>
+            <input name="contact_email" required type="email" placeholder="Correo de contacto" className={fieldClass(Boolean(fieldErrors.contact_email))} />
+          </div>
         </div>
-        <div>
-          <input name="contact_email" required type="email" placeholder="Correo de contacto" className={fieldClass(Boolean(fieldErrors.contact_email))} />
-          {fieldErrors.contact_email && <p className="mt-1 text-xs text-red-600">{fieldErrors.contact_email}</p>}
+      </section>
+
+      <section className="grid gap-3">
+        <h3 className="text-sm font-semibold text-ink">Ubicación</h3>
+        <div className="grid gap-4 md:grid-cols-2">
+          <input name="comuna" required placeholder="Comuna o sector" className={fieldClass(Boolean(fieldErrors.comuna))} />
+          <input name="address" placeholder="Dirección (opcional)" className="field" />
         </div>
-        <div>
-          <input name="instagram" required placeholder="Instagram (@equipo)" className={fieldClass(Boolean(fieldErrors.instagram))} />
-          {fieldErrors.instagram && <p className="mt-1 text-xs text-red-600">{fieldErrors.instagram}</p>}
-        </div>
-        <div>
-          <input name="address" required placeholder="Dirección" className={fieldClass(Boolean(fieldErrors.address))} />
-          {fieldErrors.address && <p className="mt-1 text-xs text-red-600">{fieldErrors.address}</p>}
-        </div>
-        <div>
-          <input name="comuna" required placeholder="Comuna" className={fieldClass(Boolean(fieldErrors.comuna))} />
-          {fieldErrors.comuna && <p className="mt-1 text-xs text-red-600">{fieldErrors.comuna}</p>}
-        </div>
-        <div>
-          <input name="city" required placeholder="Ciudad" className={fieldClass(Boolean(fieldErrors.city))} />
-          {fieldErrors.city && <p className="mt-1 text-xs text-red-600">{fieldErrors.city}</p>}
-        </div>
-        <div>
-          <input name="play_date" type="date" className={fieldClass(Boolean(fieldErrors.play_date_weekday))} />
-        </div>
-        <div>
-          <select name="weekday" className={fieldClass(Boolean(fieldErrors.play_date_weekday))}>
-            <option value="">Día de la semana (opcional)</option>
+      </section>
+
+      <section className="grid gap-3">
+        <h3 className="text-sm font-semibold text-ink">Cancha</h3>
+        <select name="has_court" required className={fieldClass(Boolean(fieldErrors.has_court))}>
+          <option value="false">No tenemos cancha</option>
+          <option value="true">Sí, ponemos cancha</option>
+        </select>
+      </section>
+
+      <section className="grid gap-3">
+        <h3 className="text-sm font-semibold text-ink">Disponibilidad</h3>
+        <div className="grid gap-3 rounded-xl border border-line/80 p-3">
+          <p className="text-xs text-muted">Días disponibles</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {weekdays.map((day) => (
-              <option key={day} value={day}>
-                {day}
-              </option>
+              <label key={day} className="flex items-center gap-2 text-sm text-ink">
+                <input type="checkbox" name="weekdays" value={day} className="h-4 w-4" />
+                <span className="capitalize">{day}</span>
+              </label>
+            ))}
+          </div>
+          {fieldErrors.weekdays && <p className="text-xs text-red-600">{fieldErrors.weekdays}</p>}
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <input name="start_time" required type="time" className={fieldClass(Boolean(fieldErrors.start_time))} />
+          <input name="end_time" required type="time" className={fieldClass(Boolean(fieldErrors.end_time))} />
+        </div>
+      </section>
+
+      <section className="grid gap-3">
+        <h3 className="text-sm font-semibold text-ink">Clasificación</h3>
+        <div className="grid gap-4 md:grid-cols-3">
+          <select name="age_category" required className={fieldClass(Boolean(fieldErrors.age_category))}>
+            <option value="">Categoría etaria</option>
+            {ageCategories.map((item) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
             ))}
           </select>
-          {fieldErrors.play_date_weekday && <p className="mt-1 text-xs text-red-600">{fieldErrors.play_date_weekday}</p>}
-        </div>
-        <div>
-          <input name="start_time" required type="time" className={fieldClass(Boolean(fieldErrors.start_time))} />
-          {fieldErrors.start_time && <p className="mt-1 text-xs text-red-600">{fieldErrors.start_time}</p>}
-        </div>
-        <div>
-          <input name="end_time" required type="time" className={fieldClass(Boolean(fieldErrors.end_time))} />
-          {fieldErrors.end_time && <p className="mt-1 text-xs text-red-600">{fieldErrors.end_time}</p>}
-        </div>
-        <div>
           <select name="branch" required className={fieldClass(Boolean(fieldErrors.branch))}>
             <option value="">Rama</option>
-            <option value="femenina">Femenina</option>
-            <option value="masculina">Masculina</option>
-            <option value="mixta">Mixta</option>
+            <option value="femenina">Femenino</option>
+            <option value="masculina">Masculino</option>
+            <option value="mixta">Mixto</option>
           </select>
-          {fieldErrors.branch && <p className="mt-1 text-xs text-red-600">{fieldErrors.branch}</p>}
-        </div>
-        <div>
           <select name="level" required className={fieldClass(Boolean(fieldErrors.level))}>
-            <option value="">Nivel declarado</option>
+            <option value="">Nivel</option>
             <option value="principiante">Principiante</option>
+            <option value="novato">Novato</option>
             <option value="intermedio">Intermedio</option>
             <option value="avanzado">Avanzado</option>
+            <option value="competitivo">Competitivo</option>
           </select>
-          {fieldErrors.level && <p className="mt-1 text-xs text-red-600">{fieldErrors.level}</p>}
         </div>
-        <div className="md:col-span-2">
-          <select name="has_court" required className={fieldClass(Boolean(fieldErrors.has_court))}>
-            <option value="false">¿Pones cancha? No</option>
-            <option value="true">¿Pones cancha? Sí</option>
-          </select>
-          {fieldErrors.has_court && <p className="mt-1 text-xs text-red-600">{fieldErrors.has_court}</p>}
-        </div>
-      </div>
+      </section>
 
-      <textarea
-        name="notes"
-        placeholder="Observaciones: tipo de balón, máximo de sets, estacionamiento, etc."
-        className="field min-h-24"
-      />
+      <section className="grid gap-3">
+        <h3 className="text-sm font-semibold text-ink">Extra</h3>
+        <textarea name="notes" placeholder="Observaciones (opcional)" className="field min-h-24" />
+      </section>
 
       <button type="submit" className="btn-accent w-full justify-center md:w-auto">
         Publicar disponibilidad

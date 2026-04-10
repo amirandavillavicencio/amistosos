@@ -2,8 +2,10 @@ import type { AvailabilityWithTeam, Level } from '@/lib/types';
 
 const levelWeight: Record<Level, number> = {
   principiante: 1,
-  intermedio: 2,
-  avanzado: 3
+  novato: 2,
+  intermedio: 3,
+  avanzado: 4,
+  competitivo: 5
 };
 
 function minutes(value: string): number {
@@ -17,75 +19,53 @@ function overlapInMinutes(aStart: string, aEnd: string, bStart: string, bEnd: st
   return Math.max(0, end - start);
 }
 
-function scheduleScore(a: AvailabilityWithTeam, b: AvailabilityWithTeam): number {
-  let score = 0;
+function resolveWeekdays(post: AvailabilityWithTeam): string[] {
+  if (post.weekdays?.length) return post.weekdays;
+  if (post.weekday) return [post.weekday];
+  return [];
+}
 
-  if (a.play_date && b.play_date && a.play_date === b.play_date) score += 16;
-  else if (a.weekday && b.weekday && a.weekday === b.weekday) score += 12;
-
+function hasScheduleCompatibility(a: AvailabilityWithTeam, b: AvailabilityWithTeam): boolean {
   const overlap = overlapInMinutes(a.start_time, a.end_time, b.start_time, b.end_time);
-  if (overlap >= 90) score += 14;
-  else if (overlap >= 60) score += 10;
-  else if (overlap > 0) score += 5;
+  if (overlap <= 0) return false;
 
-  return score;
-}
-
-function locationScore(a: AvailabilityWithTeam, b: AvailabilityWithTeam): number {
-  if (a.comuna.toLowerCase() === b.comuna.toLowerCase()) return 20;
-  if (a.city.toLowerCase() === b.city.toLowerCase()) return 10;
-  return 0;
-}
-
-function levelScore(a: AvailabilityWithTeam, b: AvailabilityWithTeam): number {
-  let score = 0;
-  if (a.branch === b.branch) score += 15;
-
-  const distance = Math.abs(levelWeight[a.desired_level] - levelWeight[b.desired_level]);
-  if (distance === 0) score += 10;
-  else if (distance === 1) score += 6;
-  else score += 2;
-
-  if (a.has_court !== b.has_court) score += 10;
-  else if (a.has_court && b.has_court) score += 7;
-  else score += 4;
-
-  return score;
-}
-
-function eloClosenessScore(aElo: number, bElo: number): number {
-  const diff = Math.abs(aElo - bElo);
-  if (diff <= 40) return 15;
-  if (diff <= 80) return 12;
-  if (diff <= 140) return 9;
-  if (diff <= 220) return 6;
-  return 3;
+  const aDays = new Set(resolveWeekdays(a));
+  const bDays = resolveWeekdays(b);
+  return bDays.some((day) => aDays.has(day));
 }
 
 export function calculateCompatibility(a: AvailabilityWithTeam, b: AvailabilityWithTeam) {
-  const schedule = scheduleScore(a, b);
-  const location = locationScore(a, b);
-  const level = levelScore(a, b);
+  const sameComuna = a.comuna.toLowerCase() === b.comuna.toLowerCase();
+  const sameCategory = a.age_category === b.age_category;
+  const sameBranch = a.branch === b.branch;
+  const levelDistance = Math.abs(levelWeight[a.desired_level] - levelWeight[b.desired_level]);
+  const compatibleLevel = levelDistance <= 1;
+  const compatibleSchedule = hasScheduleCompatibility(a, b);
+  const hasCourt = a.has_court || b.has_court;
 
-  const historyReady = a.team.matches_played >= 3 && b.team.matches_played >= 3;
-  const elo = historyReady ? eloClosenessScore(a.team.current_elo, b.team.current_elo) : 8;
-
-  const total = Math.min(100, schedule + location + level + elo);
+  const location = sameComuna ? 3 : 0;
+  const categoryBranchLevel = (sameCategory ? 5 : 0) + (sameBranch ? 5 : 0) + (compatibleLevel ? 3 : 0);
+  const schedule = compatibleSchedule ? 4 : 0;
+  const court = hasCourt ? 2 : 0;
+  const total = location + categoryBranchLevel + schedule + court;
 
   return {
     total,
     schedule,
     location,
-    level,
-    elo
+    level: categoryBranchLevel,
+    elo: court
   };
 }
 
 export function areCompatible(a: AvailabilityWithTeam, b: AvailabilityWithTeam): boolean {
-  const overlap = overlapInMinutes(a.start_time, a.end_time, b.start_time, b.end_time);
-  const sameDateOrDay =
-    Boolean(a.play_date && b.play_date && a.play_date === b.play_date) ||
-    Boolean(a.weekday && b.weekday && a.weekday === b.weekday);
+  const levelDistance = Math.abs(levelWeight[a.desired_level] - levelWeight[b.desired_level]);
 
-  return overlap > 0 && sameDateOrDay && a.branch === b.branch;
+  return (
+    a.age_category === b.age_category &&
+    a.branch === b.branch &&
+    levelDistance <= 1 &&
+    hasScheduleCompatibility(a, b) &&
+    (a.has_court || b.has_court)
+  );
 }

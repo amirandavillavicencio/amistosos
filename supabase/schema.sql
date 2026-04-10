@@ -4,6 +4,7 @@ create table if not exists teams (
   id uuid primary key default gen_random_uuid(),
   club_name text not null,
   club_name_key text not null,
+  responsible_name text not null default 'Pendiente',
   contact_email text not null,
   email_key text not null,
   instagram text not null,
@@ -11,7 +12,8 @@ create table if not exists teams (
   comuna text not null,
   city text not null,
   branch text not null check (branch in ('femenina', 'masculina', 'mixta')),
-  declared_level text not null check (declared_level in ('principiante', 'intermedio', 'avanzado')),
+  age_category text not null default 'tc' check (age_category in ('sub-12', 'sub-14', 'sub-16', 'sub-18', 'sub-20', 'tc')),
+  declared_level text not null check (declared_level in ('principiante', 'novato', 'intermedio', 'avanzado', 'competitivo')),
   current_elo integer not null default 1000,
   matches_played integer not null default 0 check (matches_played >= 0),
   wins integer not null default 0 check (wins >= 0),
@@ -29,21 +31,23 @@ create index if not exists idx_teams_elo on teams(current_elo desc, matches_play
 create table if not exists availabilities (
   id uuid primary key default gen_random_uuid(),
   team_id uuid not null references teams(id) on delete cascade,
-  address text not null,
+  address text,
   comuna text not null,
   city text not null,
   play_date date,
   weekday text,
+  weekdays text[] not null default '{}',
   start_time time not null,
   end_time time not null,
   branch text not null check (branch in ('femenina', 'masculina', 'mixta')),
-  desired_level text not null check (desired_level in ('principiante', 'intermedio', 'avanzado')),
+  age_category text not null default 'tc' check (age_category in ('sub-12', 'sub-14', 'sub-16', 'sub-18', 'sub-20', 'tc')),
+  desired_level text not null check (desired_level in ('principiante', 'novato', 'intermedio', 'avanzado', 'competitivo')),
   has_court boolean not null default false,
   notes text,
   status text not null default 'open' check (status in ('open', 'closed')),
   legacy_post_id uuid,
   created_at timestamptz not null default now(),
-  check (play_date is not null or weekday is not null),
+  check (play_date is not null or weekday is not null or cardinality(weekdays) > 0),
   check (start_time < end_time)
 );
 
@@ -107,12 +111,13 @@ do $$
 begin
   if to_regclass('public.posts') is not null then
     insert into teams (
-      club_name, club_name_key, contact_email, email_key, instagram, instagram_key,
-      comuna, city, branch, declared_level, current_elo
+      club_name, club_name_key, responsible_name, contact_email, email_key, instagram, instagram_key,
+      comuna, city, branch, age_category, declared_level, current_elo
     )
     select distinct
       p.club_name,
       lower(trim(p.club_name)),
+      'Pendiente',
       p.contact_email,
       lower(trim(p.contact_email)),
       p.instagram,
@@ -120,14 +125,18 @@ begin
       p.comuna,
       p.city,
       p.branch,
-      p.level,
+      'tc',
+      case
+        when p.level in ('principiante', 'intermedio', 'avanzado') then p.level
+        else 'intermedio'
+      end,
       1000
     from posts p
     on conflict (club_name_key, email_key, instagram_key) do nothing;
 
     insert into availabilities (
       team_id, address, comuna, city, play_date, weekday,
-      start_time, end_time, branch, desired_level, has_court,
+      start_time, end_time, branch, age_category, desired_level, has_court,
       notes, status, created_at, legacy_post_id
     )
     select
@@ -140,7 +149,11 @@ begin
       p.start_time,
       p.end_time,
       p.branch,
-      p.level,
+      'tc',
+      case
+        when p.level in ('principiante', 'intermedio', 'avanzado') then p.level
+        else 'intermedio'
+      end,
       p.has_court,
       p.notes,
       p.status,
@@ -188,3 +201,34 @@ create table if not exists club_stats (
 );
 
 create index if not exists idx_club_stats_ranking on club_stats(wins desc, matches_played desc);
+
+
+-- Safe migrations for existing production DBs
+alter table if exists teams add column if not exists responsible_name text;
+alter table if exists teams alter column responsible_name set default 'Pendiente';
+update teams set responsible_name = 'Pendiente' where responsible_name is null or trim(responsible_name) = '';
+alter table if exists teams alter column responsible_name set not null;
+alter table if exists teams add column if not exists age_category text;
+update teams set age_category = 'tc' where age_category is null;
+alter table if exists teams alter column age_category set default 'tc';
+alter table if exists teams alter column age_category set not null;
+alter table if exists teams drop constraint if exists teams_age_category_check;
+alter table if exists teams add constraint teams_age_category_check check (age_category in ('sub-12', 'sub-14', 'sub-16', 'sub-18', 'sub-20', 'tc'));
+alter table if exists teams drop constraint if exists teams_declared_level_check;
+alter table if exists teams add constraint teams_declared_level_check check (declared_level in ('principiante', 'novato', 'intermedio', 'avanzado', 'competitivo'));
+
+alter table if exists availabilities alter column address drop not null;
+alter table if exists availabilities add column if not exists weekdays text[];
+update availabilities set weekdays = case when weekday is not null then array[weekday]::text[] else '{}'::text[] end where weekdays is null;
+alter table if exists availabilities alter column weekdays set default '{}';
+alter table if exists availabilities alter column weekdays set not null;
+alter table if exists availabilities add column if not exists age_category text;
+update availabilities set age_category = 'tc' where age_category is null;
+alter table if exists availabilities alter column age_category set default 'tc';
+alter table if exists availabilities alter column age_category set not null;
+alter table if exists availabilities drop constraint if exists availabilities_age_category_check;
+alter table if exists availabilities add constraint availabilities_age_category_check check (age_category in ('sub-12', 'sub-14', 'sub-16', 'sub-18', 'sub-20', 'tc'));
+alter table if exists availabilities drop constraint if exists availabilities_desired_level_check;
+alter table if exists availabilities add constraint availabilities_desired_level_check check (desired_level in ('principiante', 'novato', 'intermedio', 'avanzado', 'competitivo'));
+alter table if exists availabilities drop constraint if exists availabilities_check;
+alter table if exists availabilities add constraint availabilities_check check (play_date is not null or weekday is not null or cardinality(weekdays) > 0);

@@ -4,7 +4,7 @@ import MatchPhotoForm from '@/components/match-photo-form';
 import PostCard from '@/components/post-card';
 import PublishForm from '@/components/publish-form';
 import TeamRankingCard from '@/components/team-ranking-card';
-import { getClubStatsRanking, getOpenAvailabilities, getRecentMatchPhotos } from '@/lib/data';
+import { getClubStatsRanking, getOpenAvailabilities, getRecentMatchPhotos, getSuggestedMatches } from '@/lib/data';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,10 +32,11 @@ const howItWorks = [
 ];
 
 export default async function HomePage() {
-  const [posts, photos, ranking] = await Promise.all([
+  const [posts, photos, ranking, suggestedMatches] = await Promise.all([
     getOpenAvailabilities(6),
     getRecentMatchPhotos(6),
-    getClubStatsRanking(6)
+    getClubStatsRanking(6),
+    getSuggestedMatches(6)
   ]);
 
   return (
@@ -148,6 +149,38 @@ export default async function HomePage() {
       <section id="publicar" className="section pt-0">
         <h2 className="mb-6 display-serif text-3xl text-ink sm:text-4xl">Publica cuándo puedes jugar</h2>
         <PublishForm />
+      </section>
+
+
+      <section className="section pt-0">
+        <div className="mb-6 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-end sm:gap-3">
+          <h2 className="display-serif text-3xl text-ink sm:text-4xl">Equipos compatibles contigo</h2>
+          <p className="text-sm text-muted">Priorizados por categoría, rama, nivel, horario, comuna y cancha.</p>
+        </div>
+
+        {suggestedMatches.length === 0 ? (
+          <p className="text-muted">Todavía no hay coincidencias suficientes. Publica tu disponibilidad para activar el matching.</p>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {suggestedMatches.map((match) => {
+              const confidence = match.totalScore >= 18 ? 'Coincidencia alta' : match.totalScore >= 13 ? 'Coincidencia media' : 'Coincidencia baja';
+              return (
+                <article key={match.id} className="card-panel p-4">
+                  <p className="text-xs text-accent">{confidence}</p>
+                  <h3 className="mt-1 display-serif text-xl text-ink">
+                    {match.a.team.club_name} vs {match.b.team.club_name}
+                  </h3>
+                  <p className="mt-1 text-sm text-muted">
+                    {match.a.age_category} · {match.a.branch} · {match.a.desired_level}
+                  </p>
+                  <p className="mt-2 text-sm text-muted">
+                    {match.a.comuna} ↔ {match.b.comuna} · {match.a.start_time.slice(0, 5)} - {match.a.end_time.slice(0, 5)}
+                  </p>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section id="partidos-reales" className="section pt-0">

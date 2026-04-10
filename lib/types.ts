@@ -1,15 +1,18 @@
 export type Branch = 'femenina' | 'masculina' | 'mixta';
-export type Level = 'principiante' | 'intermedio' | 'avanzado';
+export type AgeCategory = 'sub-12' | 'sub-14' | 'sub-16' | 'sub-18' | 'sub-20' | 'tc';
+export type Level = 'principiante' | 'novato' | 'intermedio' | 'avanzado' | 'competitivo';
 export type MatchType = 'amistoso' | 'torneo' | 'entrenamiento' | 'competitivo';
 
 export interface TeamRow {
   id: string;
   club_name: string;
+  responsible_name: string;
   contact_email: string;
   instagram: string;
   comuna: string;
   city: string;
   branch: Branch;
+  age_category: AgeCategory;
   declared_level: Level;
   current_elo: number;
   matches_played: number;
@@ -23,14 +26,16 @@ export interface TeamRow {
 export interface AvailabilityRow {
   id: string;
   team_id: string;
-  address: string;
+  address: string | null;
   comuna: string;
   city: string;
   play_date: string | null;
   weekday: string | null;
+  weekdays: string[];
   start_time: string;
   end_time: string;
   branch: Branch;
+  age_category: AgeCategory;
   desired_level: Level;
   has_court: boolean;
   notes: string | null;

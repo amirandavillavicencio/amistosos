@@ -29,6 +29,8 @@ const demoTeams = [
     comuna: 'Providencia',
     city: 'Santiago',
     branch: 'femenina',
+    age_category: 'sub-18',
+    responsible_name: 'Camila Rojas',
     declared_level: 'intermedio'
   },
   {
@@ -41,7 +43,9 @@ const demoTeams = [
     comuna: 'Ñuñoa',
     city: 'Santiago',
     branch: 'masculina',
-    declared_level: 'avanzado'
+    age_category: 'tc',
+    responsible_name: 'Diego Paredes',
+    declared_level: 'competitivo'
   },
   {
     club_name: 'Marea Mixta',
@@ -53,11 +57,16 @@ const demoTeams = [
     comuna: 'Maipú',
     city: 'Santiago',
     branch: 'mixta',
-    declared_level: 'intermedio'
+    age_category: 'sub-20',
+    responsible_name: 'Martina Salas',
+    declared_level: 'novato'
   }
 ];
 
-const { data: teams, error: teamErr } = await supabase.from('teams').upsert(demoTeams, { onConflict: 'club_name_key,email_key,instagram_key' }).select('id,club_name');
+const { data: teams, error: teamErr } = await supabase
+  .from('teams')
+  .upsert(demoTeams, { onConflict: 'club_name_key,email_key,instagram_key' })
+  .select('id,club_name');
 if (teamErr) {
   console.error('Error creando equipos demo:', teamErr.message);
   process.exit(1);
@@ -73,9 +82,11 @@ const demoPosts = [
     city: 'Santiago',
     play_date: null,
     weekday: 'martes',
+    weekdays: ['martes', 'jueves'],
     start_time: '20:00',
     end_time: '22:00',
     branch: 'femenina',
+    age_category: 'sub-18',
     desired_level: 'intermedio',
     has_court: true,
     notes: 'Cancha indoor',
@@ -88,10 +99,12 @@ const demoPosts = [
     city: 'Santiago',
     play_date: null,
     weekday: 'jueves',
+    weekdays: ['jueves'],
     start_time: '21:00',
     end_time: '23:00',
     branch: 'masculina',
-    desired_level: 'avanzado',
+    age_category: 'tc',
+    desired_level: 'competitivo',
     has_court: false,
     notes: 'Preferimos ida y vuelta',
     status: 'open'
@@ -103,10 +116,12 @@ const demoPosts = [
     city: 'Santiago',
     play_date: null,
     weekday: 'sábado',
+    weekdays: ['sábado', 'domingo'],
     start_time: '11:00',
     end_time: '13:00',
     branch: 'mixta',
-    desired_level: 'intermedio',
+    age_category: 'sub-20',
+    desired_level: 'novato',
     has_court: true,
     notes: 'Buen ambiente competitivo',
     status: 'open'

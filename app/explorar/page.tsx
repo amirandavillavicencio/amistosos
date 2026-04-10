@@ -11,6 +11,7 @@ interface ExplorarPageProps {
     rama?: string;
     nivel?: string;
     dia?: string;
+    categoria?: string;
   };
 }
 
@@ -18,11 +19,13 @@ export default async function ExplorarPage({ searchParams }: ExplorarPageProps) 
   const branch = searchParams?.rama || '';
   const level = searchParams?.nivel || '';
   const weekday = searchParams?.dia || '';
+  const ageCategory = searchParams?.categoria || '';
 
   const posts = await getOpenAvailabilities(60, {
     branch: branch || undefined,
     level: level || undefined,
-    weekday: weekday || undefined
+    weekday: weekday || undefined,
+    ageCategory: ageCategory || undefined
   });
 
   return (
@@ -37,7 +40,17 @@ export default async function ExplorarPage({ searchParams }: ExplorarPageProps) 
         </Link>
       </div>
 
-      <form className="card-panel mb-6 grid gap-3 p-4 sm:grid-cols-3" method="GET">
+      <form className="card-panel mb-6 grid gap-3 p-4 sm:grid-cols-4" method="GET">
+        <select name="categoria" defaultValue={ageCategory} className="field">
+          <option value="">Todas las categorías</option>
+          <option value="sub-12">Sub-12</option>
+          <option value="sub-14">Sub-14</option>
+          <option value="sub-16">Sub-16</option>
+          <option value="sub-18">Sub-18</option>
+          <option value="sub-20">Sub-20</option>
+          <option value="tc">Todo Competidor (TC)</option>
+        </select>
+
         <select name="rama" defaultValue={branch} className="field">
           <option value="">Todas las ramas</option>
           <option value="femenina">Femenina</option>
@@ -48,8 +61,10 @@ export default async function ExplorarPage({ searchParams }: ExplorarPageProps) 
         <select name="nivel" defaultValue={level} className="field">
           <option value="">Todos los niveles</option>
           <option value="principiante">Principiante</option>
+          <option value="novato">Novato</option>
           <option value="intermedio">Intermedio</option>
           <option value="avanzado">Avanzado</option>
+          <option value="competitivo">Competitivo</option>
         </select>
 
         <select name="dia" defaultValue={weekday} className="field">
@@ -61,7 +76,7 @@ export default async function ExplorarPage({ searchParams }: ExplorarPageProps) 
           ))}
         </select>
 
-        <div className="sm:col-span-3 flex gap-2">
+        <div className="sm:col-span-4 flex gap-2">
           <button type="submit" className="btn-accent">Aplicar filtros</button>
           <Link href="/explorar" className="btn-secondary">Limpiar</Link>
         </div>
@@ -69,19 +84,9 @@ export default async function ExplorarPage({ searchParams }: ExplorarPageProps) 
 
       {posts.length === 0 ? (
         <div className="card-panel flex flex-col items-center gap-4 p-8 text-center">
-          <svg width="72" height="72" viewBox="0 0 72 72" fill="none" aria-hidden="true">
-            <circle cx="36" cy="36" r="34" stroke="#B7C7D6" strokeWidth="2" />
-            <path d="M20 44C24 37 30 33 36 33C42 33 48 37 52 44" stroke="#7A9AB3" strokeWidth="2.5" strokeLinecap="round" />
-            <circle cx="28" cy="29" r="3" fill="#7A9AB3" />
-            <circle cx="44" cy="29" r="3" fill="#7A9AB3" />
-          </svg>
           <h2 className="display-serif text-2xl text-ink">Todavía no hay partidos publicados</h2>
-          <p className="max-w-xl text-sm text-muted">
-            Tu equipo puede ser el primero en activar la rueda de amistosos en tu zona.
-          </p>
-          <Link href="/publicar" className="btn-accent">
-            Publicar mi disponibilidad
-          </Link>
+          <p className="max-w-xl text-sm text-muted">Tu equipo puede ser el primero en activar la rueda de amistosos en tu zona.</p>
+          <Link href="/publicar" className="btn-accent">Publicar mi disponibilidad</Link>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
