@@ -2,7 +2,7 @@
 
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { confidenceFromHistory, resolveMatchOutcome, updateElo, BASE_ELO } from '@/lib/elo';
+import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
 import { areCompatible, calculateCompatibility } from '@/lib/matching';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type { AgeCategory, AvailabilityWithTeam, Branch, Level, MatchType, TeamRow } from '@/lib/types';
@@ -59,117 +59,6 @@ async function assertRateLimit(scope: 'publish' | 'results') {
 
   recent.push(now);
   requestStore.set(key, recent);
-}
-
-async function resolveOrCreateTeam(input: {
-  clubName: string;
-  responsibleName: string;
-  contactEmail: string;
-  comuna: string;
-  city: string;
-  branch: Branch;
-  ageCategory: AgeCategory;
-  level: Level;
-}) {
-  const supabase = getSupabaseAdmin();
-  const clubNameKey = normalizeIdentity(input.clubName);
-  const emailKey = normalizeIdentity(input.contactEmail);
-  const instagramFallback = `sin-instagram-${clubNameKey}-${emailKey}`;
-  const payload = {
-    ...input,
-    clubNameKey,
-    emailKey,
-    instagramFallback
-  };
-
-  const { data: existing, error: existingError } = await supabase
-    .from('teams')
-    .select('*')
-    .eq('club_name_key', clubNameKey)
-    .eq('email_key', emailKey)
-    .maybeSingle<TeamRow>();
-
-  if (existingError) {
-    console.error('[resolveOrCreateTeam] select teams by identity failed', {
-      operation: "select from teams where club_name_key/email_key",
-      payload,
-      message: existingError.message,
-      details: existingError
-    });
-    return {
-      ok: false as const,
-      message: 'No pudimos crear o resolver el equipo. Intenta nuevamente.'
-    };
-  }
-
-  if (existing) {
-    const { data: updated, error: updateError } = await supabase
-      .from('teams')
-      .update({
-        club_name: input.clubName,
-        responsible_name: input.responsibleName,
-        contact_email: input.contactEmail,
-        comuna: input.comuna,
-        city: input.city,
-        branch: input.branch,
-        age_category: input.ageCategory,
-        declared_level: input.level,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', existing.id)
-      .select('*')
-      .single<TeamRow>();
-
-    if (updateError) {
-      console.error('[resolveOrCreateTeam] update teams failed', {
-        operation: `update teams by id=${existing.id}`,
-        payload,
-        message: updateError.message,
-        details: updateError
-      });
-      return {
-        ok: false as const,
-        message: 'No pudimos crear o resolver el equipo. Intenta nuevamente.'
-      };
-    }
-
-    return { ok: true as const, team: updated || existing };
-  }
-
-  const { data: created, error } = await supabase
-    .from('teams')
-    .insert({
-      club_name: input.clubName,
-      club_name_key: clubNameKey,
-      responsible_name: input.responsibleName,
-      contact_email: input.contactEmail,
-      email_key: emailKey,
-      instagram: '',
-      instagram_key: instagramFallback,
-      comuna: input.comuna,
-      city: input.city,
-      branch: input.branch,
-      age_category: input.ageCategory,
-      declared_level: input.level,
-      current_elo: BASE_ELO
-    })
-    .select('*')
-    .single<TeamRow>();
-
-  if (error || !created) {
-    console.error('[resolveOrCreateTeam] insert teams failed', {
-      operation: 'insert into teams',
-      payload,
-      message: error?.message || 'No row returned after insert',
-      details: error || null
-    });
-    return {
-      ok: false as const,
-      message: 'No pudimos crear o resolver el equipo. Intenta nuevamente.'
-    };
-  }
-
-  return { ok: true as const, team: created };
 }
 
 async function refreshMatchesForAvailability(newAvailabilityId: string) {
@@ -246,51 +135,36 @@ export async function createAvailability(formData: FormData) {
     throw new Error('La hora de inicio debe ser menor a la hora de término.');
   }
 
-  const resolvedTeam = await resolveOrCreateTeam({
-    clubName,
-    responsibleName,
-    contactEmail,
+  const supabase = getSupabaseAdmin();
+  const payload = {
+    club_name: clubName,
+    responsible_name: responsibleName,
+    contact_email: contactEmail,
+    address,
     comuna,
     city,
+    play_date: null,
+    weekday: weekdays[0],
+    weekdays,
+    start_time: startTime,
+    end_time: endTime,
     branch,
-    ageCategory,
-    level
-  });
-  if (!resolvedTeam.ok) {
+    age_category: ageCategory,
+    level,
+    has_court: hasCourt,
+    notes,
+    status: 'open' as const
+  };
+
+  const { error } = await supabase.from('availabilities').insert(payload);
+
+  if (error) {
+    console.error('[createAvailability]', { error, payload });
     return {
       ok: false,
-      message: resolvedTeam.message
+      message: 'No pudimos guardar la publicación.'
     };
   }
-
-  const supabase = getSupabaseAdmin();
-  const { data: inserted, error } = await supabase
-    .from('availabilities')
-    .insert({
-      team_id: resolvedTeam.team.id,
-      address,
-      comuna,
-      city,
-      play_date: null,
-      weekday: weekdays[0],
-      weekdays,
-      start_time: startTime,
-      end_time: endTime,
-      branch,
-      age_category: ageCategory,
-      desired_level: level,
-      has_court: hasCourt,
-      notes,
-      status: 'open'
-    })
-    .select('id')
-    .single<{ id: string }>();
-
-  if (error || !inserted) {
-    throw new Error('No pudimos guardar la publicación. Intenta nuevamente.');
-  }
-
-  await refreshMatchesForAvailability(inserted.id);
 
   revalidatePath('/');
   revalidatePath('/explorar');

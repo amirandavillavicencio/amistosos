@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import PostCard from '@/components/post-card';
-import { getOpenAvailabilities } from '@/lib/data';
+import { getSupabasePublic } from '@/lib/supabase';
 import type { AvailabilityWithTeam } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -24,21 +24,32 @@ export default async function ExplorarPage({ searchParams }: ExplorarPageProps) 
 
   let posts: AvailabilityWithTeam[] = [];
   try {
-    const rawPosts = await getOpenAvailabilities(60, {
-      branch: branch || undefined,
-      level: level || undefined,
-      weekday: weekday || undefined,
-      ageCategory: ageCategory || undefined
-    });
-    posts = Array.isArray(rawPosts) ? rawPosts : [];
-    if (!Array.isArray(rawPosts)) {
-      console.error('ExplorarPage.getOpenAvailabilities invalid response', {
+    const supabase = getSupabasePublic();
+    let query = supabase
+      .from('availabilities')
+      .select('*')
+      .eq('status', 'open')
+      .order('created_at', { ascending: false });
+
+    if (branch) query = query.eq('branch', branch);
+    if (level) query = query.eq('level', level);
+    if (weekday) query = query.contains('weekdays', [weekday]);
+    if (ageCategory) query = query.eq('age_category', ageCategory);
+
+    const { data, error } = await query.limit(60);
+
+    if (error) {
+      console.error('ExplorarPage availabilities query failed', {
         route: '/explorar',
         branch,
         level,
         weekday,
-        ageCategory
+        ageCategory,
+        error
       });
+      posts = [];
+    } else {
+      posts = (data || []) as AvailabilityWithTeam[];
     }
   } catch (error) {
     console.error('ExplorarPage data load failed', {
