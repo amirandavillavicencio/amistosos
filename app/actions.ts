@@ -1,5 +1,6 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo, BASE_ELO } from '@/lib/elo';
 import { areCompatible, calculateCompatibility } from '@/lib/matching';
@@ -9,6 +10,9 @@ import type { AvailabilityWithTeam, Branch, Level, MatchType, TeamRow } from '@/
 const validBranches = new Set<Branch>(['femenina', 'masculina', 'mixta']);
 const validLevels = new Set<Level>(['principiante', 'intermedio', 'avanzado']);
 const validMatchTypes = new Set<MatchType>(['amistoso', 'torneo', 'entrenamiento', 'competitivo']);
+const requestStore = new Map<string, number[]>();
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
 function parseTime(value: string) {
   const [h, m] = value.split(':').map(Number);
@@ -25,6 +29,35 @@ function normalizeOptional(value: FormDataEntryValue | null) {
 
 function normalizeIdentity(value: string) {
   return value.trim().toLowerCase().replace(/^@/, '');
+}
+
+function assertHoneypot(formData: FormData) {
+  const honeypot = String(formData.get('website') || '').trim();
+  if (honeypot) {
+    throw new Error('Solicitud bloqueada.');
+  }
+}
+
+async function getRequestIp() {
+  const requestHeaders = await headers();
+  const forwardedFor = requestHeaders.get('x-forwarded-for');
+  if (forwardedFor) return forwardedFor.split(',')[0]?.trim() || 'unknown-ip';
+  return requestHeaders.get('x-real-ip') || 'unknown-ip';
+}
+
+async function assertRateLimit(scope: 'publish' | 'results') {
+  const ip = await getRequestIp();
+  const key = `${scope}:${ip}`;
+  const now = Date.now();
+  const existing = requestStore.get(key) || [];
+  const recent = existing.filter((ts) => now - ts < RATE_LIMIT_WINDOW_MS);
+
+  if (recent.length >= RATE_LIMIT_MAX) {
+    throw new Error('Superaste el límite de envíos (5 por hora). Intenta más tarde.');
+  }
+
+  recent.push(now);
+  requestStore.set(key, recent);
 }
 
 async function resolveOrCreateTeam(input: {
@@ -134,6 +167,9 @@ async function refreshMatchesForAvailability(newAvailabilityId: string) {
 }
 
 export async function createAvailability(formData: FormData) {
+  assertHoneypot(formData);
+  await assertRateLimit('publish');
+
   const clubName = String(formData.get('club_name') || '').trim();
   const contactEmail = String(formData.get('contact_email') || '').trim();
   const instagram = String(formData.get('instagram') || '').trim();
@@ -210,9 +246,11 @@ export async function createAvailability(formData: FormData) {
 }
 
 export async function registerMatchResult(formData: FormData) {
+  assertHoneypot(formData);
+  await assertRateLimit('results');
+
   const clubId = String(formData.get('club_id') || '').trim();
   const opponentClubIdRaw = normalizeOptional(formData.get('opponent_club_id'));
-  const opponentName = normalizeOptional(formData.get('opponent_name'));
   const matchDate = String(formData.get('match_date') || '').trim();
   const branch = String(formData.get('branch') || '').trim() as Branch;
   const matchType = String(formData.get('match_type') || '').trim() as MatchType;
@@ -230,8 +268,8 @@ export async function registerMatchResult(formData: FormData) {
     throw new Error('Los sets ganados/perdidos deben ser números válidos.');
   }
 
-  if (!opponentClubIdRaw && !opponentName) {
-    throw new Error('Debes seleccionar un rival existente o ingresar un nombre manual.');
+  if (!opponentClubIdRaw) {
+    throw new Error('Debes seleccionar un rival existente para registrar el resultado.');
   }
 
   const supabase = getSupabaseAdmin();
@@ -244,11 +282,15 @@ export async function registerMatchResult(formData: FormData) {
     ? await supabase.from('teams').select('*').eq('id', opponentClubId).maybeSingle<TeamRow>()
     : { data: null as TeamRow | null };
 
+  if (!opponent) {
+    throw new Error('Debes seleccionar un rival existente para actualizar el ranking ELO.');
+  }
+
   const ownActual = resolveMatchOutcome(setsWon, setsLost);
   const ownConfidence = confidenceFromHistory(club.matches_played);
 
-  const opponentRating = opponent?.current_elo ?? BASE_ELO;
-  const rivalConfidence = opponent ? confidenceFromHistory(opponent.matches_played) : 0.75;
+  const opponentRating = opponent.current_elo;
+  const rivalConfidence = confidenceFromHistory(opponent.matches_played);
 
   const ownUpdate = updateElo({
     ownRating: club.current_elo,
@@ -261,8 +303,8 @@ export async function registerMatchResult(formData: FormData) {
 
   const { error: insertResultError } = await supabase.from('match_results').insert({
     club_id: club.id,
-    opponent_club_id: opponent?.id ?? null,
-    opponent_name: opponent ? opponent.club_name : opponentName,
+    opponent_club_id: opponent.id,
+    opponent_name: opponent.club_name,
     match_date: matchDate,
     branch,
     match_type: matchType,
@@ -292,51 +334,49 @@ export async function registerMatchResult(formData: FormData) {
     })
     .eq('id', club.id);
 
-  if (opponent) {
-    const oppActual = ownActual === 1 ? 0 : ownActual === 0 ? 1 : 0.5;
-    const opponentUpdate = updateElo({
-      ownRating: opponent.current_elo,
-      opponentRating: club.current_elo,
-      actualScore: oppActual,
-      setsWon: setsLost,
-      setsLost: setsWon,
-      confidenceMultiplier: ownConfidence * rivalConfidence
-    });
+  const oppActual = ownActual === 1 ? 0 : ownActual === 0 ? 1 : 0.5;
+  const opponentUpdate = updateElo({
+    ownRating: opponent.current_elo,
+    opponentRating: club.current_elo,
+    actualScore: oppActual,
+    setsWon: setsLost,
+    setsLost: setsWon,
+    confidenceMultiplier: ownConfidence * rivalConfidence
+  });
 
-    await supabase.from('match_results').insert({
-      club_id: opponent.id,
-      opponent_club_id: club.id,
-      opponent_name: club.club_name,
-      match_date: matchDate,
-      branch,
-      match_type: matchType,
-      sets_won: setsLost,
-      sets_lost: setsWon,
-      set_scores: setScores,
-      location,
-      notes,
-      elo_before: opponent.current_elo,
-      elo_after: opponentUpdate.newRating,
-      elo_delta: opponentUpdate.delta
-    });
+  await supabase.from('match_results').insert({
+    club_id: opponent.id,
+    opponent_club_id: club.id,
+    opponent_name: club.club_name,
+    match_date: matchDate,
+    branch,
+    match_type: matchType,
+    sets_won: setsLost,
+    sets_lost: setsWon,
+    set_scores: setScores,
+    location,
+    notes,
+    elo_before: opponent.current_elo,
+    elo_after: opponentUpdate.newRating,
+    elo_delta: opponentUpdate.delta
+  });
 
-    await supabase
-      .from('teams')
-      .update({
-        current_elo: opponentUpdate.newRating,
-        matches_played: opponent.matches_played + 1,
-        wins: opponent.wins + (oppActual === 1 ? 1 : 0),
-        losses: opponent.losses + (oppActual === 0 ? 1 : 0),
-        draws: opponent.draws + (oppActual === 0.5 ? 1 : 0),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', opponent.id);
-  }
+  await supabase
+    .from('teams')
+    .update({
+      current_elo: opponentUpdate.newRating,
+      matches_played: opponent.matches_played + 1,
+      wins: opponent.wins + (oppActual === 1 ? 1 : 0),
+      losses: opponent.losses + (oppActual === 0 ? 1 : 0),
+      draws: opponent.draws + (oppActual === 0.5 ? 1 : 0),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', opponent.id);
 
   revalidatePath('/');
   revalidatePath('/ranking');
   revalidatePath(`/club/${club.id}`);
-  if (opponent?.id) revalidatePath(`/club/${opponent.id}`);
+  revalidatePath(`/club/${opponent.id}`);
   revalidatePath('/resultados');
 
   return { ok: true };
@@ -424,7 +464,7 @@ export async function uploadMatchPhoto(formData: FormData) {
     throw new Error('La imagen debe pesar menos de 6MB.');
   }
 
-  const allowedMime = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+  const allowedMime = new Set(['image/jpeg', 'image/png', 'image/webp']);
   if (!allowedMime.has(image.type)) {
     throw new Error('Formato de imagen no permitido. Usa JPG, PNG o WEBP.');
   }
