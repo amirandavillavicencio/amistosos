@@ -16,7 +16,6 @@ export const HISTORY_MINIMUM = 3;
 
 export interface AvailabilityFilters {
   branch?: string;
-  level?: string;
   weekday?: string;
   ageCategory?: string;
 }
@@ -31,7 +30,6 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
       .order('created_at', { ascending: false });
 
     if (filters?.branch) query = query.eq('branch', filters.branch);
-    if (filters?.level) query = query.eq('level', filters.level);
     if (filters?.weekday) query = query.contains('weekdays', [filters.weekday]);
     if (filters?.ageCategory) query = query.eq('age_category', filters.ageCategory);
 

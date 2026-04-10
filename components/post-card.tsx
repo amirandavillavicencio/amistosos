@@ -14,15 +14,23 @@ const categoryLabel: Record<AvailabilityWithTeam['age_category'], string> = {
   tc: 'Todo Competidor (TC)'
 };
 
+function phoneHref(phone: string | null) {
+  if (!phone) return null;
+  const keepPlus = phone.trim().startsWith('+');
+  const digits = phone.replace(/[\s()\-]/g, '');
+  return keepPlus ? `+${digits.replace(/^\+/, '')}` : digits;
+}
+
 export default function PostCard({ post }: PostCardProps) {
   const startTime = post.start_time?.slice(0, 5) || '--:--';
   const endTime = post.end_time?.slice(0, 5) || '--:--';
   const weekdays = Array.isArray(post?.weekdays) ? post.weekdays : post?.weekday ? [post.weekday] : [];
   const days = weekdays.filter(Boolean).join(', ');
+  const tel = phoneHref(post.phone);
 
   return (
     <article className="card-panel p-4 transition hover:-translate-y-0.5 hover:shadow-[0_20px_45px_rgba(77,56,36,0.14)] sm:p-5">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <h3 className="display-serif break-words text-xl font-semibold text-ink sm:text-2xl">
             <Link href={`/publicaciones/${post.id}`} className="hover:text-accent">
@@ -33,26 +41,22 @@ export default function PostCard({ post }: PostCardProps) {
             {post.comuna} · {categoryLabel[post.age_category]} · {post.branch}
           </p>
         </div>
-        <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
-          Nivel: {post.level}
-        </span>
+        {post.logo_url ? (
+          <img src={post.logo_url} alt={`Logo ${post.club_name}`} className="h-14 w-14 rounded-full border border-line object-cover" />
+        ) : (
+          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-line text-xs text-muted">Sin logo</div>
+        )}
       </div>
       <ul className="space-y-2 text-sm text-muted">
-        <li>
-          <strong className="text-ink">Horario:</strong> {startTime} - {endTime}
-        </li>
-        <li>
-          <strong className="text-ink">Días:</strong> {days || 'Sin días informados'}
-        </li>
-        <li>
-          <strong className="text-ink">Cancha:</strong> {post.has_court ? 'Sí pone cancha' : 'No pone cancha'}
-        </li>
+        <li><strong className="text-ink">Horario:</strong> {startTime} - {endTime}</li>
+        <li><strong className="text-ink">Días:</strong> {days || 'Sin días informados'}</li>
+        <li><strong className="text-ink">Cancha:</strong> {post.has_court ? 'Sí pone cancha' : 'No pone cancha'}</li>
+        {post.phone && tel && <li><strong className="text-ink">Tel:</strong> <a href={`tel:${tel}`} className="text-accent hover:underline">{post.phone}</a></li>}
+        {post.instagram && <li><strong className="text-ink">Instagram:</strong> <a href={`https://instagram.com/${post.instagram}`} target="_blank" rel="noreferrer" className="text-accent hover:underline">@{post.instagram}</a></li>}
       </ul>
       {post.notes && <p className="mt-3 border-t border-line/80 pt-3 text-sm text-muted">{post.notes}</p>}
       <div className="mt-3 border-t border-line/80 pt-3">
-        <Link href={`/publicaciones/${post.id}`} className="text-sm text-accent hover:underline">
-          Ver detalle / Editar disponibilidad
-        </Link>
+        <Link href={`/publicaciones/${post.id}`} className="text-sm text-accent hover:underline">Ver detalle / Editar disponibilidad</Link>
       </div>
     </article>
   );

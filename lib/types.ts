@@ -34,13 +34,16 @@ export interface AvailabilityRow {
   end_time: string;
   branch: Branch;
   age_category: AgeCategory;
-  level: Level;
+  level: Level | null;
   has_court: boolean;
   notes: string | null;
   status: 'open' | 'closed';
   created_at: string;
   contact_email: string | null;
   responsible_name: string | null;
+  phone: string | null;
+  instagram: string | null;
+  logo_url: string | null;
 }
 
 export type AvailabilityWithTeam = AvailabilityRow;

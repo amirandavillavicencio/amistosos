@@ -5,10 +5,9 @@ import { revalidatePath } from 'next/cache';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
 import { areCompatible, calculateCompatibility } from '@/lib/matching';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import type { AgeCategory, AvailabilityRow, Branch, Level, MatchType, TeamRow } from '@/lib/types';
+import type { AgeCategory, AvailabilityRow, Branch, MatchType, TeamRow } from '@/lib/types';
 
 const validBranches = new Set<Branch>(['femenina', 'masculina', 'mixta']);
-const validLevels = new Set<Level>(['principiante', 'novato', 'intermedio', 'avanzado', 'competitivo']);
 const validAgeCategories = new Set<AgeCategory>(['sub-12', 'sub-14', 'sub-16', 'sub-18', 'sub-20', 'tc']);
 const validMatchTypes = new Set<MatchType>(['amistoso', 'torneo', 'entrenamiento', 'competitivo']);
 const validWeekdays = new Set(['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']);
@@ -31,6 +30,28 @@ function normalizeOptional(value: FormDataEntryValue | null) {
 
 function normalizeIdentity(value: string) {
   return value.trim().toLowerCase().replace(/^@/, '');
+}
+
+function normalizePhone(value: FormDataEntryValue | null) {
+  const raw = String(value || '').trim();
+  return raw || null;
+}
+
+
+function normalizeInstagram(value: FormDataEntryValue | null) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+
+  const withoutAt = raw.replace(/^@+/, '');
+  try {
+    const url = new URL(withoutAt);
+    if (url.hostname.includes('instagram.com')) {
+      const firstSegment = url.pathname.split('/').filter(Boolean)[0];
+      if (firstSegment) return firstSegment.toLowerCase();
+    }
+  } catch {}
+
+  return withoutAt.split('/')[0].trim().toLowerCase() || null;
 }
 
 function assertHoneypot(formData: FormData) {
@@ -106,8 +127,8 @@ async function refreshMatchesForAvailability(availabilityId: string) {
         compatibility_score: score.total,
         schedule_score: score.schedule,
         location_score: score.location,
-        level_score: score.level,
-        elo_score: score.elo,
+        level_score: score.court,
+        elo_score: 0,
         status: 'active' as const
       };
     })
@@ -125,7 +146,6 @@ function validateAvailabilityPayload(input: {
   start_time: string;
   end_time: string;
   branch: Branch;
-  level: Level;
   age_category: AgeCategory;
 }) {
   if (!input.comuna.trim()) {
@@ -145,8 +165,8 @@ function validateAvailabilityPayload(input: {
     throw new Error('La hora de inicio debe ser menor a la hora de término.');
   }
 
-  if (!validBranches.has(input.branch) || !validLevels.has(input.level) || !validAgeCategories.has(input.age_category)) {
-    throw new Error('Clasificación inválida. Revisa categoría, rama y nivel.');
+  if (!validBranches.has(input.branch) || !validAgeCategories.has(input.age_category)) {
+    throw new Error('Clasificación inválida. Revisa categoría y rama.');
   }
 }
 
@@ -161,18 +181,20 @@ export async function createAvailability(formData: FormData) {
   const start_time = String(formData.get('start_time') || '').trim();
   const end_time = String(formData.get('end_time') || '').trim();
   const branch = String(formData.get('branch') || '').trim() as Branch;
-  const level = String(formData.get('level') || '').trim() as Level;
   const age_category = String(formData.get('age_category') || '').trim() as AgeCategory;
+  const phone = normalizePhone(formData.get('phone'));
+  const instagram = normalizeInstagram(formData.get('instagram'));
+  const responsible_name = normalizeOptional(formData.get('responsible_name'));
+  const logo_url = normalizeOptional(formData.get('logo_url'));
   const has_court = String(formData.get('has_court') || 'false') === 'true';
   const notes = normalizeOptional(formData.get('notes'));
   const contact_email = normalizeOptional(formData.get('contact_email'));
-  const responsible_name = normalizeOptional(formData.get('responsible_name'));
 
   if (!club_name || !comuna) {
     throw new Error('Completa todos los campos requeridos.');
   }
 
-  validateAvailabilityPayload({ comuna, weekdays, start_time, end_time, branch, level, age_category });
+  validateAvailabilityPayload({ comuna, weekdays, start_time, end_time, branch, age_category });
 
   if (!contact_email) {
     throw new Error('El correo de contacto es obligatorio para editar luego la publicación.');
@@ -191,12 +213,14 @@ export async function createAvailability(formData: FormData) {
       start_time,
       end_time,
       branch,
-      level,
       age_category,
       has_court,
       notes,
       contact_email,
       responsible_name,
+      phone,
+      instagram,
+      logo_url,
       status: 'open'
     })
     .select('id')
@@ -240,13 +264,16 @@ export async function updateAvailability(formData: FormData) {
   const has_court = String(formData.get('has_court') || 'false') === 'true';
   const notes = normalizeOptional(formData.get('notes'));
   const branch = String(formData.get('branch') || '').trim() as Branch;
-  const level = String(formData.get('level') || '').trim() as Level;
   const age_category = String(formData.get('age_category') || '').trim() as AgeCategory;
+  const phone = normalizePhone(formData.get('phone'));
+  const instagram = normalizeInstagram(formData.get('instagram'));
+  const responsible_name = normalizeOptional(formData.get('responsible_name'));
+  const logo_url = normalizeOptional(formData.get('logo_url'));
 
   if (!id) return { ok: false, message: 'No encontramos la publicación a editar.' };
   if (!email) return { ok: false, message: 'Debes ingresar el correo de contacto.' };
 
-  validateAvailabilityPayload({ comuna, weekdays, start_time, end_time, branch, level, age_category });
+  validateAvailabilityPayload({ comuna, weekdays, start_time, end_time, branch, age_category });
 
   const supabase = getSupabaseAdmin();
   const { data: existing, error: existingError } = await supabase
@@ -276,8 +303,11 @@ export async function updateAvailability(formData: FormData) {
     has_court,
     notes,
     branch,
-    level,
     age_category,
+    phone,
+    instagram,
+    responsible_name,
+    logo_url,
     status: 'open' as const
   };
 
@@ -492,6 +522,40 @@ async function upsertClubStats(input: {
       updated_at: new Date().toISOString()
     })
     .eq('id', existing.id);
+}
+
+
+export async function uploadTeamLogo(formData: FormData) {
+  const file = formData.get('logo');
+  if (!(file instanceof File)) {
+    return { ok: false, message: 'Debes seleccionar una imagen.' };
+  }
+
+  const validTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+  if (!validTypes.has(file.type)) {
+    return { ok: false, message: 'Formato no permitido. Usa JPG, PNG o WEBP.' };
+  }
+
+  if (file.size > 4 * 1024 * 1024) {
+    return { ok: false, message: 'La imagen supera el máximo permitido (4MB).' };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const safeExt = ['jpg', 'jpeg', 'png', 'webp'].includes(ext) ? ext : 'jpg';
+  const path = `logos/${Date.now()}-${crypto.randomUUID()}.${safeExt}`;
+  const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+  const { error } = await supabase.storage.from('team-logos').upload(path, fileBuffer, {
+    contentType: file.type,
+    cacheControl: '3600',
+    upsert: false
+  });
+
+  if (error) return { ok: false, message: 'No pudimos subir el logo. Intenta nuevamente.' };
+
+  const { data } = supabase.storage.from('team-logos').getPublicUrl(path);
+  return { ok: true, url: data.publicUrl };
 }
 
 export async function uploadMatchPhoto(formData: FormData) {
