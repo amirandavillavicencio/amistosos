@@ -1,14 +1,4 @@
-import type { AvailabilityWithTeam, Level } from '@/lib/types';
-
-const levelWeight: Record<Level, number> = {
-  principiante: 1,
-  novato: 2,
-  intermedio: 3,
-  avanzado: 4,
-  competitivo: 5
-};
-
-const MAX_LEVEL_DISTANCE = 2;
+import type { AvailabilityWithTeam } from '@/lib/types';
 
 function minutes(value: string): number {
   const [h, m] = value.split(':').map(Number);
@@ -27,47 +17,69 @@ function resolveWeekdays(post: AvailabilityWithTeam): string[] {
   return [];
 }
 
-function hasScheduleCompatibility(a: AvailabilityWithTeam, b: AvailabilityWithTeam): boolean {
-  const overlap = overlapInMinutes(a.start_time, a.end_time, b.start_time, b.end_time);
-  if (overlap <= 0) return false;
+function sharedWeekdays(a: AvailabilityWithTeam, b: AvailabilityWithTeam): string[] {
+  const bDays = new Set(resolveWeekdays(b));
+  return resolveWeekdays(a).filter((day, index, arr) => bDays.has(day) && arr.indexOf(day) === index);
+}
 
-  const aDays = new Set(resolveWeekdays(a));
-  const bDays = resolveWeekdays(b);
-  return bDays.some((day) => aDays.has(day));
+function safeComuna(post: AvailabilityWithTeam) {
+  return (post.comuna || '').trim().toLowerCase();
 }
 
 export function calculateCompatibility(a: AvailabilityWithTeam, b: AvailabilityWithTeam) {
-  const sameComuna = a.comuna.toLowerCase() === b.comuna.toLowerCase();
-  const sameCategory = a.age_category === b.age_category;
-  const sameBranch = a.branch === b.branch;
-  const levelDistance = Math.abs(levelWeight[a.level] - levelWeight[b.level]);
-  const compatibleLevel = levelDistance <= MAX_LEVEL_DISTANCE;
-  const compatibleSchedule = hasScheduleCompatibility(a, b);
-  const hasCourt = a.has_court || b.has_court;
+  const overlap = overlapInMinutes(a.start_time, a.end_time, b.start_time, b.end_time);
+  const days = sharedWeekdays(a, b);
+  const sameComuna = safeComuna(a) && safeComuna(a) === safeComuna(b);
 
-  const location = sameComuna ? 3 : 0;
-  const categoryBranchLevel = (sameCategory ? 5 : 0) + (sameBranch ? 5 : 0) + (compatibleLevel ? 3 : 0);
-  const schedule = compatibleSchedule ? 4 : 0;
-  const court = hasCourt ? 2 : 0;
-  const total = location + categoryBranchLevel + schedule + court;
+  const schedule = Math.min(40, days.length * 10 + Math.min(20, Math.floor(overlap / 15) * 2));
+  const location = sameComuna ? 25 : 8;
+  const court = (a.has_court || b.has_court) ? (a.has_court && b.has_court ? 15 : 10) : 0;
+  const base = 20; // misma rama + categoría ya validado en areCompatible
+  const total = Math.min(100, base + schedule + location + court);
 
   return {
     total,
     schedule,
     location,
-    level: categoryBranchLevel,
-    elo: court
+    court,
+    sharedDays: days,
+    overlapMinutes: overlap,
+    sameComuna
   };
 }
 
 export function areCompatible(a: AvailabilityWithTeam, b: AvailabilityWithTeam): boolean {
-  const levelDistance = Math.abs(levelWeight[a.level] - levelWeight[b.level]);
+  const overlap = overlapInMinutes(a.start_time, a.end_time, b.start_time, b.end_time);
 
   return (
     a.age_category === b.age_category &&
     a.branch === b.branch &&
-    levelDistance <= MAX_LEVEL_DISTANCE &&
-    hasScheduleCompatibility(a, b) &&
+    sharedWeekdays(a, b).length > 0 &&
+    overlap > 0 &&
     (a.has_court || b.has_court)
   );
+}
+
+export function getMatchTier(score: number): 'Match alto' | 'Match medio' | 'Match bajo' {
+  if (score >= 80) return 'Match alto';
+  if (score >= 60) return 'Match medio';
+  return 'Match bajo';
+}
+
+export function getMatchReasons(a: AvailabilityWithTeam, b: AvailabilityWithTeam, score: number): string[] {
+  const reasons: string[] = ['Misma rama y categoría'];
+  const meta = calculateCompatibility(a, b);
+
+  if (meta.sharedDays.length) {
+    const [first] = meta.sharedDays;
+    reasons.push(meta.sharedDays.length > 1 ? `Comparten ${meta.sharedDays.length} días (incluye ${first})` : `Comparten ${first}`);
+  }
+
+  if (meta.overlapMinutes > 0) reasons.push(`Sus horarios se cruzan (${meta.overlapMinutes} min)`);
+  if (a.has_court && b.has_court) reasons.push('Ambos equipos pueden poner cancha');
+  else if (a.has_court || b.has_court) reasons.push('Uno de los equipos pone cancha');
+  if (meta.sameComuna) reasons.push('Misma comuna');
+  reasons.push(getMatchTier(score));
+
+  return reasons;
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { updateAvailability } from '@/app/actions';
+import { updateAvailability, uploadTeamLogo } from '@/app/actions';
 import type { AvailabilityWithTeam } from '@/lib/types';
 
 const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
@@ -15,6 +15,18 @@ export default function EditAvailabilityForm({ post }: { post: AvailabilityWithT
       action={async (formData) => {
         setMessage(null);
         setError(null);
+        const logoFile = formData.get('logo');
+        if (logoFile instanceof File && logoFile.size > 0) {
+          const logoData = new FormData();
+          logoData.append('logo', logoFile);
+          const upload = await uploadTeamLogo(logoData);
+          if (!upload.ok || !upload.url) {
+            setError(upload.message || 'No pudimos subir el logo.');
+            return;
+          }
+          formData.set('logo_url', upload.url);
+        }
+
         const result = await updateAvailability(formData);
         if (!result.ok) {
           setError(result.message || 'No se pudo actualizar la publicación.');
@@ -69,7 +81,7 @@ export default function EditAvailabilityForm({ post }: { post: AvailabilityWithT
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <select name="age_category" required defaultValue={post.age_category} className="field">
           <option value="sub-12">Sub-12</option>
           <option value="sub-14">Sub-14</option>
@@ -83,13 +95,14 @@ export default function EditAvailabilityForm({ post }: { post: AvailabilityWithT
           <option value="masculina">Masculina</option>
           <option value="mixta">Mixta</option>
         </select>
-        <select name="level" required defaultValue={post.level} className="field">
-          <option value="principiante">Principiante</option>
-          <option value="novato">Novato</option>
-          <option value="intermedio">Intermedio</option>
-          <option value="avanzado">Avanzado</option>
-          <option value="competitivo">Competitivo</option>
-        </select>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <input name="responsible_name" defaultValue={post.responsible_name || ''} placeholder="Responsable (opcional)" className="field" />
+        <input name="phone" defaultValue={post.phone || ''} placeholder="Teléfono (opcional)" className="field" />
+        <input name="instagram" defaultValue={post.instagram ? `@${post.instagram}` : ''} placeholder="Instagram (opcional)" className="field" />
+        <input name="logo" type="file" accept="image/jpeg,image/png,image/webp" className="field file:mr-2 file:mt-1 file:rounded-lg file:border file:border-line file:bg-sand file:px-3 file:py-2 file:text-ink sm:file:mr-3 sm:file:mt-0" />
+        <input name="logo_url" defaultValue={post.logo_url || ''} placeholder="URL logo (opcional)" className="field" />
       </div>
 
       <textarea name="notes" defaultValue={post.notes || ''} placeholder="Observaciones" className="field min-h-24" />

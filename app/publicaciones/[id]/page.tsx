@@ -19,11 +19,14 @@ export default async function PublicacionDetallePage({ params }: { params: { id:
         <p className="text-sm text-muted">Detalle de disponibilidad</p>
         <h1 className="mt-1 display-serif text-4xl text-ink">{post.club_name}</h1>
         <p className="mt-2 text-sm text-muted">
-          {post.comuna} · {post.branch} · {post.age_category} · Nivel {post.level}
+          {post.comuna} · {post.branch} · {post.age_category}
         </p>
-        <p className="mt-1 text-sm text-muted">
-          Horario: {post.start_time?.slice(0, 5)} - {post.end_time?.slice(0, 5)}
-        </p>
+        <p className="mt-1 text-sm text-muted">Horario: {post.start_time?.slice(0, 5)} - {post.end_time?.slice(0, 5)}</p>
+        {post.logo_url ? <img src={post.logo_url} alt={`Logo ${post.club_name}`} className="mt-3 h-20 w-20 rounded-full border border-line object-cover" /> : null}
+        <div className="mt-3 space-y-1 text-sm text-muted">
+          {post.phone ? <p>Teléfono: <a href={`tel:${post.phone.replace(/[\s()\-]/g, '')}`} className="text-accent hover:underline">{post.phone}</a></p> : null}
+          {post.instagram ? <p>Instagram: <a href={`https://instagram.com/${post.instagram}`} target="_blank" rel="noreferrer" className="text-accent hover:underline">@{post.instagram}</a></p> : null}
+        </div>
       </section>
 
       {!post.contact_email ? (

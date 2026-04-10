@@ -4,6 +4,7 @@ import MatchPhotoForm from '@/components/match-photo-form';
 import PostCard from '@/components/post-card';
 import PublishForm from '@/components/publish-form';
 import TeamRankingCard from '@/components/team-ranking-card';
+import SuggestedMatchCardView from '@/components/suggested-match-card';
 import { getClubStatsRanking, getRecentMatchPhotos, getSuggestedMatches } from '@/lib/data';
 import { getSupabasePublic } from '@/lib/supabase';
 import type { AvailabilityWithTeam, ClubStatsCard, MatchPhotoRow, SuggestedMatchCard } from '@/lib/types';
@@ -26,11 +27,6 @@ const howItWorks = [
     title: 'Sube partidos reales',
     description: 'Comparte fotos y resultados para dar visibilidad a la actividad.'
   },
-  {
-    step: '04',
-    title: 'Sigue el ranking',
-    description: 'La tabla se actualiza con resultados publicados por la comunidad.'
-  }
 ];
 
 const branchLabel: Record<string, string> = {
@@ -180,7 +176,7 @@ export default async function HomePage() {
 
       <section className="section pt-2 md:pt-4">
         <div className="feature-strip">
-          <p className="display-serif text-2xl text-ink md:text-3xl">Cómo funciona</p>
+          <p className="display-serif text-2xl text-ink md:text-3xl">Cómo funciona rápido</p>
           <p className="max-w-2xl text-sm leading-relaxed text-muted md:text-base">
             Esta plataforma está pensada para clubes y equipos que quieren cerrar amistosos de forma simple: publicar,
             coordinar y dejar registro de partidos reales.
@@ -225,8 +221,8 @@ export default async function HomePage() {
 
       <section className="section pt-0">
         <div className="mb-6 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-end sm:gap-3">
-          <h2 className="display-serif text-3xl text-ink sm:text-4xl">Equipos compatibles contigo</h2>
-          <p className="text-sm text-muted">Priorizados por categoría, rama, nivel, horario, comuna y cancha.</p>
+          <h2 className="display-serif text-3xl text-ink sm:text-4xl">Matches disponibles</h2>
+          <p className="text-sm text-muted">Priorizados por rama, categoría, días, horario, cancha y comuna.</p>
         </div>
 
         {safeSuggestedMatches.length === 0 ? (
@@ -240,24 +236,7 @@ export default async function HomePage() {
                 <div key={branch}>
                   <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-muted">{branchLabel[branch]}</h3>
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {branchMatches.map((match) => {
-                      const confidence = match.totalScore >= 18 ? 'Coincidencia alta' : match.totalScore >= 13 ? 'Coincidencia media' : 'Coincidencia baja';
-                      return (
-                        <article key={match.id} className="card-panel p-4">
-                          <p className="text-xs text-accent">{confidence}</p>
-                          <h3 className="mt-1 display-serif text-xl text-ink">
-                            {match.a.club_name} ({match.a.level}) vs {match.b.club_name} ({match.b.level})
-                          </h3>
-                          <p className="mt-1 text-sm text-muted">
-                            {match.a.age_category} · Rama {match.a.branch}
-                          </p>
-                          <p className="mt-2 text-sm text-muted">
-                            {match.a.comuna || 'Sin comuna'} ↔ {match.b.comuna || 'Sin comuna'} ·{' '}
-                            {match.a.start_time?.slice(0, 5) || '--:--'} - {match.a.end_time?.slice(0, 5) || '--:--'}
-                          </p>
-                        </article>
-                      );
-                    })}
+                    {branchMatches.map((match) => (<SuggestedMatchCardView key={match.id} match={match} />))}
                   </div>
                 </div>
               );
@@ -312,18 +291,7 @@ export default async function HomePage() {
         )}
       </section>
 
-      <section className="section pt-4">
-        <div className="cta-shell">
-          <p className="eyebrow">Comunidad activa</p>
-          <h2 className="display-serif mt-3 text-3xl text-ink sm:text-4xl md:text-5xl">¿Listos para coordinar su próximo amistoso?</h2>
-          <p className="mt-3 max-w-2xl text-muted">
-            Si tu equipo tiene horario disponible, publíquenlo y conecten con otros clubes de su ciudad.
-          </p>
-          <a href="/publicar" className="btn-accent mt-7 inline-flex w-full justify-center sm:w-auto">
-            Ir al formulario de publicación
-          </a>
-        </div>
-      </section>
+
     </main>
   );
 }

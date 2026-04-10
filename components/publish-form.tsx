@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { createAvailability } from '@/app/actions';
+import { createAvailability, uploadTeamLogo } from '@/app/actions';
 
 const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const ageCategories = [
@@ -22,7 +22,6 @@ const requiredFields = [
   'end_time',
   'branch',
   'age_category',
-  'level',
   'has_court'
 ] as const;
 
@@ -67,6 +66,18 @@ export default function PublishForm() {
         setFieldErrors({});
 
         try {
+          const logoFile = formData.get('logo');
+          if (logoFile instanceof File && logoFile.size > 0) {
+            const logoData = new FormData();
+            logoData.append('logo', logoFile);
+            const upload = await uploadTeamLogo(logoData);
+            if (!upload.ok || !upload.url) {
+              setError(upload.message || 'No pudimos subir el logo.');
+              return;
+            }
+            formData.set('logo_url', upload.url);
+          }
+
           const result = await createAvailability(formData);
 
           if (!result?.ok) {
@@ -87,7 +98,7 @@ export default function PublishForm() {
 
       <section className="grid gap-3">
         <h3 className="text-sm font-semibold text-ink">Identidad</h3>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <div>
             <input
               name="club_name"
@@ -145,7 +156,7 @@ export default function PublishForm() {
 
       <section className="grid gap-3">
         <h3 className="text-sm font-semibold text-ink">Clasificación</h3>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <select name="age_category" required className={fieldClass(Boolean(fieldErrors.age_category))}>
             <option value="">Categoría etaria</option>
             {ageCategories.map((item) => (
@@ -158,14 +169,16 @@ export default function PublishForm() {
             <option value="masculina">Masculino</option>
             <option value="mixta">Mixto</option>
           </select>
-          <select name="level" required className={fieldClass(Boolean(fieldErrors.level))}>
-            <option value="">Nivel</option>
-            <option value="principiante">Principiante</option>
-            <option value="novato">Novato</option>
-            <option value="intermedio">Intermedio</option>
-            <option value="avanzado">Avanzado</option>
-            <option value="competitivo">Competitivo</option>
-          </select>
+        </div>
+      </section>
+
+      <section className="grid gap-3">
+        <h3 className="text-sm font-semibold text-ink">Contacto y logo</h3>
+        <div className="grid gap-4 md:grid-cols-2">
+          <input name="phone" placeholder="Teléfono (opcional)" className="field" />
+          <input name="instagram" placeholder="Instagram (usuario o URL)" className="field" />
+          <input name="logo" type="file" accept="image/jpeg,image/png,image/webp" className="field md:col-span-2 file:mr-2 file:mt-1 file:rounded-lg file:border file:border-line file:bg-sand file:px-3 file:py-2 file:text-ink sm:file:mr-3 sm:file:mt-0" />
+          <input name="logo_url" placeholder="o pega URL del logo (opcional)" className="field md:col-span-2" />
         </div>
       </section>
 

@@ -10,7 +10,6 @@ const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado
 interface ExplorarPageProps {
   searchParams?: {
     rama?: string;
-    nivel?: string;
     dia?: string;
     categoria?: string;
   };
@@ -18,7 +17,6 @@ interface ExplorarPageProps {
 
 export default async function ExplorarPage({ searchParams }: ExplorarPageProps) {
   const branch = searchParams?.rama || '';
-  const level = searchParams?.nivel || '';
   const weekday = searchParams?.dia || '';
   const ageCategory = searchParams?.categoria || '';
 
@@ -32,7 +30,6 @@ export default async function ExplorarPage({ searchParams }: ExplorarPageProps) 
       .order('created_at', { ascending: false });
 
     if (branch) query = query.eq('branch', branch);
-    if (level) query = query.eq('level', level);
     if (weekday) query = query.contains('weekdays', [weekday]);
     if (ageCategory) query = query.eq('age_category', ageCategory);
 
@@ -42,7 +39,6 @@ export default async function ExplorarPage({ searchParams }: ExplorarPageProps) 
       console.error('ExplorarPage availabilities query failed', {
         route: '/explorar',
         branch,
-        level,
         weekday,
         ageCategory,
         error
@@ -55,7 +51,6 @@ export default async function ExplorarPage({ searchParams }: ExplorarPageProps) 
     console.error('ExplorarPage data load failed', {
       route: '/explorar',
       branch,
-      level,
       weekday,
       ageCategory,
       error
@@ -90,15 +85,6 @@ export default async function ExplorarPage({ searchParams }: ExplorarPageProps) 
           <option value="femenina">Femenina</option>
           <option value="masculina">Masculina</option>
           <option value="mixta">Mixta</option>
-        </select>
-
-        <select name="nivel" defaultValue={level} className="field">
-          <option value="">Todos los niveles</option>
-          <option value="principiante">Principiante</option>
-          <option value="novato">Novato</option>
-          <option value="intermedio">Intermedio</option>
-          <option value="avanzado">Avanzado</option>
-          <option value="competitivo">Competitivo</option>
         </select>
 
         <select name="dia" defaultValue={weekday} className="field">
