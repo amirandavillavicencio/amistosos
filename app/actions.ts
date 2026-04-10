@@ -173,7 +173,7 @@ export async function createAvailability(formData: FormData) {
       }
     });
 
-    throw new Error('Insert falló');
+    return { ok: false, message: 'Insert falló' };
   }
 
   revalidatePath('/');

@@ -67,7 +67,13 @@ export default function PublishForm() {
         setFieldErrors({});
 
         try {
-          await createAvailability(formData);
+          const result = await createAvailability(formData);
+
+          if (!result?.ok) {
+            setError(result?.message || 'No se pudo guardar la publicación.');
+            return;
+          }
+
           setClubName('');
           setSuccess('¡Disponibilidad publicada! Ya aparece en equipos compatibles.');
           setTimeout(() => setSuccess(null), 3000);
