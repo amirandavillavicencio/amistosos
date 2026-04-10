@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import PostCard from '@/components/post-card';
 import { getOpenAvailabilities } from '@/lib/data';
+import type { AvailabilityWithTeam } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,12 +22,34 @@ export default async function ExplorarPage({ searchParams }: ExplorarPageProps) 
   const weekday = searchParams?.dia || '';
   const ageCategory = searchParams?.categoria || '';
 
-  const posts = await getOpenAvailabilities(60, {
-    branch: branch || undefined,
-    level: level || undefined,
-    weekday: weekday || undefined,
-    ageCategory: ageCategory || undefined
-  });
+  let posts: AvailabilityWithTeam[] = [];
+  try {
+    const rawPosts = await getOpenAvailabilities(60, {
+      branch: branch || undefined,
+      level: level || undefined,
+      weekday: weekday || undefined,
+      ageCategory: ageCategory || undefined
+    });
+    posts = Array.isArray(rawPosts) ? rawPosts : [];
+    if (!Array.isArray(rawPosts)) {
+      console.error('ExplorarPage.getOpenAvailabilities invalid response', {
+        route: '/explorar',
+        branch,
+        level,
+        weekday,
+        ageCategory
+      });
+    }
+  } catch (error) {
+    console.error('ExplorarPage data load failed', {
+      route: '/explorar',
+      branch,
+      level,
+      weekday,
+      ageCategory,
+      error
+    });
+  }
 
   return (
     <main className="section">

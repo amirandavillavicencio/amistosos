@@ -1,11 +1,28 @@
 import Link from 'next/link';
 import ResultForm from '@/components/result-form';
 import { getAllTeamsMinimal, getRecentResults } from '@/lib/data';
+import type { MatchResultRow, TeamRow } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ResultadosPage() {
-  const [teams, recent] = await Promise.all([getAllTeamsMinimal(), getRecentResults(12)]);
+  let teams: TeamRow[] = [];
+  let recent: MatchResultRow[] = [];
+  try {
+    const [rawTeams, rawRecent] = await Promise.all([getAllTeamsMinimal(), getRecentResults(12)]);
+    teams = Array.isArray(rawTeams) ? rawTeams : [];
+    recent = Array.isArray(rawRecent) ? rawRecent : [];
+
+    if (!Array.isArray(rawTeams) || !Array.isArray(rawRecent)) {
+      console.error('ResultadosPage invalid data shape', {
+        route: '/resultados',
+        teamsIsArray: Array.isArray(rawTeams),
+        recentIsArray: Array.isArray(rawRecent)
+      });
+    }
+  } catch (error) {
+    console.error('ResultadosPage data load failed', { route: '/resultados', error });
+  }
 
   return (
     <main className="section">
