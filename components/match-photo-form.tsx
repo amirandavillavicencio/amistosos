@@ -40,14 +40,14 @@ export default function MatchPhotoForm() {
           name="image"
           type="file"
           required
-          accept="image/png,image/jpeg,image/webp,image/jpg"
+          accept="image/jpeg,image/png,image/webp"
           className="field file:mr-2 file:mt-1 file:rounded-lg file:border file:border-line file:bg-sand file:px-3 file:py-2 file:text-ink sm:file:mr-3 sm:file:mt-0"
         />
       </div>
 
       <textarea name="comment" placeholder="Comentario corto (opcional)" className="field min-h-20" />
 
-      <p className="text-xs text-muted">Formato recomendado: JPG o WEBP. Máximo 6MB.</p>
+      <p className="text-xs text-muted">JPG, PNG o WEBP admitidos. Máximo 6MB.</p>
 
       <button type="submit" className="btn-accent w-full justify-center md:w-auto">
         Subir foto del partido

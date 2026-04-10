@@ -62,10 +62,11 @@ Abrir `http://localhost:3000`.
 
 ## 4) Rutas principales
 
-- `/`: landing + destacados + publicación + sugerencias
-- `/explorar`: disponibilidades abiertas
+- `/`: landing + destacados + galería + resumen de ranking
+- `/explorar`: disponibilidades abiertas + filtros compartibles por URL
 - `/ranking`: ranking ELO + equipos activos
 - `/club/[id]`: ficha competitiva + historial
+- `/publicar`: formulario dedicado para publicar disponibilidad
 - `/resultados`: formulario para registrar partidos
 
 ## 5) Módulos clave
@@ -75,3 +76,14 @@ Abrir `http://localhost:3000`.
 - `app/actions.ts`: creación de disponibilidad normalizada + registro de resultados.
 - `supabase/schema.sql`: esquema completo y migración desde modelo legacy.
 
+
+
+## 6) Seed de datos demo
+
+Para poblar el entorno con publicaciones de ejemplo:
+
+```bash
+npm run seed:demo
+```
+
+Este script está pensado para desarrollo. En producción solo corre con `ALLOW_PREVIEW_SEED=true`.

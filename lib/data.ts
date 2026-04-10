@@ -14,14 +14,25 @@ import type {
 
 export const HISTORY_MINIMUM = 3;
 
-export async function getOpenAvailabilities(limit = 18): Promise<AvailabilityWithTeam[]> {
+export interface AvailabilityFilters {
+  branch?: string;
+  level?: string;
+  weekday?: string;
+}
+
+export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFilters): Promise<AvailabilityWithTeam[]> {
   const supabase = getSupabasePublic();
-  const { data } = await supabase
+  let query = supabase
     .from('availabilities')
     .select('*, team:teams(*)')
     .eq('status', 'open')
-    .order('created_at', { ascending: false })
-    .limit(limit);
+    .order('created_at', { ascending: false });
+
+  if (filters?.branch) query = query.eq('branch', filters.branch);
+  if (filters?.level) query = query.eq('desired_level', filters.level);
+  if (filters?.weekday) query = query.eq('weekday', filters.weekday);
+
+  const { data } = await query.limit(limit);
 
   return ((data || []) as AvailabilityWithTeam[]).filter((row) => Boolean(row.team));
 }
