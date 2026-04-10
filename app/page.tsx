@@ -49,6 +49,17 @@ export default async function HomePage() {
     console.error('HomePage data load failed', error);
   }
 
+  const safeSuggestedMatches = suggestedMatches.filter((match) => {
+    const isValid = Boolean(match?.a?.team && match?.b?.team);
+    if (!isValid) {
+      console.error('HomePage invalid suggested match payload', {
+        route: '/',
+        matchId: match?.id || 'unknown'
+      });
+    }
+    return isValid;
+  });
+
   return (
     <main className="pb-16">
       <header className="mx-auto mt-4 w-full max-w-6xl px-4 sm:mt-6 sm:px-6 md:mt-8 md:px-8">
@@ -168,11 +179,11 @@ export default async function HomePage() {
           <p className="text-sm text-muted">Priorizados por categoría, rama, nivel, horario, comuna y cancha.</p>
         </div>
 
-        {suggestedMatches.length === 0 ? (
+        {safeSuggestedMatches.length === 0 ? (
           <p className="text-muted">Todavía no hay coincidencias suficientes. Publica tu disponibilidad para activar el matching.</p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {suggestedMatches.map((match) => {
+            {safeSuggestedMatches.map((match) => {
               const confidence = match.totalScore >= 18 ? 'Coincidencia alta' : match.totalScore >= 13 ? 'Coincidencia media' : 'Coincidencia baja';
               return (
                 <article key={match.id} className="card-panel p-4">
