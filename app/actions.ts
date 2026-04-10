@@ -156,13 +156,34 @@ export async function createAvailability(formData: FormData) {
     status: 'open' as const
   };
 
-  const { error } = await supabase.from('availabilities').insert(payload);
+  const { data: inserted, error } = await supabase
+    .from('availabilities')
+    .insert(payload)
+    .select('id')
+    .single();
 
-  if (error) {
-    console.error('[createAvailability]', { error, payload });
+  if (error || !inserted) {
+    console.error('[createAvailability] insert availabilities failed', {
+      message: error?.message || 'No row returned after insert',
+      details: error || null,
+      payload: {
+        clubName,
+        comuna,
+        city,
+        weekdays,
+        startTime,
+        endTime,
+        branch,
+        ageCategory,
+        level,
+        hasCourt,
+        notes
+      }
+    });
+
     return {
       ok: false,
-      message: 'No pudimos guardar la publicación.'
+      message: 'No pudimos guardar la publicación. Intenta nuevamente.'
     };
   }
 
