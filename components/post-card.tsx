@@ -15,6 +15,9 @@ const categoryLabel: Record<AvailabilityWithTeam['age_category'], string> = {
 
 export default function PostCard({ post }: PostCardProps) {
   const team = post.team;
+  const startTime = post.start_time?.slice(0, 5) || '--:--';
+  const endTime = post.end_time?.slice(0, 5) || '--:--';
+  const days = (post.weekdays?.length ? post.weekdays : post.weekday ? [post.weekday] : []).filter(Boolean).join(', ');
 
   return (
     <article className="card-panel p-4 transition hover:-translate-y-0.5 hover:shadow-[0_20px_45px_rgba(77,56,36,0.14)] sm:p-5">
@@ -29,10 +32,10 @@ export default function PostCard({ post }: PostCardProps) {
       </div>
       <ul className="space-y-2 text-sm text-muted">
         <li>
-          <strong className="text-ink">Horario:</strong> {post.start_time.slice(0, 5)} - {post.end_time.slice(0, 5)}
+          <strong className="text-ink">Horario:</strong> {startTime} - {endTime}
         </li>
         <li>
-          <strong className="text-ink">Días:</strong> {(post.weekdays?.length ? post.weekdays : post.weekday ? [post.weekday] : []).join(', ')}
+          <strong className="text-ink">Días:</strong> {days || 'Sin días informados'}
         </li>
         <li>
           <strong className="text-ink">Cancha:</strong> {post.has_court ? 'Sí pone cancha' : 'No pone cancha'}
