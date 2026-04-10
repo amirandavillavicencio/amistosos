@@ -4,7 +4,8 @@ import MatchPhotoForm from '@/components/match-photo-form';
 import PostCard from '@/components/post-card';
 import PublishForm from '@/components/publish-form';
 import TeamRankingCard from '@/components/team-ranking-card';
-import { getClubStatsRanking, getOpenAvailabilities, getRecentMatchPhotos, getSuggestedMatches } from '@/lib/data';
+import { getClubStatsRanking, getRecentMatchPhotos, getSuggestedMatches } from '@/lib/data';
+import { getSupabasePublic } from '@/lib/supabase';
 import type { AvailabilityWithTeam, ClubStatsCard, MatchPhotoRow, SuggestedMatchCard } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -39,12 +40,29 @@ export default async function HomePage() {
   let suggestedMatches: SuggestedMatchCard[] = [];
 
   try {
-    [posts, photos, ranking, suggestedMatches] = await Promise.all([
-      getOpenAvailabilities(6),
+    const supabase = getSupabasePublic();
+    const [{ data: availabilityRows, error: availabilityError }, recentPhotos, clubRanking, matches] = await Promise.all([
+      supabase
+        .from('availabilities')
+        .select('*')
+        .eq('status', 'open')
+        .order('created_at', { ascending: false })
+        .limit(6),
       getRecentMatchPhotos(6),
       getClubStatsRanking(6),
       getSuggestedMatches(6)
     ]);
+
+    if (availabilityError) {
+      console.error('HomePage get availabilities failed', availabilityError);
+      posts = [];
+    } else {
+      posts = (availabilityRows || []) as AvailabilityWithTeam[];
+    }
+
+    photos = recentPhotos;
+    ranking = clubRanking;
+    suggestedMatches = matches;
   } catch (error) {
     console.error('HomePage data load failed', error);
   }
