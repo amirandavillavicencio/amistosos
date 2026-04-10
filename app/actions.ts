@@ -104,21 +104,19 @@ export async function createAvailability(formData: FormData) {
   assertHoneypot(formData);
   await assertRateLimit('publish');
 
-  const clubName = String(formData.get('club_name') || '').trim();
-  const responsibleName = String(formData.get('responsible_name') || '').trim();
-  const contactEmail = String(formData.get('contact_email') || '').trim();
+  const club_name = String(formData.get('club_name') || '').trim();
   const comuna = String(formData.get('comuna') || '').trim();
-  const city = 'Santiago';
+  const city = String(formData.get('city') || 'Santiago').trim() || 'Santiago';
   const weekdays = formData.getAll('weekdays').map((day) => String(day || '').trim()).filter(Boolean);
-  const startTime = String(formData.get('start_time') || '').trim();
-  const endTime = String(formData.get('end_time') || '').trim();
+  const start_time = String(formData.get('start_time') || '').trim();
+  const end_time = String(formData.get('end_time') || '').trim();
   const branch = String(formData.get('branch') || '').trim() as Branch;
-  const ageCategory = String(formData.get('age_category') || '').trim() as AgeCategory;
   const level = String(formData.get('level') || '').trim() as Level;
-  const hasCourt = String(formData.get('has_court') || 'false') === 'true';
+  const age_category = String(formData.get('age_category') || '').trim() as AgeCategory;
+  const has_court = String(formData.get('has_court') || 'false') === 'true';
   const notes = normalizeOptional(formData.get('notes'));
 
-  if (!clubName || !responsibleName || !contactEmail || !comuna || !startTime || !endTime) {
+  if (!club_name || !comuna) {
     throw new Error('Completa todos los campos requeridos.');
   }
 
@@ -126,69 +124,63 @@ export async function createAvailability(formData: FormData) {
     throw new Error('Debes seleccionar al menos un día disponible.');
   }
 
-  if (!validBranches.has(branch) || !validLevels.has(level) || !validAgeCategories.has(ageCategory)) {
-    throw new Error('Clasificación inválida. Revisa categoría, rama y nivel.');
+  const hhmmRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  if (!hhmmRegex.test(start_time) || !hhmmRegex.test(end_time)) {
+    throw new Error('La hora debe tener formato HH:mm.');
   }
 
-  if (parseTime(startTime) >= parseTime(endTime)) {
+  if (parseTime(start_time) >= parseTime(end_time)) {
     throw new Error('La hora de inicio debe ser menor a la hora de término.');
   }
 
+  if (!validBranches.has(branch) || !validLevels.has(level) || !validAgeCategories.has(age_category)) {
+    throw new Error('Clasificación inválida. Revisa categoría, rama y nivel.');
+  }
+
   const supabase = getSupabaseAdmin();
-  const payload = {
-    club_name: clubName,
-    comuna,
-    city,
-    weekday: weekdays[0] ?? null,
-    weekdays,
-    start_time: startTime,
-    end_time: endTime,
-    branch,
-    age_category: ageCategory,
-    level,
-    has_court: hasCourt,
-    notes,
-    status: 'open' as const
-  };
 
   const { data: inserted, error } = await supabase
     .from('availabilities')
-    .insert(payload)
+    .insert({
+      club_name,
+      comuna,
+      city,
+      weekday: weekdays?.[0] ?? null,
+      weekdays,
+      start_time,
+      end_time,
+      branch,
+      level,
+      age_category,
+      has_court,
+      notes,
+      status: 'open'
+    })
     .select('id')
     .single();
 
   if (error || !inserted) {
-    console.error('[createAvailability] insert availabilities failed', {
-      message: error?.message || 'No row returned after insert',
-      details: error || null,
+    console.error('[createAvailability ERROR]', {
+      error,
+      inserted,
       payload: {
-        club_name: clubName,
+        club_name,
         comuna,
         city,
-        weekday: weekdays[0] ?? null,
         weekdays,
-        start_time: startTime,
-        end_time: endTime,
-        branch,
-        age_category: ageCategory,
-        level,
-        has_court: hasCourt,
-        notes,
-        status: 'open'
+        start_time,
+        end_time
       }
     });
 
-    return {
-      ok: false,
-      message: 'No pudimos guardar la publicación. Intenta nuevamente.'
-    };
+    throw new Error('Insert falló');
   }
 
   revalidatePath('/');
   revalidatePath('/explorar');
   revalidatePath('/ranking');
 
-  return { ok: true };
+  return { ok: true, id: inserted.id };
 }
 
 export async function registerMatchResult(formData: FormData) {
