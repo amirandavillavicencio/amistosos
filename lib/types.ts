@@ -25,27 +25,23 @@ export interface TeamRow {
 
 export interface AvailabilityRow {
   id: string;
-  team_id: string;
-  address: string | null;
+  club_name: string;
   comuna: string;
   city: string;
-  play_date: string | null;
   weekday: string | null;
   weekdays: string[];
   start_time: string;
   end_time: string;
   branch: Branch;
   age_category: AgeCategory;
-  desired_level: Level;
+  level: Level;
   has_court: boolean;
   notes: string | null;
   status: 'open' | 'closed';
   created_at: string;
 }
 
-export interface AvailabilityWithTeam extends AvailabilityRow {
-  team: TeamRow;
-}
+export type AvailabilityWithTeam = AvailabilityRow;
 
 export interface SuggestedMatchRow {
   id: string;

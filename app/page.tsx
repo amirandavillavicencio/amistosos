@@ -68,7 +68,7 @@ export default async function HomePage() {
   }
 
   const safeSuggestedMatches = suggestedMatches.filter((match) => {
-    const isValid = Boolean(match?.a?.team && match?.b?.team);
+    const isValid = Boolean(match?.a && match?.b);
     if (!isValid) {
       console.error('HomePage invalid suggested match payload', {
         route: '/',
@@ -207,10 +207,10 @@ export default async function HomePage() {
                 <article key={match.id} className="card-panel p-4">
                   <p className="text-xs text-accent">{confidence}</p>
                   <h3 className="mt-1 display-serif text-xl text-ink">
-                    {match.a.team.club_name} vs {match.b.team.club_name}
+                    {match.a.club_name} vs {match.b.club_name}
                   </h3>
                   <p className="mt-1 text-sm text-muted">
-                    {match.a.age_category} · {match.a.branch} · {match.a.desired_level}
+                    {match.a.age_category} · {match.a.branch} · {match.a.level}
                   </p>
                   <p className="mt-2 text-sm text-muted">
                     {match.a.comuna || 'Sin comuna'} ↔ {match.b.comuna || 'Sin comuna'} ·{' '}

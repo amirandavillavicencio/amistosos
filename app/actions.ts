@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
 import { areCompatible, calculateCompatibility } from '@/lib/matching';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import type { AgeCategory, AvailabilityWithTeam, Branch, Level, MatchType, TeamRow } from '@/lib/types';
+import type { AgeCategory, AvailabilityRow, Branch, Level, MatchType, TeamRow } from '@/lib/types';
 
 const validBranches = new Set<Branch>(['femenina', 'masculina', 'mixta']);
 const validLevels = new Set<Level>(['principiante', 'novato', 'intermedio', 'avanzado', 'competitivo']);
@@ -65,19 +65,20 @@ async function refreshMatchesForAvailability(newAvailabilityId: string) {
   const supabase = getSupabaseAdmin();
   const { data: inserted } = await supabase
     .from('availabilities')
-    .select('*, team:teams(*)')
+    .select('*')
     .eq('id', newAvailabilityId)
-    .single<AvailabilityWithTeam>();
+    .eq('status', 'open')
+    .single<AvailabilityRow>();
 
   if (!inserted) return;
 
   const { data: candidates } = await supabase
     .from('availabilities')
-    .select('*, team:teams(*)')
+    .select('*')
     .neq('id', newAvailabilityId)
     .eq('status', 'open');
 
-  const rows = ((candidates || []) as AvailabilityWithTeam[])
+  const rows = ((candidates || []) as AvailabilityRow[])
     .filter((candidate) => areCompatible(inserted, candidate))
     .map((candidate) => {
       const score = calculateCompatibility(inserted, candidate);
@@ -175,6 +176,8 @@ export async function createAvailability(formData: FormData) {
 
     return { ok: false, message: 'Insert falló' };
   }
+
+  await refreshMatchesForAvailability(inserted.id);
 
   revalidatePath('/');
   revalidatePath('/explorar');

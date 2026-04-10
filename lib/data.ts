@@ -26,12 +26,12 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
     const supabase = getSupabasePublic();
     let query = supabase
       .from('availabilities')
-      .select('*, team:teams(*)')
+      .select('*')
       .eq('status', 'open')
       .order('created_at', { ascending: false });
 
     if (filters?.branch) query = query.eq('branch', filters.branch);
-    if (filters?.level) query = query.eq('desired_level', filters.level);
+    if (filters?.level) query = query.eq('level', filters.level);
     if (filters?.weekday) query = query.contains('weekdays', [filters.weekday]);
     if (filters?.ageCategory) query = query.eq('age_category', filters.ageCategory);
 
@@ -41,7 +41,7 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
       return [];
     }
 
-    return ((data || []) as AvailabilityWithTeam[]).filter((row) => Boolean(row?.team));
+    return (data || []) as AvailabilityWithTeam[];
   } catch (error) {
     console.error('getOpenAvailabilities crashed', error);
     return [];
@@ -71,7 +71,7 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
 
     const { data: availabilities, error: availabilitiesError } = await supabase
       .from('availabilities')
-      .select('*, team:teams(*)')
+      .select('*')
       .in('id', ids);
 
     if (availabilitiesError) {
@@ -88,7 +88,7 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
       .map((row) => {
         const a = map.get(row.post_a_id);
         const b = map.get(row.post_b_id);
-        if (!a || !b || !a.team || !b.team) return null;
+        if (!a || !b) return null;
         return {
           id: row.id,
           totalScore: row.compatibility_score,
@@ -280,7 +280,7 @@ export async function getAllTeamsMinimal(): Promise<TeamRow[]> {
 export async function getAvailabilityById(id: string): Promise<AvailabilityWithTeam | null> {
   try {
     const supabase = getSupabasePublic();
-    const { data, error } = await supabase.from('availabilities').select('*, team:teams(*)').eq('id', id).maybeSingle();
+    const { data, error } = await supabase.from('availabilities').select('*').eq('id', id).maybeSingle();
     if (error) {
       console.error('getAvailabilityById failed', error);
       return null;
@@ -292,6 +292,6 @@ export async function getAvailabilityById(id: string): Promise<AvailabilityWithT
   }
 }
 
-export function toAvailabilityWithTeam(row: AvailabilityRow & { team: TeamRow }): AvailabilityWithTeam {
+export function toAvailabilityWithTeam(row: AvailabilityRow): AvailabilityWithTeam {
   return row;
 }
