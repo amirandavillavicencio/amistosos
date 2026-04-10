@@ -75,16 +75,35 @@ async function resolveOrCreateTeam(input: {
   const clubNameKey = normalizeIdentity(input.clubName);
   const emailKey = normalizeIdentity(input.contactEmail);
   const instagramFallback = `sin-instagram-${clubNameKey}-${emailKey}`;
+  const payload = {
+    ...input,
+    clubNameKey,
+    emailKey,
+    instagramFallback
+  };
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from('teams')
     .select('*')
     .eq('club_name_key', clubNameKey)
     .eq('email_key', emailKey)
     .maybeSingle<TeamRow>();
 
+  if (existingError) {
+    console.error('[resolveOrCreateTeam] select teams by identity failed', {
+      operation: "select from teams where club_name_key/email_key",
+      payload,
+      message: existingError.message,
+      details: existingError
+    });
+    return {
+      ok: false as const,
+      message: 'No pudimos crear o resolver el equipo. Intenta nuevamente.'
+    };
+  }
+
   if (existing) {
-    const { data: updated } = await supabase
+    const { data: updated, error: updateError } = await supabase
       .from('teams')
       .update({
         club_name: input.clubName,
@@ -101,7 +120,20 @@ async function resolveOrCreateTeam(input: {
       .select('*')
       .single<TeamRow>();
 
-    return updated || existing;
+    if (updateError) {
+      console.error('[resolveOrCreateTeam] update teams failed', {
+        operation: `update teams by id=${existing.id}`,
+        payload,
+        message: updateError.message,
+        details: updateError
+      });
+      return {
+        ok: false as const,
+        message: 'No pudimos crear o resolver el equipo. Intenta nuevamente.'
+      };
+    }
+
+    return { ok: true as const, team: updated || existing };
   }
 
   const { data: created, error } = await supabase
@@ -125,10 +157,19 @@ async function resolveOrCreateTeam(input: {
     .single<TeamRow>();
 
   if (error || !created) {
-    throw new Error('No pudimos crear o resolver el club. Intenta nuevamente.');
+    console.error('[resolveOrCreateTeam] insert teams failed', {
+      operation: 'insert into teams',
+      payload,
+      message: error?.message || 'No row returned after insert',
+      details: error || null
+    });
+    return {
+      ok: false as const,
+      message: 'No pudimos crear o resolver el equipo. Intenta nuevamente.'
+    };
   }
 
-  return created;
+  return { ok: true as const, team: created };
 }
 
 async function refreshMatchesForAvailability(newAvailabilityId: string) {
@@ -205,7 +246,7 @@ export async function createAvailability(formData: FormData) {
     throw new Error('La hora de inicio debe ser menor a la hora de término.');
   }
 
-  const team = await resolveOrCreateTeam({
+  const resolvedTeam = await resolveOrCreateTeam({
     clubName,
     responsibleName,
     contactEmail,
@@ -215,12 +256,18 @@ export async function createAvailability(formData: FormData) {
     ageCategory,
     level
   });
+  if (!resolvedTeam.ok) {
+    return {
+      ok: false,
+      message: resolvedTeam.message
+    };
+  }
 
   const supabase = getSupabaseAdmin();
   const { data: inserted, error } = await supabase
     .from('availabilities')
     .insert({
-      team_id: team.id,
+      team_id: resolvedTeam.team.id,
       address,
       comuna,
       city,
