@@ -38,7 +38,7 @@ export function calculateCompatibility(a: AvailabilityWithTeam, b: AvailabilityW
   const sameComuna = a.comuna.toLowerCase() === b.comuna.toLowerCase();
   const sameCategory = a.age_category === b.age_category;
   const sameBranch = a.branch === b.branch;
-  const levelDistance = Math.abs(levelWeight[a.desired_level] - levelWeight[b.desired_level]);
+  const levelDistance = Math.abs(levelWeight[a.level] - levelWeight[b.level]);
   const compatibleLevel = levelDistance <= 1;
   const compatibleSchedule = hasScheduleCompatibility(a, b);
   const hasCourt = a.has_court || b.has_court;
@@ -59,7 +59,7 @@ export function calculateCompatibility(a: AvailabilityWithTeam, b: AvailabilityW
 }
 
 export function areCompatible(a: AvailabilityWithTeam, b: AvailabilityWithTeam): boolean {
-  const levelDistance = Math.abs(levelWeight[a.desired_level] - levelWeight[b.desired_level]);
+  const levelDistance = Math.abs(levelWeight[a.level] - levelWeight[b.level]);
 
   return (
     a.age_category === b.age_category &&

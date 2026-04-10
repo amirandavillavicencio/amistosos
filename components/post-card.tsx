@@ -36,7 +36,7 @@ export default function PostCard({ post }: PostCardProps) {
           </p>
         </div>
         <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
-          {availability.level || post.desired_level}
+          {availability.level || post.level}
         </span>
       </div>
       <ul className="space-y-2 text-sm text-muted">
