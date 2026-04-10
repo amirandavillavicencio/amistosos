@@ -11,6 +11,7 @@ const validBranches = new Set<Branch>(['femenina', 'masculina', 'mixta']);
 const validLevels = new Set<Level>(['principiante', 'novato', 'intermedio', 'avanzado', 'competitivo']);
 const validAgeCategories = new Set<AgeCategory>(['sub-12', 'sub-14', 'sub-16', 'sub-18', 'sub-20', 'tc']);
 const validMatchTypes = new Set<MatchType>(['amistoso', 'torneo', 'entrenamiento', 'competitivo']);
+const validWeekdays = new Set(['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']);
 const requestStore = new Map<string, number[]>();
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
@@ -61,30 +62,47 @@ async function assertRateLimit(scope: 'publish' | 'results') {
   requestStore.set(key, recent);
 }
 
-async function refreshMatchesForAvailability(newAvailabilityId: string) {
+function toCanonicalPair(aId: string, bId: string) {
+  return aId < bId ? { post_a_id: aId, post_b_id: bId } : { post_a_id: bId, post_b_id: aId };
+}
+
+async function deleteMatchesForAvailability(availabilityId: string) {
   const supabase = getSupabaseAdmin();
-  const { data: inserted } = await supabase
+  await supabase.from('suggested_matches').delete().or(`post_a_id.eq.${availabilityId},post_b_id.eq.${availabilityId}`);
+}
+
+async function refreshMatchesForAvailability(availabilityId: string) {
+  const supabase = getSupabaseAdmin();
+
+  await deleteMatchesForAvailability(availabilityId);
+
+  const { data: current } = await supabase
     .from('availabilities')
     .select('*')
-    .eq('id', newAvailabilityId)
+    .eq('id', availabilityId)
     .eq('status', 'open')
-    .single<AvailabilityRow>();
+    .maybeSingle<AvailabilityRow>();
 
-  if (!inserted) return;
+  if (!current) return;
 
   const { data: candidates } = await supabase
     .from('availabilities')
     .select('*')
-    .neq('id', newAvailabilityId)
-    .eq('status', 'open');
+    .neq('id', availabilityId)
+    .eq('status', 'open')
+    .returns<AvailabilityRow[]>();
 
-  const rows = ((candidates || []) as AvailabilityRow[])
-    .filter((candidate) => areCompatible(inserted, candidate))
+  const rows = (candidates || [])
+    .filter((candidate) => {
+      if (candidate.id === current.id) return false;
+      if (candidate.club_name.trim().toLowerCase() === current.club_name.trim().toLowerCase()) return false;
+      return areCompatible(current, candidate);
+    })
     .map((candidate) => {
-      const score = calculateCompatibility(inserted, candidate);
+      const score = calculateCompatibility(current, candidate);
+      const pair = toCanonicalPair(current.id, candidate.id);
       return {
-        post_a_id: inserted.id,
-        post_b_id: candidate.id,
+        ...pair,
         compatibility_score: score.total,
         schedule_score: score.schedule,
         location_score: score.location,
@@ -96,8 +114,39 @@ async function refreshMatchesForAvailability(newAvailabilityId: string) {
     .sort((a, b) => b.compatibility_score - a.compatibility_score)
     .slice(0, 16);
 
-  if (rows.length > 0) {
-    await supabase.from('suggested_matches').insert(rows);
+  if (!rows.length) return;
+
+  await supabase.from('suggested_matches').insert(rows);
+}
+
+function validateAvailabilityPayload(input: {
+  comuna: string;
+  weekdays: string[];
+  start_time: string;
+  end_time: string;
+  branch: Branch;
+  level: Level;
+  age_category: AgeCategory;
+}) {
+  if (!input.comuna.trim()) {
+    throw new Error('La comuna es obligatoria.');
+  }
+
+  if (!input.weekdays.length || input.weekdays.some((day) => !validWeekdays.has(day))) {
+    throw new Error('Debes seleccionar días válidos para la disponibilidad.');
+  }
+
+  const hhmmRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  if (!hhmmRegex.test(input.start_time) || !hhmmRegex.test(input.end_time)) {
+    throw new Error('La hora debe tener formato HH:mm.');
+  }
+
+  if (parseTime(input.start_time) >= parseTime(input.end_time)) {
+    throw new Error('La hora de inicio debe ser menor a la hora de término.');
+  }
+
+  if (!validBranches.has(input.branch) || !validLevels.has(input.level) || !validAgeCategories.has(input.age_category)) {
+    throw new Error('Clasificación inválida. Revisa categoría, rama y nivel.');
   }
 }
 
@@ -116,26 +165,17 @@ export async function createAvailability(formData: FormData) {
   const age_category = String(formData.get('age_category') || '').trim() as AgeCategory;
   const has_court = String(formData.get('has_court') || 'false') === 'true';
   const notes = normalizeOptional(formData.get('notes'));
+  const contact_email = normalizeOptional(formData.get('contact_email'));
+  const responsible_name = normalizeOptional(formData.get('responsible_name'));
 
   if (!club_name || !comuna) {
     throw new Error('Completa todos los campos requeridos.');
   }
 
-  if (!weekdays.length) {
-    throw new Error('Debes seleccionar al menos un día disponible.');
-  }
+  validateAvailabilityPayload({ comuna, weekdays, start_time, end_time, branch, level, age_category });
 
-  const hhmmRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-  if (!hhmmRegex.test(start_time) || !hhmmRegex.test(end_time)) {
-    throw new Error('La hora debe tener formato HH:mm.');
-  }
-
-  if (parseTime(start_time) >= parseTime(end_time)) {
-    throw new Error('La hora de inicio debe ser menor a la hora de término.');
-  }
-
-  if (!validBranches.has(branch) || !validLevels.has(level) || !validAgeCategories.has(age_category)) {
-    throw new Error('Clasificación inválida. Revisa categoría, rama y nivel.');
+  if (!contact_email) {
+    throw new Error('El correo de contacto es obligatorio para editar luego la publicación.');
   }
 
   const supabase = getSupabaseAdmin();
@@ -155,6 +195,8 @@ export async function createAvailability(formData: FormData) {
       age_category,
       has_court,
       notes,
+      contact_email,
+      responsible_name,
       status: 'open'
     })
     .select('id')
@@ -184,6 +226,74 @@ export async function createAvailability(formData: FormData) {
   revalidatePath('/ranking');
 
   return { ok: true, id: inserted.id };
+}
+
+export async function updateAvailability(formData: FormData) {
+  assertHoneypot(formData);
+
+  const id = String(formData.get('id') || '').trim();
+  const email = normalizeOptional(formData.get('contact_email'));
+  const comuna = String(formData.get('comuna') || '').trim();
+  const weekdays = formData.getAll('weekdays').map((day) => String(day || '').trim()).filter(Boolean);
+  const start_time = String(formData.get('start_time') || '').trim();
+  const end_time = String(formData.get('end_time') || '').trim();
+  const has_court = String(formData.get('has_court') || 'false') === 'true';
+  const notes = normalizeOptional(formData.get('notes'));
+  const branch = String(formData.get('branch') || '').trim() as Branch;
+  const level = String(formData.get('level') || '').trim() as Level;
+  const age_category = String(formData.get('age_category') || '').trim() as AgeCategory;
+
+  if (!id) return { ok: false, message: 'No encontramos la publicación a editar.' };
+  if (!email) return { ok: false, message: 'Debes ingresar el correo de contacto.' };
+
+  validateAvailabilityPayload({ comuna, weekdays, start_time, end_time, branch, level, age_category });
+
+  const supabase = getSupabaseAdmin();
+  const { data: existing, error: existingError } = await supabase
+    .from('availabilities')
+    .select('id, contact_email')
+    .eq('id', id)
+    .maybeSingle<{ id: string; contact_email: string | null }>();
+
+  if (existingError || !existing) {
+    return { ok: false, message: 'No encontramos la publicación indicada.' };
+  }
+
+  if (!existing.contact_email) {
+    return { ok: false, message: 'Esta publicación no se puede editar porque no tiene correo asociado.' };
+  }
+
+  if (existing.contact_email.trim().toLowerCase() !== email.toLowerCase()) {
+    return { ok: false, message: 'Correo incorrecto. No tienes permiso para editar esta publicación.' };
+  }
+
+  const payload = {
+    comuna,
+    weekday: weekdays[0] || null,
+    weekdays,
+    start_time,
+    end_time,
+    has_court,
+    notes,
+    branch,
+    level,
+    age_category,
+    status: 'open' as const
+  };
+
+  const { error: updateError } = await supabase.from('availabilities').update(payload).eq('id', id);
+  if (updateError) {
+    return { ok: false, message: 'No pudimos guardar los cambios de la publicación.' };
+  }
+
+  await refreshMatchesForAvailability(id);
+
+  revalidatePath('/');
+  revalidatePath('/explorar');
+  revalidatePath('/publicaciones');
+  revalidatePath(`/publicaciones/${id}`);
+
+  return { ok: true, id };
 }
 
 export async function registerMatchResult(formData: FormData) {

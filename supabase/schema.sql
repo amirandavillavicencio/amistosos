@@ -232,3 +232,8 @@ alter table if exists availabilities drop constraint if exists availabilities_de
 alter table if exists availabilities add constraint availabilities_desired_level_check check (desired_level in ('principiante', 'novato', 'intermedio', 'avanzado', 'competitivo'));
 alter table if exists availabilities drop constraint if exists availabilities_check;
 alter table if exists availabilities add constraint availabilities_check check (play_date is not null or weekday is not null or cardinality(weekdays) > 0);
+alter table if exists availabilities add column if not exists contact_email text;
+alter table if exists availabilities add column if not exists responsible_name text;
+
+create unique index if not exists uq_suggested_matches_pair
+  on suggested_matches (least(post_a_id, post_b_id), greatest(post_a_id, post_b_id));

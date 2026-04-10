@@ -39,6 +39,8 @@ export interface AvailabilityRow {
   notes: string | null;
   status: 'open' | 'closed';
   created_at: string;
+  contact_email: string | null;
+  responsible_name: string | null;
 }
 
 export type AvailabilityWithTeam = AvailabilityRow;
