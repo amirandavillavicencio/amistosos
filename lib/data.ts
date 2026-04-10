@@ -64,12 +64,29 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
 
     if (!rows?.length) return [];
 
-    const ids = [...new Set(rows.flatMap((row) => [row.post_a_id, row.post_b_id]))];
+    const validRows = rows.filter((row) => {
+      const hasPosts = Boolean(row.post_a_id && row.post_b_id);
+      const samePost = row.post_a_id === row.post_b_id;
+      if (!hasPosts || samePost) {
+        console.error('getSuggestedMatches skipping invalid row', {
+          matchId: row.id,
+          post_a_id: row.post_a_id,
+          post_b_id: row.post_b_id
+        });
+        return false;
+      }
+      return true;
+    });
+
+    if (!validRows.length) return [];
+
+    const ids = [...new Set(validRows.flatMap((row) => [row.post_a_id, row.post_b_id]).filter(Boolean))];
     if (!ids.length) return [];
 
     const { data: availabilities, error: availabilitiesError } = await supabase
       .from('availabilities')
       .select('*')
+      .eq('status', 'open')
       .in('id', ids);
 
     if (availabilitiesError) {
@@ -82,11 +99,18 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
       map.set(row.id, row);
     }
 
-    return rows
+    return validRows
       .map((row) => {
-        const a = map.get(row.post_a_id);
-        const b = map.get(row.post_b_id);
-        if (!a || !b) return null;
+        const a = row.post_a_id ? map.get(row.post_a_id) : null;
+        const b = row.post_b_id ? map.get(row.post_b_id) : null;
+        if (!a || !b) {
+          console.error('getSuggestedMatches missing availability for row', {
+            matchId: row.id,
+            post_a_id: row.post_a_id,
+            post_b_id: row.post_b_id
+          });
+          return null;
+        }
         return {
           id: row.id,
           totalScore: row.compatibility_score,

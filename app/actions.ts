@@ -89,7 +89,15 @@ function toCanonicalPair(aId: string, bId: string) {
 
 async function deleteMatchesForAvailability(availabilityId: string) {
   const supabase = getSupabaseAdmin();
-  await supabase.from('suggested_matches').delete().or(`post_a_id.eq.${availabilityId},post_b_id.eq.${availabilityId}`);
+  const { error } = await supabase
+    .from('suggested_matches')
+    .delete()
+    .or(`post_a_id.eq.${availabilityId},post_b_id.eq.${availabilityId}`);
+
+  if (error) {
+    console.error('deleteMatchesForAvailability failed', { availabilityId, error });
+    throw new Error('No pudimos limpiar matches previos.');
+  }
 }
 
 async function refreshMatchesForAvailability(availabilityId: string) {
@@ -97,21 +105,31 @@ async function refreshMatchesForAvailability(availabilityId: string) {
 
   await deleteMatchesForAvailability(availabilityId);
 
-  const { data: current } = await supabase
+  const { data: current, error: currentError } = await supabase
     .from('availabilities')
     .select('*')
     .eq('id', availabilityId)
     .eq('status', 'open')
     .maybeSingle<AvailabilityRow>();
 
+  if (currentError) {
+    console.error('refreshMatchesForAvailability current failed', { availabilityId, error: currentError });
+    throw new Error('No pudimos cargar la publicación actual para recalcular matches.');
+  }
+
   if (!current) return;
 
-  const { data: candidates } = await supabase
+  const { data: candidates, error: candidatesError } = await supabase
     .from('availabilities')
     .select('*')
     .neq('id', availabilityId)
     .eq('status', 'open')
     .returns<AvailabilityRow[]>();
+
+  if (candidatesError) {
+    console.error('refreshMatchesForAvailability candidates failed', { availabilityId, error: candidatesError });
+    throw new Error('No pudimos cargar publicaciones candidatas para matching.');
+  }
 
   const rows = (candidates || [])
     .filter((candidate) => {
@@ -137,7 +155,11 @@ async function refreshMatchesForAvailability(availabilityId: string) {
 
   if (!rows.length) return;
 
-  await supabase.from('suggested_matches').insert(rows);
+  const { error: insertError } = await supabase.from('suggested_matches').insert(rows);
+  if (insertError) {
+    console.error('refreshMatchesForAvailability insert failed', { availabilityId, rows: rows.length, error: insertError });
+    throw new Error('No pudimos guardar los matches sugeridos.');
+  }
 }
 
 function validateAvailabilityPayload(input: {

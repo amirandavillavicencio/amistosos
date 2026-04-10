@@ -50,8 +50,8 @@ export type AvailabilityWithTeam = AvailabilityRow;
 
 export interface SuggestedMatchRow {
   id: string;
-  post_a_id: string;
-  post_b_id: string;
+  post_a_id: string | null;
+  post_b_id: string | null;
   compatibility_score: number;
   schedule_score: number;
   location_score: number;
