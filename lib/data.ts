@@ -22,176 +22,274 @@ export interface AvailabilityFilters {
 }
 
 export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFilters): Promise<AvailabilityWithTeam[]> {
-  const supabase = getSupabasePublic();
-  let query = supabase
-    .from('availabilities')
-    .select('*, team:teams(*)')
-    .eq('status', 'open')
-    .order('created_at', { ascending: false });
+  try {
+    const supabase = getSupabasePublic();
+    let query = supabase
+      .from('availabilities')
+      .select('*, team:teams(*)')
+      .eq('status', 'open')
+      .order('created_at', { ascending: false });
 
-  if (filters?.branch) query = query.eq('branch', filters.branch);
-  if (filters?.level) query = query.eq('desired_level', filters.level);
-  if (filters?.weekday) query = query.contains('weekdays', [filters.weekday]);
-  if (filters?.ageCategory) query = query.eq('age_category', filters.ageCategory);
+    if (filters?.branch) query = query.eq('branch', filters.branch);
+    if (filters?.level) query = query.eq('desired_level', filters.level);
+    if (filters?.weekday) query = query.contains('weekdays', [filters.weekday]);
+    if (filters?.ageCategory) query = query.eq('age_category', filters.ageCategory);
 
-  const { data } = await query.limit(limit);
+    const { data, error } = await query.limit(limit);
+    if (error) {
+      console.error('getOpenAvailabilities failed', error);
+      return [];
+    }
 
-  return ((data || []) as AvailabilityWithTeam[]).filter((row) => Boolean(row.team));
+    return ((data || []) as AvailabilityWithTeam[]).filter((row) => Boolean(row?.team));
+  } catch (error) {
+    console.error('getOpenAvailabilities crashed', error);
+    return [];
+  }
 }
 
 export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
-  const supabase = getSupabasePublic();
-  const { data: rows } = await supabase
-    .from('suggested_matches')
-    .select('*')
-    .eq('status', 'active')
-    .order('compatibility_score', { ascending: false })
-    .limit(limit)
-    .returns<SuggestedMatchRow[]>();
+  try {
+    const supabase = getSupabasePublic();
+    const { data: rows, error } = await supabase
+      .from('suggested_matches')
+      .select('*')
+      .eq('status', 'active')
+      .order('compatibility_score', { ascending: false })
+      .limit(limit)
+      .returns<SuggestedMatchRow[]>();
 
-  if (!rows?.length) return [];
+    if (error) {
+      console.error('getSuggestedMatches failed', error);
+      return [];
+    }
 
-  const ids = [...new Set(rows.flatMap((row) => [row.post_a_id, row.post_b_id]))];
-  const { data: availabilities } = await supabase
-    .from('availabilities')
-    .select('*, team:teams(*)')
-    .in('id', ids);
+    if (!rows?.length) return [];
 
-  const map = new Map<string, AvailabilityWithTeam>();
-  for (const row of (availabilities || []) as AvailabilityWithTeam[]) {
-    map.set(row.id, row);
+    const ids = [...new Set(rows.flatMap((row) => [row.post_a_id, row.post_b_id]))];
+    if (!ids.length) return [];
+
+    const { data: availabilities, error: availabilitiesError } = await supabase
+      .from('availabilities')
+      .select('*, team:teams(*)')
+      .in('id', ids);
+
+    if (availabilitiesError) {
+      console.error('getSuggestedMatches availabilities failed', availabilitiesError);
+      return [];
+    }
+
+    const map = new Map<string, AvailabilityWithTeam>();
+    for (const row of (availabilities || []) as AvailabilityWithTeam[]) {
+      map.set(row.id, row);
+    }
+
+    return rows
+      .map((row) => {
+        const a = map.get(row.post_a_id);
+        const b = map.get(row.post_b_id);
+        if (!a || !b || !a.team || !b.team) return null;
+        return {
+          id: row.id,
+          totalScore: row.compatibility_score,
+          scheduleScore: row.schedule_score,
+          locationScore: row.location_score,
+          levelScore: row.level_score,
+          eloScore: row.elo_score,
+          a,
+          b
+        };
+      })
+      .filter((value): value is SuggestedMatchCard => Boolean(value));
+  } catch (error) {
+    console.error('getSuggestedMatches crashed', error);
+    return [];
   }
-
-  return rows
-    .map((row) => {
-      const a = map.get(row.post_a_id);
-      const b = map.get(row.post_b_id);
-      if (!a || !b) return null;
-      return {
-        id: row.id,
-        totalScore: row.compatibility_score,
-        scheduleScore: row.schedule_score,
-        locationScore: row.location_score,
-        levelScore: row.level_score,
-        eloScore: row.elo_score,
-        a,
-        b
-      };
-    })
-    .filter((value): value is SuggestedMatchCard => Boolean(value));
 }
 
 export async function getRecentMatchPhotos(limit = 12): Promise<MatchPhotoRow[]> {
-  const supabase = getSupabasePublic();
-  const { data } = await supabase
-    .from('match_photos')
-    .select('*')
-    .order('match_date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(limit)
-    .returns<MatchPhotoRow[]>();
+  try {
+    const supabase = getSupabasePublic();
+    const { data, error } = await supabase
+      .from('match_photos')
+      .select('*')
+      .order('match_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(limit)
+      .returns<MatchPhotoRow[]>();
 
-  return data || [];
+    if (error) {
+      console.error('getRecentMatchPhotos failed', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('getRecentMatchPhotos crashed', error);
+    return [];
+  }
 }
 
 export async function getClubStatsRanking(limit = 20): Promise<ClubStatsCard[]> {
-  const supabase = getSupabasePublic();
-  const { data: stats } = await supabase
-    .from('club_stats')
-    .select('*')
-    .order('wins', { ascending: false })
-    .order('matches_played', { ascending: false })
-    .order('last_match_date', { ascending: false })
-    .limit(limit)
-    .returns<ClubStatsRow[]>();
+  try {
+    const supabase = getSupabasePublic();
+    const { data: stats, error } = await supabase
+      .from('club_stats')
+      .select('*')
+      .order('wins', { ascending: false })
+      .order('matches_played', { ascending: false })
+      .order('last_match_date', { ascending: false })
+      .limit(limit)
+      .returns<ClubStatsRow[]>();
 
-  const base = stats || [];
-  if (!base.length) return [];
-
-  const { data: photos } = await supabase
-    .from('match_photos')
-    .select('club_name_key, comuna, created_at')
-    .in(
-      'club_name_key',
-      base.map((item) => item.club_name_key)
-    )
-    .order('created_at', { ascending: false });
-
-  const comunaByClub = new Map<string, string>();
-  for (const photo of photos || []) {
-    if (!comunaByClub.has(photo.club_name_key)) {
-      comunaByClub.set(photo.club_name_key, photo.comuna);
+    if (error) {
+      console.error('getClubStatsRanking failed', error);
+      return [];
     }
-  }
 
-  return base.map((item) => ({
-    ...item,
-    comuna: comunaByClub.get(item.club_name_key) || null,
-    win_rate: item.matches_played > 0 ? Math.round((item.wins / item.matches_played) * 100) : 0
-  }));
+    const base = stats || [];
+    if (!base.length) return [];
+
+    const { data: photos, error: photosError } = await supabase
+      .from('match_photos')
+      .select('club_name_key, comuna, created_at')
+      .in(
+        'club_name_key',
+        base.map((item) => item.club_name_key)
+      )
+      .order('created_at', { ascending: false });
+
+    if (photosError) {
+      console.error('getClubStatsRanking photos failed', photosError);
+    }
+
+    const comunaByClub = new Map<string, string>();
+    for (const photo of photos || []) {
+      if (!photo?.club_name_key || !photo?.comuna) continue;
+      if (!comunaByClub.has(photo.club_name_key)) {
+        comunaByClub.set(photo.club_name_key, photo.comuna);
+      }
+    }
+
+    return base.map((item) => ({
+      ...item,
+      comuna: comunaByClub.get(item.club_name_key) || null,
+      win_rate: item.matches_played > 0 ? Math.round((item.wins / item.matches_played) * 100) : 0
+    }));
+  } catch (error) {
+    console.error('getClubStatsRanking crashed', error);
+    return [];
+  }
 }
 
 export async function getTopTeams(limit = 8): Promise<TeamRow[]> {
-  const supabase = getSupabasePublic();
-  const { data } = await supabase
-    .from('teams')
-    .select('*')
-    .order('current_elo', { ascending: false })
-    .order('matches_played', { ascending: false })
-    .limit(limit)
-    .returns<TeamRow[]>();
-
-  return data || [];
+  try {
+    const supabase = getSupabasePublic();
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .order('current_elo', { ascending: false })
+      .order('matches_played', { ascending: false })
+      .limit(limit)
+      .returns<TeamRow[]>();
+    if (error) {
+      console.error('getTopTeams failed', error);
+      return [];
+    }
+    return data || [];
+  } catch (error) {
+    console.error('getTopTeams crashed', error);
+    return [];
+  }
 }
 
 export async function getRecentResults(limit = 10): Promise<MatchResultRow[]> {
-  const supabase = getSupabasePublic();
-  const { data } = await supabase
-    .from('match_results')
-    .select('*')
-    .order('match_date', { ascending: false })
-    .limit(limit)
-    .returns<MatchResultRow[]>();
-
-  return data || [];
+  try {
+    const supabase = getSupabasePublic();
+    const { data, error } = await supabase
+      .from('match_results')
+      .select('*')
+      .order('match_date', { ascending: false })
+      .limit(limit)
+      .returns<MatchResultRow[]>();
+    if (error) {
+      console.error('getRecentResults failed', error);
+      return [];
+    }
+    return data || [];
+  } catch (error) {
+    console.error('getRecentResults crashed', error);
+    return [];
+  }
 }
 
 export async function getTeamProfile(teamId: string): Promise<TeamProfile | null> {
-  const supabase = getSupabasePublic();
-  const { data: team } = await supabase.from('teams').select('*').eq('id', teamId).maybeSingle<TeamRow>();
-  if (!team) return null;
+  try {
+    const supabase = getSupabasePublic();
+    const { data: team, error: teamError } = await supabase.from('teams').select('*').eq('id', teamId).maybeSingle<TeamRow>();
+    if (teamError) {
+      console.error('getTeamProfile team failed', teamError);
+      return null;
+    }
+    if (!team) return null;
 
-  const { data: results } = await supabase
-    .from('match_results')
-    .select('*')
-    .eq('club_id', teamId)
-    .order('match_date', { ascending: false })
-    .limit(12)
-    .returns<MatchResultRow[]>();
+    const { data: results, error: resultsError } = await supabase
+      .from('match_results')
+      .select('*')
+      .eq('club_id', teamId)
+      .order('match_date', { ascending: false })
+      .limit(12)
+      .returns<MatchResultRow[]>();
 
-  const winRate = team.matches_played > 0 ? Math.round((team.wins / team.matches_played) * 100) : 0;
+    if (resultsError) {
+      console.error('getTeamProfile results failed', resultsError);
+    }
 
-  return {
-    ...team,
-    win_rate: winRate,
-    latest_results: results || []
-  };
+    const winRate = team.matches_played > 0 ? Math.round((team.wins / team.matches_played) * 100) : 0;
+
+    return {
+      ...team,
+      win_rate: winRate,
+      latest_results: results || []
+    };
+  } catch (error) {
+    console.error('getTeamProfile crashed', error);
+    return null;
+  }
 }
 
 export async function getAllTeamsMinimal(): Promise<TeamRow[]> {
-  const supabase = getSupabasePublic();
-  const { data } = await supabase
-    .from('teams')
-    .select('*')
-    .order('club_name', { ascending: true })
-    .returns<TeamRow[]>();
-  return data || [];
+  try {
+    const supabase = getSupabasePublic();
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .order('club_name', { ascending: true })
+      .returns<TeamRow[]>();
+    if (error) {
+      console.error('getAllTeamsMinimal failed', error);
+      return [];
+    }
+    return data || [];
+  } catch (error) {
+    console.error('getAllTeamsMinimal crashed', error);
+    return [];
+  }
 }
 
 export async function getAvailabilityById(id: string): Promise<AvailabilityWithTeam | null> {
-  const supabase = getSupabasePublic();
-  const { data } = await supabase.from('availabilities').select('*, team:teams(*)').eq('id', id).maybeSingle();
-  return (data as AvailabilityWithTeam | null) || null;
+  try {
+    const supabase = getSupabasePublic();
+    const { data, error } = await supabase.from('availabilities').select('*, team:teams(*)').eq('id', id).maybeSingle();
+    if (error) {
+      console.error('getAvailabilityById failed', error);
+      return null;
+    }
+    return (data as AvailabilityWithTeam | null) || null;
+  } catch (error) {
+    console.error('getAvailabilityById crashed', error);
+    return null;
+  }
 }
 
 export function toAvailabilityWithTeam(row: AvailabilityRow & { team: TeamRow }): AvailabilityWithTeam {

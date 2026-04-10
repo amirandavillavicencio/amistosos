@@ -1,11 +1,18 @@
 import Link from 'next/link';
 import TeamRankingCard from '@/components/team-ranking-card';
 import { getClubStatsRanking } from '@/lib/data';
+import type { ClubStatsCard } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
 export default async function RankingPage() {
-  const teams = await getClubStatsRanking(40);
+  let teams: ClubStatsCard[] = [];
+  try {
+    teams = await getClubStatsRanking(40);
+  } catch (error) {
+    console.error('RankingPage data load failed', error);
+  }
+
   const mostActive = [...teams].sort((a, b) => b.matches_played - a.matches_played).slice(0, 3);
 
   return (
@@ -17,7 +24,8 @@ export default async function RankingPage() {
           <p className="mt-2 text-muted">Se actualiza con fotos que incluyan resultado válido (por ejemplo 3-1).</p>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">
             El ranking se basa en un sistema ELO. Cada equipo tiene un puntaje que sube cuando gana y baja cuando
-            pierde. Si ganas contra un equipo fuerte, subes más puntos. Si pierdes contra uno más débil, bajas más.
+            pierde. Si ganas contra un equipo con más victorias, subes más puntos. Si pierdes contra uno con menos
+            victorias, bajas más puntos.
           </p>
         </div>
         <Link href="/" className="rounded-xl border border-line bg-ivory px-4 py-2 text-sm text-ink">

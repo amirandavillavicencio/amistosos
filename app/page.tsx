@@ -5,6 +5,7 @@ import PostCard from '@/components/post-card';
 import PublishForm from '@/components/publish-form';
 import TeamRankingCard from '@/components/team-ranking-card';
 import { getClubStatsRanking, getOpenAvailabilities, getRecentMatchPhotos, getSuggestedMatches } from '@/lib/data';
+import type { AvailabilityWithTeam, ClubStatsCard, MatchPhotoRow, SuggestedMatchCard } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,12 +33,21 @@ const howItWorks = [
 ];
 
 export default async function HomePage() {
-  const [posts, photos, ranking, suggestedMatches] = await Promise.all([
-    getOpenAvailabilities(6),
-    getRecentMatchPhotos(6),
-    getClubStatsRanking(6),
-    getSuggestedMatches(6)
-  ]);
+  let posts: AvailabilityWithTeam[] = [];
+  let photos: MatchPhotoRow[] = [];
+  let ranking: ClubStatsCard[] = [];
+  let suggestedMatches: SuggestedMatchCard[] = [];
+
+  try {
+    [posts, photos, ranking, suggestedMatches] = await Promise.all([
+      getOpenAvailabilities(6),
+      getRecentMatchPhotos(6),
+      getClubStatsRanking(6),
+      getSuggestedMatches(6)
+    ]);
+  } catch (error) {
+    console.error('HomePage data load failed', error);
+  }
 
   return (
     <main className="pb-16">
@@ -174,7 +184,8 @@ export default async function HomePage() {
                     {match.a.age_category} · {match.a.branch} · {match.a.desired_level}
                   </p>
                   <p className="mt-2 text-sm text-muted">
-                    {match.a.comuna} ↔ {match.b.comuna} · {match.a.start_time.slice(0, 5)} - {match.a.end_time.slice(0, 5)}
+                    {match.a.comuna || 'Sin comuna'} ↔ {match.b.comuna || 'Sin comuna'} ·{' '}
+                    {match.a.start_time?.slice(0, 5) || '--:--'} - {match.a.end_time?.slice(0, 5) || '--:--'}
                   </p>
                 </article>
               );
@@ -210,15 +221,16 @@ export default async function HomePage() {
             <h2 className="display-serif text-3xl text-ink sm:text-4xl">Ranking ELO</h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
               El ranking se basa en un sistema ELO. Cada equipo tiene un puntaje que sube cuando gana y baja cuando
-              pierde. Si ganas contra un equipo fuerte, subes más puntos. Si pierdes contra uno más débil, bajas más.
+              pierde. Si ganas contra un equipo con más victorias, subes más puntos. Si pierdes contra uno con menos
+              victorias, bajas más puntos.
             </p>
           </div>
           <Link href="/ranking" className="editorial-link">
-            Ver ranking completo
+            Ver tabla completa
           </Link>
         </div>
         {ranking.length === 0 ? (
-          <p className="text-muted">Cuando suban fotos con resultado, aparecerá el ranking aquí.</p>
+          <p className="text-muted">Cuando se registren resultados, el ranking aparecerá aquí.</p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {ranking.map((team, index) => (
