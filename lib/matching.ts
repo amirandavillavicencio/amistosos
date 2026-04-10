@@ -2,6 +2,7 @@ import type { AvailabilityWithTeam } from '@/lib/types';
 
 function minutes(value: string): number {
   const [h, m] = value.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return -1;
   return h * 60 + m;
 }
 
@@ -26,15 +27,30 @@ function safeComuna(post: AvailabilityWithTeam) {
   return (post.comuna || '').trim().toLowerCase();
 }
 
+function safeClubName(post: AvailabilityWithTeam) {
+  return (post.club_name || '').trim().toLowerCase();
+}
+
+function startDistanceInMinutes(a: AvailabilityWithTeam, b: AvailabilityWithTeam): number {
+  const aStart = minutes(a.start_time);
+  const bStart = minutes(b.start_time);
+  if (aStart < 0 || bStart < 0) return Number.POSITIVE_INFINITY;
+  return Math.abs(aStart - bStart);
+}
+
 export function calculateCompatibility(a: AvailabilityWithTeam, b: AvailabilityWithTeam) {
   const overlap = overlapInMinutes(a.start_time, a.end_time, b.start_time, b.end_time);
   const days = sharedWeekdays(a, b);
   const sameComuna = safeComuna(a) && safeComuna(a) === safeComuna(b);
+  const startDistance = startDistanceInMinutes(a, b);
 
-  const schedule = Math.min(40, days.length * 10 + Math.min(20, Math.floor(overlap / 15) * 2));
-  const location = sameComuna ? 25 : 8;
-  const court = (a.has_court || b.has_court) ? (a.has_court && b.has_court ? 15 : 10) : 0;
-  const base = 20; // misma rama + categoría ya validado en areCompatible
+  const dayScore = Math.min(12, days.length * 4);
+  const overlapScore = Math.min(12, Math.floor(overlap / 15) * 2);
+  const closenessBonus = startDistance <= 30 ? 6 : startDistance <= 60 ? 4 : startDistance <= 120 ? 2 : 0;
+  const schedule = Math.min(30, dayScore + overlapScore + closenessBonus);
+  const location = sameComuna ? 20 : 8;
+  const court = a.has_court && b.has_court ? 25 : a.has_court || b.has_court ? 14 : 0;
+  const base = 25; // misma rama + categoría ya validado en areCompatible
   const total = Math.min(100, base + schedule + location + court);
 
   return {
@@ -44,11 +60,22 @@ export function calculateCompatibility(a: AvailabilityWithTeam, b: AvailabilityW
     court,
     sharedDays: days,
     overlapMinutes: overlap,
-    sameComuna
+    sameComuna,
+    startDistance
   };
 }
 
 export function areCompatible(a: AvailabilityWithTeam, b: AvailabilityWithTeam): boolean {
+  if (!a?.id || !b?.id) return false;
+  if (a.id === b.id) return false;
+  if (safeClubName(a) && safeClubName(a) === safeClubName(b)) return false;
+
+  const aStart = minutes(a.start_time);
+  const aEnd = minutes(a.end_time);
+  const bStart = minutes(b.start_time);
+  const bEnd = minutes(b.end_time);
+  if (aStart < 0 || aEnd < 0 || bStart < 0 || bEnd < 0 || aStart >= aEnd || bStart >= bEnd) return false;
+
   const overlap = overlapInMinutes(a.start_time, a.end_time, b.start_time, b.end_time);
 
   return (
@@ -76,6 +103,7 @@ export function getMatchReasons(a: AvailabilityWithTeam, b: AvailabilityWithTeam
   }
 
   if (meta.overlapMinutes > 0) reasons.push(`Sus horarios se cruzan (${meta.overlapMinutes} min)`);
+  if (Number.isFinite(meta.startDistance)) reasons.push(`Inicio de horario cercano (${meta.startDistance} min de diferencia)`);
   if (a.has_court && b.has_court) reasons.push('Ambos equipos pueden poner cancha');
   else if (a.has_court || b.has_court) reasons.push('Uno de los equipos pone cancha');
   if (meta.sameComuna) reasons.push('Misma comuna');

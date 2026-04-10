@@ -1,4 +1,5 @@
 import { getSupabasePublic } from '@/lib/supabase';
+import { areCompatible } from '@/lib/matching';
 import type {
   AvailabilityRow,
   AvailabilityWithTeam,
@@ -49,12 +50,14 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
 export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
   try {
     const supabase = getSupabasePublic();
+    const safeLimit = Math.max(1, limit);
+    const overscanLimit = Math.max(safeLimit * 4, safeLimit + 8);
     const { data: rows, error } = await supabase
       .from('suggested_matches')
       .select('*')
       .eq('status', 'active')
       .order('compatibility_score', { ascending: false })
-      .limit(limit)
+      .limit(overscanLimit)
       .returns<SuggestedMatchRow[]>();
 
     if (error) {
@@ -82,11 +85,35 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
       map.set(row.id, row);
     }
 
-    return rows
+    const pairSeen = new Set<string>();
+    const hydrated = rows
       .map((row) => {
         const a = map.get(row.post_a_id);
         const b = map.get(row.post_b_id);
-        if (!a || !b) return null;
+        if (!a || !b) {
+          console.error('getSuggestedMatches skipping orphan match row', {
+            matchId: row.id,
+            postAId: row.post_a_id,
+            postBId: row.post_b_id
+          });
+          return null;
+        }
+
+        if (!areCompatible(a, b)) {
+          console.error('getSuggestedMatches skipping incompatible match row', {
+            matchId: row.id,
+            postAId: row.post_a_id,
+            postBId: row.post_b_id
+          });
+          return null;
+        }
+
+        const pairKey = row.post_a_id < row.post_b_id ? `${row.post_a_id}:${row.post_b_id}` : `${row.post_b_id}:${row.post_a_id}`;
+        if (pairSeen.has(pairKey)) {
+          return null;
+        }
+        pairSeen.add(pairKey);
+
         return {
           id: row.id,
           totalScore: row.compatibility_score,
@@ -98,7 +125,10 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
           b
         };
       })
-      .filter((value): value is SuggestedMatchCard => Boolean(value));
+      .filter((value): value is SuggestedMatchCard => Boolean(value))
+      .sort((a, b) => b.totalScore - a.totalScore);
+
+    return hydrated.slice(0, safeLimit);
   } catch (error) {
     console.error('getSuggestedMatches crashed', error);
     return [];

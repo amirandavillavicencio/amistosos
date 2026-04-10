@@ -89,7 +89,11 @@ function toCanonicalPair(aId: string, bId: string) {
 
 async function deleteMatchesForAvailability(availabilityId: string) {
   const supabase = getSupabaseAdmin();
-  await supabase.from('suggested_matches').delete().or(`post_a_id.eq.${availabilityId},post_b_id.eq.${availabilityId}`);
+  const { error } = await supabase.from('suggested_matches').delete().or(`post_a_id.eq.${availabilityId},post_b_id.eq.${availabilityId}`);
+  if (error) {
+    console.error('deleteMatchesForAvailability failed', { availabilityId, error });
+    throw new Error('No se pudieron limpiar los matches anteriores.');
+  }
 }
 
 async function refreshMatchesForAvailability(availabilityId: string) {
@@ -97,31 +101,43 @@ async function refreshMatchesForAvailability(availabilityId: string) {
 
   await deleteMatchesForAvailability(availabilityId);
 
-  const { data: current } = await supabase
+  const { data: current, error: currentError } = await supabase
     .from('availabilities')
     .select('*')
     .eq('id', availabilityId)
     .eq('status', 'open')
     .maybeSingle<AvailabilityRow>();
 
+  if (currentError) {
+    console.error('refreshMatchesForAvailability current failed', { availabilityId, error: currentError });
+    throw new Error('No se pudo leer la publicación actual para regenerar matches.');
+  }
+
   if (!current) return;
 
-  const { data: candidates } = await supabase
+  const { data: candidates, error: candidatesError } = await supabase
     .from('availabilities')
     .select('*')
     .neq('id', availabilityId)
     .eq('status', 'open')
     .returns<AvailabilityRow[]>();
 
+  if (candidatesError) {
+    console.error('refreshMatchesForAvailability candidates failed', { availabilityId, error: candidatesError });
+    throw new Error('No se pudieron leer publicaciones candidatas para regenerar matches.');
+  }
+
+  const pairSeen = new Set<string>();
   const rows = (candidates || [])
     .filter((candidate) => {
-      if (candidate.id === current.id) return false;
-      if (candidate.club_name.trim().toLowerCase() === current.club_name.trim().toLowerCase()) return false;
       return areCompatible(current, candidate);
     })
     .map((candidate) => {
       const score = calculateCompatibility(current, candidate);
       const pair = toCanonicalPair(current.id, candidate.id);
+      const pairKey = `${pair.post_a_id}:${pair.post_b_id}`;
+      if (pairSeen.has(pairKey)) return null;
+      pairSeen.add(pairKey);
       return {
         ...pair,
         compatibility_score: score.total,
@@ -132,12 +148,17 @@ async function refreshMatchesForAvailability(availabilityId: string) {
         status: 'active' as const
       };
     })
+    .filter((row): row is NonNullable<typeof row> => Boolean(row))
     .sort((a, b) => b.compatibility_score - a.compatibility_score)
     .slice(0, 16);
 
   if (!rows.length) return;
 
-  await supabase.from('suggested_matches').insert(rows);
+  const { error: insertError } = await supabase.from('suggested_matches').insert(rows);
+  if (insertError) {
+    console.error('refreshMatchesForAvailability insert failed', { availabilityId, error: insertError, attemptedRows: rows.length });
+    throw new Error('No se pudieron guardar los matches regenerados.');
+  }
 }
 
 function validateAvailabilityPayload(input: {

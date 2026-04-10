@@ -89,10 +89,12 @@ export default async function HomePage() {
   });
 
   const groupedPosts = groupByBranch(posts);
+  const featuredMatch = safeSuggestedMatches[0] || null;
+  const remainingMatches = featuredMatch ? safeSuggestedMatches.slice(1) : [];
   const groupedMatches = {
-    femenina: safeSuggestedMatches.filter((m) => m.a.branch === 'femenina'),
-    mixta: safeSuggestedMatches.filter((m) => m.a.branch === 'mixta'),
-    masculina: safeSuggestedMatches.filter((m) => m.a.branch === 'masculina')
+    femenina: remainingMatches.filter((m) => m.a.branch === 'femenina'),
+    mixta: remainingMatches.filter((m) => m.a.branch === 'mixta'),
+    masculina: remainingMatches.filter((m) => m.a.branch === 'masculina')
   };
 
   return (
@@ -229,6 +231,17 @@ export default async function HomePage() {
           <p className="text-muted">Todavía no hay coincidencias suficientes. Publica tu disponibilidad para activar el matching.</p>
         ) : (
           <div className="space-y-6">
+            {featuredMatch ? (
+              <div className="rounded-2xl border border-accent/30 bg-accent/5 p-4 sm:p-5">
+                <h3 className="display-serif text-2xl text-ink sm:text-3xl">Match de la fecha</h3>
+                <p className="mt-1 text-sm text-muted">
+                  El cruce mejor puntuado entre publicaciones activas según rama, categoría, horario, días y cancha.
+                </p>
+                <div className="mt-4 max-w-3xl">
+                  <SuggestedMatchCardView match={featuredMatch} featured />
+                </div>
+              </div>
+            ) : null}
             {(['femenina', 'mixta', 'masculina'] as const).map((branch) => {
               const branchMatches = groupedMatches[branch];
               if (!branchMatches.length) return null;
