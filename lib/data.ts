@@ -1,4 +1,5 @@
 import { getSupabasePublic } from '@/lib/supabase';
+import { areCompatible } from '@/lib/matching';
 import type {
   AvailabilityRow,
   AvailabilityWithTeam,
@@ -49,12 +50,14 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
 export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
   try {
     const supabase = getSupabasePublic();
+    const overscan = Math.max(limit * 4, 24);
+
     const { data: rows, error } = await supabase
       .from('suggested_matches')
       .select('*')
       .eq('status', 'active')
       .order('compatibility_score', { ascending: false })
-      .limit(limit)
+      .limit(overscan)
       .returns<SuggestedMatchRow[]>();
 
     if (error) {
@@ -70,7 +73,8 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
     const { data: availabilities, error: availabilitiesError } = await supabase
       .from('availabilities')
       .select('*')
-      .in('id', ids);
+      .in('id', ids)
+      .eq('status', 'open');
 
     if (availabilitiesError) {
       console.error('getSuggestedMatches availabilities failed', availabilitiesError);
@@ -82,23 +86,45 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
       map.set(row.id, row);
     }
 
-    return rows
-      .map((row) => {
-        const a = map.get(row.post_a_id);
-        const b = map.get(row.post_b_id);
-        if (!a || !b) return null;
-        return {
-          id: row.id,
-          totalScore: row.compatibility_score,
-          scheduleScore: row.schedule_score,
-          locationScore: row.location_score,
-          levelScore: row.level_score,
-          eloScore: row.elo_score,
-          a,
-          b
-        };
-      })
-      .filter((value): value is SuggestedMatchCard => Boolean(value));
+    const seenPairs = new Set<string>();
+    const cards: SuggestedMatchCard[] = [];
+
+    for (const row of rows) {
+      const a = map.get(row.post_a_id);
+      const b = map.get(row.post_b_id);
+
+      if (!a || !b) {
+        console.error('getSuggestedMatches skipping orphan row', {
+          matchId: row.id,
+          postA: row.post_a_id,
+          postB: row.post_b_id
+        });
+        continue;
+      }
+
+      if (!areCompatible(a, b)) {
+        continue;
+      }
+
+      const pairKey = [a.id, b.id].sort().join('::');
+      if (seenPairs.has(pairKey)) continue;
+      seenPairs.add(pairKey);
+
+      cards.push({
+        id: row.id,
+        totalScore: row.compatibility_score,
+        scheduleScore: row.schedule_score,
+        locationScore: row.location_score,
+        levelScore: row.level_score,
+        eloScore: row.elo_score,
+        a,
+        b
+      });
+
+      if (cards.length >= limit) break;
+    }
+
+    return cards;
   } catch (error) {
     console.error('getSuggestedMatches crashed', error);
     return [];

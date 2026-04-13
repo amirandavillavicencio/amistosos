@@ -60,7 +60,7 @@ export default async function HomePage() {
         .limit(6),
       getRecentMatchPhotos(6),
       getClubStatsRanking(6),
-      getSuggestedMatches(6)
+      getSuggestedMatches(12)
     ]);
 
     if (availabilityError) {
@@ -87,6 +87,10 @@ export default async function HomePage() {
     }
     return isValid;
   });
+
+  const sortedSuggestedMatches = [...safeSuggestedMatches].sort((a, b) => b.totalScore - a.totalScore);
+  const featuredMatch = sortedSuggestedMatches[0] || null;
+  const remainingMatches = featuredMatch ? sortedSuggestedMatches.filter((match) => match.id !== featuredMatch.id) : [];
 
   const groupedPosts = groupByBranch(posts);
   const groupedMatches = {
@@ -225,22 +229,34 @@ export default async function HomePage() {
           <p className="text-sm text-muted">Priorizados por rama, categoría, días, horario, cancha y comuna.</p>
         </div>
 
-        {safeSuggestedMatches.length === 0 ? (
+        {!featuredMatch ? (
           <p className="text-muted">Todavía no hay coincidencias suficientes. Publica tu disponibilidad para activar el matching.</p>
         ) : (
-          <div className="space-y-6">
-            {(['femenina', 'mixta', 'masculina'] as const).map((branch) => {
-              const branchMatches = groupedMatches[branch];
-              if (!branchMatches.length) return null;
-              return (
-                <div key={branch}>
-                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-muted">{branchLabel[branch]}</h3>
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {branchMatches.map((match) => (<SuggestedMatchCardView key={match.id} match={match} />))}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="space-y-8">
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted">Match de la fecha</h3>
+              <p className="mt-1 text-sm text-muted">El cruce con mejor score total disponible ahora mismo.</p>
+              <div className="mt-3">
+                <SuggestedMatchCardView match={featuredMatch} featured />
+              </div>
+            </div>
+
+            {remainingMatches.length > 0 ? (
+              <div className="space-y-6">
+                {(['femenina', 'mixta', 'masculina'] as const).map((branch) => {
+                  const branchMatches = groupedMatches[branch].filter((match) => match.id !== featuredMatch.id);
+                  if (!branchMatches.length) return null;
+                  return (
+                    <div key={branch}>
+                      <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-muted">{branchLabel[branch]}</h3>
+                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {branchMatches.map((match) => (<SuggestedMatchCardView key={match.id} match={match} />))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
         )}
       </section>

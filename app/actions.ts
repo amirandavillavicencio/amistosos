@@ -89,7 +89,11 @@ function toCanonicalPair(aId: string, bId: string) {
 
 async function deleteMatchesForAvailability(availabilityId: string) {
   const supabase = getSupabaseAdmin();
-  await supabase.from('suggested_matches').delete().or(`post_a_id.eq.${availabilityId},post_b_id.eq.${availabilityId}`);
+  const { error } = await supabase.from('suggested_matches').delete().or(`post_a_id.eq.${availabilityId},post_b_id.eq.${availabilityId}`);
+
+  if (error) {
+    console.error('deleteMatchesForAvailability failed', { availabilityId, error });
+  }
 }
 
 async function refreshMatchesForAvailability(availabilityId: string) {
@@ -97,47 +101,79 @@ async function refreshMatchesForAvailability(availabilityId: string) {
 
   await deleteMatchesForAvailability(availabilityId);
 
-  const { data: current } = await supabase
+  const { data: current, error: currentError } = await supabase
     .from('availabilities')
     .select('*')
     .eq('id', availabilityId)
     .eq('status', 'open')
     .maybeSingle<AvailabilityRow>();
 
+  if (currentError) {
+    console.error('refreshMatchesForAvailability current load failed', { availabilityId, error: currentError });
+    return;
+  }
+
   if (!current) return;
 
-  const { data: candidates } = await supabase
+  const { data: candidates, error: candidatesError } = await supabase
     .from('availabilities')
     .select('*')
     .neq('id', availabilityId)
     .eq('status', 'open')
     .returns<AvailabilityRow[]>();
 
-  const rows = (candidates || [])
-    .filter((candidate) => {
-      if (candidate.id === current.id) return false;
-      if (candidate.club_name.trim().toLowerCase() === current.club_name.trim().toLowerCase()) return false;
-      return areCompatible(current, candidate);
-    })
-    .map((candidate) => {
-      const score = calculateCompatibility(current, candidate);
-      const pair = toCanonicalPair(current.id, candidate.id);
-      return {
-        ...pair,
-        compatibility_score: score.total,
-        schedule_score: score.schedule,
-        location_score: score.location,
-        level_score: score.court,
-        elo_score: 0,
-        status: 'active' as const
-      };
-    })
+  if (candidatesError) {
+    console.error('refreshMatchesForAvailability candidates load failed', { availabilityId, error: candidatesError });
+    return;
+  }
+
+  const rowsByPair = new Map<string, {
+    post_a_id: string;
+    post_b_id: string;
+    compatibility_score: number;
+    schedule_score: number;
+    location_score: number;
+    level_score: number;
+    elo_score: number;
+    status: 'active';
+  }>();
+
+  for (const candidate of candidates || []) {
+    if (!candidate?.id || candidate.id === current.id) continue;
+
+    if (!areCompatible(current, candidate)) continue;
+
+    const pair = toCanonicalPair(current.id, candidate.id);
+    const pairKey = `${pair.post_a_id}::${pair.post_b_id}`;
+    if (rowsByPair.has(pairKey)) continue;
+
+    const score = calculateCompatibility(current, candidate);
+
+    rowsByPair.set(pairKey, {
+      ...pair,
+      compatibility_score: score.total,
+      schedule_score: score.schedule,
+      location_score: score.location,
+      level_score: score.court,
+      elo_score: 0,
+      status: 'active'
+    });
+  }
+
+  const rows = [...rowsByPair.values()]
     .sort((a, b) => b.compatibility_score - a.compatibility_score)
     .slice(0, 16);
 
   if (!rows.length) return;
 
-  await supabase.from('suggested_matches').insert(rows);
+  const { error: insertError } = await supabase.from('suggested_matches').insert(rows);
+  if (insertError) {
+    console.error('refreshMatchesForAvailability insert failed', {
+      availabilityId,
+      rows: rows.length,
+      error: insertError
+    });
+  }
 }
 
 function validateAvailabilityPayload(input: {
