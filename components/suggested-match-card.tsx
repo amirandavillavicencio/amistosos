@@ -11,13 +11,13 @@ const categoryLabel: Record<string, string> = {
   tc: 'Todo Competidor (TC)'
 };
 
-export default function SuggestedMatchCardView({ match }: { match: SuggestedMatchCard }) {
+export default function SuggestedMatchCardView({ match, featured = false }: { match: SuggestedMatchCard; featured?: boolean }) {
   const tier = getMatchTier(match.totalScore);
   const reasons = getMatchReasons(match.a, match.b, match.totalScore).slice(0, 4);
 
   return (
-    <article className="card-panel p-4">
-      <p className="text-xs font-medium text-accent">{tier}</p>
+    <article className={`card-panel p-4 ${featured ? 'border-accent/50 bg-accent/5' : ''}`}>
+      <p className="text-xs font-medium text-accent">{featured ? 'Destacado · ' : ''}{tier}</p>
       <h3 className="mt-1 display-serif text-xl text-ink">{match.a.club_name} vs {match.b.club_name}</h3>
       <p className="mt-1 text-sm text-muted">{categoryLabel[match.a.age_category] || match.a.age_category} · Rama {match.a.branch}</p>
       <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted">
