@@ -13,7 +13,7 @@ const categoryLabel: Record<string, string> = {
 
 export default function SuggestedMatchCardView({ match, featured = false }: { match: SuggestedMatchCard; featured?: boolean }) {
   const tier = getMatchTier(match.totalScore);
-  const reasons = getMatchReasons(match.a, match.b, match.totalScore).slice(0, 4);
+  const reasons = getMatchReasons(match).slice(0, 4);
 
   return (
     <article className={`card-panel p-4 ${featured ? 'border-accent/50 bg-accent/5' : ''}`}>

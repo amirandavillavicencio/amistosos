@@ -1,113 +1,184 @@
-import type { AvailabilityWithTeam } from '@/lib/types';
+import type {
+  AvailabilityWithTeam,
+  MatchingAvailability,
+  SuggestedMatchInsertRow,
+  SuggestedMatchScoreBreakdown,
+  SuggestedMatchCard
+} from '@/lib/types';
 
-function minutes(value: string): number {
-  const [h, m] = value.split(':').map(Number);
-  if (Number.isNaN(h) || Number.isNaN(m)) return -1;
-  return h * 60 + m;
+const VALID_WEEKDAYS = new Set(['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']);
+
+export function normalizeId(value: string | null | undefined): string {
+  return String(value || '').trim();
 }
 
-function overlapInMinutes(aStart: string, aEnd: string, bStart: string, bEnd: string): number {
-  const aStartMinutes = minutes(aStart);
-  const aEndMinutes = minutes(aEnd);
-  const bStartMinutes = minutes(bStart);
-  const bEndMinutes = minutes(bEnd);
-
-  if (aStartMinutes < 0 || aEndMinutes < 0 || bStartMinutes < 0 || bEndMinutes < 0) return 0;
-
-  const start = Math.max(aStartMinutes, bStartMinutes);
-  const end = Math.min(aEndMinutes, bEndMinutes);
-  return Math.max(0, end - start);
+export function normalizeClubName(value: string | null | undefined): string {
+  return String(value || '').trim().toLowerCase();
 }
 
-function resolveWeekdays(post: AvailabilityWithTeam): string[] {
-  if (post.weekdays?.length) return post.weekdays;
-  if (post.weekday) return [post.weekday];
-  return [];
+export function canonicalPairIds(aId: string, bId: string): { post_a_id: string; post_b_id: string } {
+  const left = normalizeId(aId);
+  const right = normalizeId(bId);
+  return left < right ? { post_a_id: left, post_b_id: right } : { post_a_id: right, post_b_id: left };
 }
 
-function sharedWeekdays(a: AvailabilityWithTeam, b: AvailabilityWithTeam): string[] {
+export function canonicalPairKey(aId: string, bId: string): string {
+  const pair = canonicalPairIds(aId, bId);
+  return `${pair.post_a_id}::${pair.post_b_id}`;
+}
+
+export function resolveWeekdays(post: Pick<MatchingAvailability, 'weekday' | 'weekdays'>): string[] {
+  const fromWeekdays = Array.isArray(post.weekdays) ? post.weekdays : [];
+  const merged = [...fromWeekdays, post.weekday || ''];
+  const seen = new Set<string>();
+
+  return merged
+    .map((day) => String(day || '').trim().toLowerCase())
+    .filter((day) => VALID_WEEKDAYS.has(day))
+    .filter((day) => {
+      if (seen.has(day)) return false;
+      seen.add(day);
+      return true;
+    });
+}
+
+export function toMinutes(value: string | null | undefined): number {
+  const clean = String(value || '').trim();
+  const match = clean.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if (!match) return -1;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+export function hasValidTimeRange(post: Pick<MatchingAvailability, 'start_time' | 'end_time'>): boolean {
+  const start = toMinutes(post.start_time);
+  const end = toMinutes(post.end_time);
+  return start >= 0 && end >= 0 && end > start;
+}
+
+export function overlapMinutes(a: Pick<MatchingAvailability, 'start_time' | 'end_time'>, b: Pick<MatchingAvailability, 'start_time' | 'end_time'>): number {
+  const aStart = toMinutes(a.start_time);
+  const aEnd = toMinutes(a.end_time);
+  const bStart = toMinutes(b.start_time);
+  const bEnd = toMinutes(b.end_time);
+
+  if (aStart < 0 || aEnd < 0 || bStart < 0 || bEnd < 0) return 0;
+  return Math.max(0, Math.min(aEnd, bEnd) - Math.max(aStart, bStart));
+}
+
+export function isAvailabilityEligible(post: MatchingAvailability): boolean {
+  if (!normalizeId(post.id)) return false;
+  if (post.status !== 'open') return false;
+  if (!normalizeClubName(post.club_name)) return false;
+  if (!post.branch || !post.age_category) return false;
+  if (!hasValidTimeRange(post)) return false;
+  if (resolveWeekdays(post).length === 0) return false;
+  return true;
+}
+
+function sharedWeekdays(a: MatchingAvailability, b: MatchingAvailability): string[] {
   const bDays = new Set(resolveWeekdays(b));
-  return resolveWeekdays(a).filter((day, index, arr) => bDays.has(day) && arr.indexOf(day) === index);
+  return resolveWeekdays(a).filter((day) => bDays.has(day));
 }
 
-function safeComuna(post: AvailabilityWithTeam) {
-  return (post.comuna || '').trim().toLowerCase();
+function normalizedComuna(value: string | null | undefined): string {
+  return String(value || '').trim().toLowerCase();
 }
 
-function safeClub(post: AvailabilityWithTeam) {
-  return (post.club_name || '').trim().toLowerCase();
-}
-
-function timeClosenessBonus(a: AvailabilityWithTeam, b: AvailabilityWithTeam): number {
-  const aStart = minutes(a.start_time);
-  const bStart = minutes(b.start_time);
-  const aEnd = minutes(a.end_time);
-  const bEnd = minutes(b.end_time);
-
-  if (aStart < 0 || bStart < 0 || aEnd < 0 || bEnd < 0) return 0;
-
-  const startDiff = Math.abs(aStart - bStart);
-  const endDiff = Math.abs(aEnd - bEnd);
-  const totalDiff = startDiff + endDiff;
-
-  if (totalDiff <= 30) return 12;
-  if (totalDiff <= 60) return 9;
-  if (totalDiff <= 90) return 6;
-  if (totalDiff <= 120) return 3;
-  return 0;
-}
-
-function clampScore(value: number): number {
-  return Math.max(0, Math.min(100, value));
-}
-
-export function calculateCompatibility(a: AvailabilityWithTeam, b: AvailabilityWithTeam) {
-  const overlap = overlapInMinutes(a.start_time, a.end_time, b.start_time, b.end_time);
-  const days = sharedWeekdays(a, b);
-  const sameComuna = safeComuna(a) !== '' && safeComuna(a) === safeComuna(b);
-
-  const daysScore = Math.min(24, days.length * 8);
-  const overlapScore = Math.min(30, Math.floor(overlap / 15) * 3);
-  const proximityScore = timeClosenessBonus(a, b);
-  const schedule = Math.min(42, daysScore + overlapScore + proximityScore);
-
-  const location = sameComuna ? 18 : 0;
-  const court = a.has_court && b.has_court ? 20 : a.has_court || b.has_court ? 10 : 0;
-  const base = 20;
-
-  const total = clampScore(base + schedule + location + court);
-
-  return {
-    total,
-    schedule,
-    location,
-    court,
-    sharedDays: days,
-    overlapMinutes: overlap,
-    sameComuna
-  };
-}
-
-export function areCompatible(a: AvailabilityWithTeam, b: AvailabilityWithTeam): boolean {
-  if (!a?.id || !b?.id) return false;
-  if (a.id === b.id) return false;
-
-  const clubA = safeClub(a);
-  const clubB = safeClub(b);
-  if (!clubA || !clubB || clubA === clubB) return false;
-
-  if (a.age_category !== b.age_category) return false;
+export function canPostsMatch(a: MatchingAvailability, b: MatchingAvailability): boolean {
+  if (!isAvailabilityEligible(a) || !isAvailabilityEligible(b)) return false;
+  if (normalizeId(a.id) === normalizeId(b.id)) return false;
+  if (normalizeClubName(a.club_name) === normalizeClubName(b.club_name)) return false;
   if (a.branch !== b.branch) return false;
+  if (a.age_category !== b.age_category) return false;
 
-  const days = sharedWeekdays(a, b);
-  if (days.length === 0) return false;
+  const sharedDays = sharedWeekdays(a, b);
+  if (sharedDays.length === 0) return false;
 
-  const overlap = overlapInMinutes(a.start_time, a.end_time, b.start_time, b.end_time);
+  const overlap = overlapMinutes(a, b);
   if (overlap <= 0) return false;
 
   if (!a.has_court && !b.has_court) return false;
 
   return true;
+}
+
+function timeClosenessScore(a: MatchingAvailability, b: MatchingAvailability): number {
+  const startDiff = Math.abs(toMinutes(a.start_time) - toMinutes(b.start_time));
+  const endDiff = Math.abs(toMinutes(a.end_time) - toMinutes(b.end_time));
+  const totalDiff = startDiff + endDiff;
+
+  if (totalDiff <= 20) return 12;
+  if (totalDiff <= 40) return 9;
+  if (totalDiff <= 70) return 6;
+  if (totalDiff <= 100) return 3;
+  return 0;
+}
+
+export function scoreMatch(a: MatchingAvailability, b: MatchingAvailability): { total: number; breakdown: SuggestedMatchScoreBreakdown } {
+  const sharedDays = sharedWeekdays(a, b);
+  const overlap = overlapMinutes(a, b);
+  const sameComuna = normalizedComuna(a.comuna) !== '' && normalizedComuna(a.comuna) === normalizedComuna(b.comuna);
+
+  const breakdown: SuggestedMatchScoreBreakdown = {
+    base: 30,
+    sharedDays: Math.min(20, sharedDays.length * 7),
+    overlapMinutes: Math.min(24, Math.floor(overlap / 20) * 4),
+    sameComuna: sameComuna ? 8 : 0,
+    courtAvailability: a.has_court && b.has_court ? 10 : 5,
+    timeCloseness: timeClosenessScore(a, b),
+    strongMatchBonus: sharedDays.length >= 2 && overlap >= 90 ? 8 : 0,
+    marginalOverlapPenalty: overlap < 45 ? -4 : 0,
+    overlapRawMinutes: overlap,
+    sharedWeekdays: sharedDays
+  };
+
+  const total = Math.max(
+    0,
+    Math.min(
+      100,
+      breakdown.base +
+        breakdown.sharedDays +
+        breakdown.overlapMinutes +
+        breakdown.sameComuna +
+        breakdown.courtAvailability +
+        breakdown.timeCloseness +
+        breakdown.strongMatchBonus +
+        breakdown.marginalOverlapPenalty
+    )
+  );
+
+  return { total, breakdown };
+}
+
+export function buildSuggestedMatches(availabilities: MatchingAvailability[]): SuggestedMatchInsertRow[] {
+  const eligible = availabilities.filter(isAvailabilityEligible);
+  const rowsByPair = new Map<string, SuggestedMatchInsertRow>();
+
+  for (let i = 0; i < eligible.length; i += 1) {
+    for (let j = i + 1; j < eligible.length; j += 1) {
+      const a = eligible[i];
+      const b = eligible[j];
+      if (!canPostsMatch(a, b)) continue;
+
+      const pair = canonicalPairIds(a.id, b.id);
+      const pairKey = canonicalPairKey(pair.post_a_id, pair.post_b_id);
+      if (rowsByPair.has(pairKey)) continue;
+
+      const { total, breakdown } = scoreMatch(a, b);
+      rowsByPair.set(pairKey, {
+        post_a_id: pair.post_a_id,
+        post_b_id: pair.post_b_id,
+        compatibility_score: total,
+        schedule_score: breakdown.sharedDays + breakdown.overlapMinutes + breakdown.timeCloseness,
+        location_score: breakdown.sameComuna,
+        level_score: breakdown.courtAvailability,
+        elo_score: 0,
+        status: 'active'
+      });
+    }
+  }
+
+  return [...rowsByPair.values()].sort((a, b) => b.compatibility_score - a.compatibility_score);
 }
 
 export function getMatchTier(score: number): 'Match alto' | 'Match medio' | 'Match bajo' {
@@ -116,20 +187,24 @@ export function getMatchTier(score: number): 'Match alto' | 'Match medio' | 'Mat
   return 'Match bajo';
 }
 
-export function getMatchReasons(a: AvailabilityWithTeam, b: AvailabilityWithTeam, score: number): string[] {
+export function getMatchReasons(match: SuggestedMatchCard): string[] {
   const reasons: string[] = ['Misma rama y categoría'];
-  const meta = calculateCompatibility(a, b);
 
-  if (meta.sharedDays.length) {
-    const [first] = meta.sharedDays;
-    reasons.push(meta.sharedDays.length > 1 ? `Comparten ${meta.sharedDays.length} días (incluye ${first})` : `Comparten ${first}`);
+  if (match.breakdown.sharedWeekdays.length > 0) {
+    reasons.push(
+      match.breakdown.sharedWeekdays.length > 1
+        ? `Comparten ${match.breakdown.sharedWeekdays.length} días`
+        : `Comparten ${match.breakdown.sharedWeekdays[0]}`
+    );
   }
 
-  if (meta.overlapMinutes > 0) reasons.push(`Cruce horario real (${meta.overlapMinutes} min)`);
-  if (a.has_court && b.has_court) reasons.push('Ambos equipos pueden poner cancha');
-  else if (a.has_court || b.has_court) reasons.push('Un equipo pone cancha');
-  if (meta.sameComuna) reasons.push('Misma comuna');
-  reasons.push(getMatchTier(score));
+  if (match.breakdown.overlapRawMinutes > 0) {
+    reasons.push(`Cruce horario real (${match.breakdown.overlapRawMinutes} min)`);
+  }
+
+  reasons.push(match.breakdown.courtAvailability >= 10 ? 'Ambos ponen cancha' : 'Un equipo pone cancha');
+  if (match.breakdown.sameComuna > 0) reasons.push('Misma comuna');
+  reasons.push(getMatchTier(match.totalScore));
 
   return reasons;
 }

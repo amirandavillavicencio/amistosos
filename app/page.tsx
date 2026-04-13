@@ -5,7 +5,13 @@ import PostCard from '@/components/post-card';
 import PublishForm from '@/components/publish-form';
 import TeamRankingCard from '@/components/team-ranking-card';
 import SuggestedMatchCardView from '@/components/suggested-match-card';
-import { getClubStatsRanking, getRecentMatchPhotos, getSuggestedMatches } from '@/lib/data';
+import {
+  getClubStatsRanking,
+  getFeaturedSuggestedMatch,
+  getRecentMatchPhotos,
+  getRemainingSuggestedMatches,
+  getSuggestedMatches
+} from '@/lib/data';
 import { getSupabasePublic } from '@/lib/supabase';
 import type { AvailabilityWithTeam, ClubStatsCard, MatchPhotoRow, SuggestedMatchCard } from '@/lib/types';
 
@@ -88,15 +94,14 @@ export default async function HomePage() {
     return isValid;
   });
 
-  const sortedSuggestedMatches = [...safeSuggestedMatches].sort((a, b) => b.totalScore - a.totalScore);
-  const featuredMatch = sortedSuggestedMatches[0] || null;
-  const remainingMatches = featuredMatch ? sortedSuggestedMatches.filter((match) => match.id !== featuredMatch.id) : [];
+  const featuredMatch = getFeaturedSuggestedMatch(safeSuggestedMatches);
+  const remainingMatches = getRemainingSuggestedMatches(safeSuggestedMatches, featuredMatch);
 
   const groupedPosts = groupByBranch(posts);
   const groupedMatches = {
-    femenina: safeSuggestedMatches.filter((m) => m.a.branch === 'femenina'),
-    mixta: safeSuggestedMatches.filter((m) => m.a.branch === 'mixta'),
-    masculina: safeSuggestedMatches.filter((m) => m.a.branch === 'masculina')
+    femenina: remainingMatches.filter((m) => m.a.branch === 'femenina'),
+    mixta: remainingMatches.filter((m) => m.a.branch === 'mixta'),
+    masculina: remainingMatches.filter((m) => m.a.branch === 'masculina')
   };
 
   return (
@@ -244,7 +249,7 @@ export default async function HomePage() {
             {remainingMatches.length > 0 ? (
               <div className="space-y-6">
                 {(['femenina', 'mixta', 'masculina'] as const).map((branch) => {
-                  const branchMatches = groupedMatches[branch].filter((match) => match.id !== featuredMatch.id);
+                  const branchMatches = groupedMatches[branch];
                   if (!branchMatches.length) return null;
                   return (
                     <div key={branch}>

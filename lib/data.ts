@@ -1,5 +1,5 @@
 import { getSupabasePublic } from '@/lib/supabase';
-import { areCompatible } from '@/lib/matching';
+import { canonicalPairKey, canPostsMatch, scoreMatch } from '@/lib/matching';
 import type {
   AvailabilityRow,
   AvailabilityWithTeam,
@@ -93,32 +93,26 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
       const a = map.get(row.post_a_id);
       const b = map.get(row.post_b_id);
 
-      if (!a || !b) {
-        console.error('getSuggestedMatches skipping orphan row', {
-          matchId: row.id,
-          postA: row.post_a_id,
-          postB: row.post_b_id
-        });
-        continue;
-      }
+      if (!a || !b) continue;
+      if (a.id === b.id) continue;
+      if (!canPostsMatch(a, b)) continue;
 
-      if (!areCompatible(a, b)) {
-        continue;
-      }
-
-      const pairKey = [a.id, b.id].sort().join('::');
+      const pairKey = canonicalPairKey(a.id, b.id);
       if (seenPairs.has(pairKey)) continue;
       seenPairs.add(pairKey);
 
+      const calculated = scoreMatch(a, b);
+
       cards.push({
         id: row.id,
-        totalScore: row.compatibility_score,
+        totalScore: calculated.total,
         scheduleScore: row.schedule_score,
         locationScore: row.location_score,
         levelScore: row.level_score,
         eloScore: row.elo_score,
         a,
-        b
+        b,
+        breakdown: calculated.breakdown
       });
 
       if (cards.length >= limit) break;
@@ -129,6 +123,18 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
     console.error('getSuggestedMatches crashed', error);
     return [];
   }
+}
+
+export function getFeaturedSuggestedMatch(matches: SuggestedMatchCard[]): SuggestedMatchCard | null {
+  return matches.length ? [...matches].sort((a, b) => b.totalScore - a.totalScore)[0] : null;
+}
+
+export function getRemainingSuggestedMatches(
+  matches: SuggestedMatchCard[],
+  featured: SuggestedMatchCard | null
+): SuggestedMatchCard[] {
+  if (!featured) return matches;
+  return matches.filter((match) => match.id !== featured.id);
 }
 
 export async function getRecentMatchPhotos(limit = 12): Promise<MatchPhotoRow[]> {

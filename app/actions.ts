@@ -3,7 +3,7 @@
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
-import { areCompatible, calculateCompatibility } from '@/lib/matching';
+import { buildSuggestedMatches } from '@/lib/matching';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type { AgeCategory, AvailabilityRow, Branch, MatchType, TeamRow } from '@/lib/types';
 
@@ -83,97 +83,41 @@ async function assertRateLimit(scope: 'publish' | 'results') {
   requestStore.set(key, recent);
 }
 
-function toCanonicalPair(aId: string, bId: string) {
-  return aId < bId ? { post_a_id: aId, post_b_id: bId } : { post_a_id: bId, post_b_id: aId };
-}
-
-async function deleteMatchesForAvailability(availabilityId: string) {
-  const supabase = getSupabaseAdmin();
-  const { error } = await supabase.from('suggested_matches').delete().or(`post_a_id.eq.${availabilityId},post_b_id.eq.${availabilityId}`);
-
-  if (error) {
-    console.error('deleteMatchesForAvailability failed', { availabilityId, error });
-  }
-}
-
-async function refreshMatchesForAvailability(availabilityId: string) {
+export async function rebuildSuggestedMatches() {
   const supabase = getSupabaseAdmin();
 
-  await deleteMatchesForAvailability(availabilityId);
-
-  const { data: current, error: currentError } = await supabase
+  const { data: openAvailabilities, error: openError } = await supabase
     .from('availabilities')
     .select('*')
-    .eq('id', availabilityId)
-    .eq('status', 'open')
-    .maybeSingle<AvailabilityRow>();
-
-  if (currentError) {
-    console.error('refreshMatchesForAvailability current load failed', { availabilityId, error: currentError });
-    return;
-  }
-
-  if (!current) return;
-
-  const { data: candidates, error: candidatesError } = await supabase
-    .from('availabilities')
-    .select('*')
-    .neq('id', availabilityId)
     .eq('status', 'open')
     .returns<AvailabilityRow[]>();
 
-  if (candidatesError) {
-    console.error('refreshMatchesForAvailability candidates load failed', { availabilityId, error: candidatesError });
-    return;
+  if (openError) {
+    console.error('rebuildSuggestedMatches open availabilities failed', openError);
+    throw new Error('No pudimos reconstruir los matches sugeridos.');
   }
 
-  const rowsByPair = new Map<string, {
-    post_a_id: string;
-    post_b_id: string;
-    compatibility_score: number;
-    schedule_score: number;
-    location_score: number;
-    level_score: number;
-    elo_score: number;
-    status: 'active';
-  }>();
+  const sourcePosts = openAvailabilities || [];
+  const rows = buildSuggestedMatches(sourcePosts);
 
-  for (const candidate of candidates || []) {
-    if (!candidate?.id || candidate.id === current.id) continue;
-
-    if (!areCompatible(current, candidate)) continue;
-
-    const pair = toCanonicalPair(current.id, candidate.id);
-    const pairKey = `${pair.post_a_id}::${pair.post_b_id}`;
-    if (rowsByPair.has(pairKey)) continue;
-
-    const score = calculateCompatibility(current, candidate);
-
-    rowsByPair.set(pairKey, {
-      ...pair,
-      compatibility_score: score.total,
-      schedule_score: score.schedule,
-      location_score: score.location,
-      level_score: score.court,
-      elo_score: 0,
-      status: 'active'
-    });
+  const { error: deleteError } = await supabase.from('suggested_matches').delete().neq('id', '');
+  if (deleteError) {
+    console.error('rebuildSuggestedMatches truncate failed', deleteError);
+    throw new Error('No pudimos limpiar la tabla derivada de matches.');
   }
 
-  const rows = [...rowsByPair.values()]
-    .sort((a, b) => b.compatibility_score - a.compatibility_score)
-    .slice(0, 16);
-
-  if (!rows.length) return;
-
-  const { error: insertError } = await supabase.from('suggested_matches').insert(rows);
-  if (insertError) {
-    console.error('refreshMatchesForAvailability insert failed', {
-      availabilityId,
-      rows: rows.length,
-      error: insertError
-    });
+  if (rows.length > 0) {
+    const { error: insertError } = await supabase.from('suggested_matches').insert(rows);
+    if (insertError) {
+      console.error('rebuildSuggestedMatches insert failed', insertError);
+      throw new Error('No pudimos insertar los matches reconstruidos.');
+    }
   }
+
+  console.log('rebuildSuggestedMatches completed', { openPosts: sourcePosts.length, generatedMatches: rows.length });
+  revalidatePath('/');
+  revalidatePath('/explorar');
+  revalidatePath('/publicaciones');
 }
 
 function validateAvailabilityPayload(input: {
@@ -279,7 +223,7 @@ export async function createAvailability(formData: FormData) {
     return { ok: false, message: 'Insert falló' };
   }
 
-  await refreshMatchesForAvailability(inserted.id);
+  await rebuildSuggestedMatches();
 
   revalidatePath('/');
   revalidatePath('/explorar');
@@ -352,7 +296,7 @@ export async function updateAvailability(formData: FormData) {
     return { ok: false, message: 'No pudimos guardar los cambios de la publicación.' };
   }
 
-  await refreshMatchesForAvailability(id);
+  await rebuildSuggestedMatches();
 
   revalidatePath('/');
   revalidatePath('/explorar');
