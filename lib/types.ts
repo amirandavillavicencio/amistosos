@@ -47,6 +47,10 @@ export interface AvailabilityRow {
 }
 
 export type AvailabilityWithTeam = AvailabilityRow;
+export type MatchingAvailability = Pick<
+  AvailabilityWithTeam,
+  'id' | 'club_name' | 'comuna' | 'weekday' | 'weekdays' | 'start_time' | 'end_time' | 'branch' | 'age_category' | 'has_court' | 'status'
+>;
 
 export interface SuggestedMatchRow {
   id: string;
@@ -61,6 +65,30 @@ export interface SuggestedMatchRow {
   created_at: string;
 }
 
+export interface SuggestedMatchScoreBreakdown {
+  base: number;
+  sharedDays: number;
+  overlapMinutes: number;
+  sameComuna: number;
+  courtAvailability: number;
+  timeCloseness: number;
+  strongMatchBonus: number;
+  marginalOverlapPenalty: number;
+  overlapRawMinutes: number;
+  sharedWeekdays: string[];
+}
+
+export interface SuggestedMatchInsertRow {
+  post_a_id: string;
+  post_b_id: string;
+  compatibility_score: number;
+  schedule_score: number;
+  location_score: number;
+  level_score: number;
+  elo_score: number;
+  status: 'active';
+}
+
 export interface SuggestedMatchCard {
   id: string;
   totalScore: number;
@@ -70,6 +98,7 @@ export interface SuggestedMatchCard {
   eloScore: number;
   a: AvailabilityWithTeam;
   b: AvailabilityWithTeam;
+  breakdown: SuggestedMatchScoreBreakdown;
 }
 
 export interface MatchResultRow {
