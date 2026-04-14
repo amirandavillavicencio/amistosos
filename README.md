@@ -47,9 +47,13 @@ Crea `.env.local` con:
 NEXT_PUBLIC_SUPABASE_URL=tu_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
 SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD_HASH=2e54906dde52b5aa8fc7cde6f7b88379378fcb3b4020e84f8e1a790c1d8edcd3
+ADMIN_SESSION_SECRET=cambia_esto_por_un_secreto_largo_y_unico
 ```
 
 > `SUPABASE_SERVICE_ROLE_KEY` se usa en server actions para escribir en DB sin requerir auth de usuario final.
+> `ADMIN_PASSWORD_HASH` corresponde a la clave inicial `Voley.2011` usando `sha256`.
 
 ## 3) Correr local
 
@@ -68,6 +72,8 @@ Abrir `http://localhost:3000`.
 - `/club/[id]`: ficha competitiva + historial
 - `/publicar`: formulario dedicado para publicar disponibilidad
 - `/resultados`: formulario para registrar partidos
+- `/admin/login`: login administrador
+- `/admin`: panel administrador protegido
 
 ## 5) Módulos clave
 

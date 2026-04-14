@@ -3,6 +3,7 @@
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
+import { getActiveBannedClubNameKeys, isClubBannedByName, normalizeClubNameKey } from '@/lib/banned-clubs';
 import { buildSuggestedMatches } from '@/lib/matching';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type { AgeCategory, AvailabilityRow, Branch, MatchType, TeamRow } from '@/lib/types';
@@ -83,13 +84,22 @@ async function assertRateLimit(scope: 'publish' | 'results') {
   requestStore.set(key, recent);
 }
 
+async function assertClubNotBanned(clubName: string) {
+  const supabase = getSupabaseAdmin();
+  const banned = await isClubBannedByName(supabase, clubName);
+
+  if (banned) {
+    throw new Error('Este club está bloqueado por administración y no puede publicar disponibilidades.');
+  }
+}
+
 export async function rebuildSuggestedMatches() {
   const supabase = getSupabaseAdmin();
 
   const { data: openAvailabilities, error: openError } = await supabase
     .from('availabilities')
     .select('*')
-    .eq('status', 'open')
+    .in('status', ['open', 'active', 'published'])
     .returns<AvailabilityRow[]>();
 
   if (openError) {
@@ -97,7 +107,10 @@ export async function rebuildSuggestedMatches() {
     throw new Error('No pudimos reconstruir los matches sugeridos.');
   }
 
-  const sourcePosts = openAvailabilities || [];
+  const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
+  const sourcePosts = (openAvailabilities || []).filter(
+    (post) => !bannedClubNameKeys.has(normalizeClubNameKey(post.club_name))
+  );
   const rows = buildSuggestedMatches(sourcePosts);
 
   const { error: deleteError } = await supabase.from('suggested_matches').delete().neq('id', '');
@@ -180,6 +193,8 @@ export async function createAvailability(formData: FormData) {
     throw new Error('El correo de contacto es obligatorio para editar luego la publicación.');
   }
 
+  await assertClubNotBanned(club_name);
+
   const supabase = getSupabaseAdmin();
 
   const { data: inserted, error } = await supabase
@@ -258,9 +273,9 @@ export async function updateAvailability(formData: FormData) {
   const supabase = getSupabaseAdmin();
   const { data: existing, error: existingError } = await supabase
     .from('availabilities')
-    .select('id, contact_email')
+    .select('id, contact_email, club_name')
     .eq('id', id)
-    .maybeSingle<{ id: string; contact_email: string | null }>();
+    .maybeSingle<{ id: string; contact_email: string | null; club_name: string }>();
 
   if (existingError || !existing) {
     return { ok: false, message: 'No encontramos la publicación indicada.' };
@@ -273,6 +288,8 @@ export async function updateAvailability(formData: FormData) {
   if (existing.contact_email.trim().toLowerCase() !== email.toLowerCase()) {
     return { ok: false, message: 'Correo incorrecto. No tienes permiso para editar esta publicación.' };
   }
+
+  await assertClubNotBanned(existing.club_name || '');
 
   const payload = {
     comuna,

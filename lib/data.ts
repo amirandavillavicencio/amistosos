@@ -1,5 +1,8 @@
+import 'server-only';
+
 import { buildLiveSuggestedMatches, USABLE_AVAILABILITY_STATUSES } from '@/lib/matching';
-import { getSupabasePublic } from '@/lib/supabase';
+import { getActiveBannedClubNameKeys, normalizeClubNameKey } from '@/lib/banned-clubs';
+import { getSupabaseAdmin } from '@/lib/supabase';
 import type {
   AvailabilityRow,
   AvailabilityWithTeam,
@@ -20,9 +23,19 @@ export interface AvailabilityFilters {
   ageCategory?: string;
 }
 
+function filterOutBannedAvailabilities(
+  rows: AvailabilityWithTeam[],
+  bannedClubNameKeys: Set<string>
+): AvailabilityWithTeam[] {
+  if (!bannedClubNameKeys.size) return rows;
+
+  return rows.filter((row) => !bannedClubNameKeys.has(normalizeClubNameKey(row.club_name)));
+}
+
 export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFilters): Promise<AvailabilityWithTeam[]> {
   try {
-    const supabase = getSupabasePublic();
+    const supabase = getSupabaseAdmin();
+    const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
     let query = supabase
       .from('availabilities')
       .select('*')
@@ -48,7 +61,8 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
       return [];
     }
 
-    return (data || []) as AvailabilityWithTeam[];
+    const sourcePosts = (data || []) as AvailabilityWithTeam[];
+    return filterOutBannedAvailabilities(sourcePosts, bannedClubNameKeys);
   } catch (error) {
     console.error('getOpenAvailabilities crashed', error);
     return [];
@@ -57,7 +71,8 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
 
 export async function getLiveSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
   try {
-    const supabase = getSupabasePublic();
+    const supabase = getSupabaseAdmin();
+    const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
     const { data, error } = await supabase
       .from('availabilities')
       .select('*')
@@ -69,7 +84,7 @@ export async function getLiveSuggestedMatches(limit = 12): Promise<SuggestedMatc
       return [];
     }
 
-    const sourcePosts = (data || []) as AvailabilityWithTeam[];
+    const sourcePosts = filterOutBannedAvailabilities((data || []) as AvailabilityWithTeam[], bannedClubNameKeys);
     const { matches, stats } = buildLiveSuggestedMatches(sourcePosts, limit);
 
     console.log('[getLiveSuggestedMatches] total availabilities:', stats.totalAvailabilities);
@@ -103,7 +118,7 @@ export function getRemainingSuggestedMatches(
 
 export async function getRecentMatchPhotos(limit = 12): Promise<MatchPhotoRow[]> {
   try {
-    const supabase = getSupabasePublic();
+    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('match_photos')
       .select('*')
@@ -126,7 +141,7 @@ export async function getRecentMatchPhotos(limit = 12): Promise<MatchPhotoRow[]>
 
 export async function getClubStatsRanking(limit = 20): Promise<ClubStatsCard[]> {
   try {
-    const supabase = getSupabasePublic();
+    const supabase = getSupabaseAdmin();
     const { data: stats, error } = await supabase
       .from('club_stats')
       .select('*')
@@ -179,7 +194,7 @@ export async function getClubStatsRanking(limit = 20): Promise<ClubStatsCard[]> 
 
 export async function getTopTeams(limit = 8): Promise<TeamRow[]> {
   try {
-    const supabase = getSupabasePublic();
+    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('teams')
       .select('*')
@@ -202,7 +217,7 @@ export async function getTopTeams(limit = 8): Promise<TeamRow[]> {
 
 export async function getRecentResults(limit = 10): Promise<MatchResultRow[]> {
   try {
-    const supabase = getSupabasePublic();
+    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('match_results')
       .select('*')
@@ -224,7 +239,7 @@ export async function getRecentResults(limit = 10): Promise<MatchResultRow[]> {
 
 export async function getTeamProfile(teamId: string): Promise<TeamProfile | null> {
   try {
-    const supabase = getSupabasePublic();
+    const supabase = getSupabaseAdmin();
     const { data: team, error: teamError } = await supabase
       .from('teams')
       .select('*')
@@ -265,7 +280,7 @@ export async function getTeamProfile(teamId: string): Promise<TeamProfile | null
 
 export async function getAllTeamsMinimal(): Promise<TeamRow[]> {
   try {
-    const supabase = getSupabasePublic();
+    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('teams')
       .select('*')
@@ -286,7 +301,7 @@ export async function getAllTeamsMinimal(): Promise<TeamRow[]> {
 
 export async function getAvailabilityById(id: string): Promise<AvailabilityWithTeam | null> {
   try {
-    const supabase = getSupabasePublic();
+    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('availabilities')
       .select('*')

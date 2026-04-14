@@ -173,3 +173,28 @@ export interface ClubStatsCard extends ClubStatsRow {
   comuna: string | null;
   win_rate: number;
 }
+
+export interface BannedClubRow {
+  id: string;
+  club_name: string;
+  club_name_key: string;
+  reason: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminManualMatchRow {
+  id: string;
+  post_a_id: string | null;
+  post_b_id: string | null;
+  post_a_club_name: string;
+  post_b_club_name: string;
+  branch: string | null;
+  age_category: string | null;
+  status: 'active' | 'archived' | 'cancelled';
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
