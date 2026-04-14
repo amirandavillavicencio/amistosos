@@ -1,11 +1,14 @@
+import { redirect } from 'next/navigation';
 import {
   adminArchiveManualMatch,
   adminBanClub,
   adminCloseAvailability,
   adminCreateManualMatch,
+  adminLogout,
   adminUnbanClub,
   adminUpdateTeamRanking
 } from '@/app/admin/actions';
+import { getAdminSession } from '@/lib/admin-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type { AdminManualMatchRow, AvailabilityWithTeam, BannedClubRow, TeamRow } from '@/lib/types';
 
@@ -29,6 +32,11 @@ function formatTime(value: string | null | undefined): string {
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
+  const session = await getAdminSession();
+  if (!session) {
+    redirect('/admin/login');
+  }
+
   const supabase = getSupabaseAdmin();
 
   const [teamsQuery, postsQuery, manualMatchesQuery, bannedQuery] = await Promise.all([
@@ -79,7 +87,20 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const notice = readSafeParam(searchParams?.notice);
 
   return (
-    <div className="space-y-10">
+    <main className="section space-y-10">
+      <header className="mb-8 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+        <div>
+          <p className="text-sm text-accent">Administracion</p>
+          <h1 className="display-serif text-4xl text-ink sm:text-5xl">Panel admin</h1>
+          <p className="mt-1 text-sm text-muted">Sesion activa: {session.username}</p>
+        </div>
+        <form action={adminLogout}>
+          <button type="submit" className="btn-secondary">
+            Cerrar sesion
+          </button>
+        </form>
+      </header>
+
       {notice ? <p className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{notice}</p> : null}
       {error ? <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
 
@@ -114,7 +135,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       </section>
 
       <section id="manual" className={`card-panel p-5 ${section === 'manual' ? 'ring-2 ring-accent/30' : ''}`}>
-        <h2 className="display-serif text-2xl text-ink">Match manual</h2>
+        <h2 className="display-serif text-2xl text-ink">Crear match manual</h2>
         <p className="mt-1 text-sm text-muted">Crea y archiva matches manuales para seguimiento administrativo.</p>
         <form action={adminCreateManualMatch} className="mt-4 grid gap-3 md:grid-cols-2">
           <select name="post_a_id" required className="field">
@@ -177,7 +198,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       </section>
 
       <section id="posts" className={`card-panel p-5 ${section === 'posts' ? 'ring-2 ring-accent/30' : ''}`}>
-        <h2 className="display-serif text-2xl text-ink">Publicaciones</h2>
+        <h2 className="display-serif text-2xl text-ink">Publicaciones (cerrar)</h2>
         <p className="mt-1 text-sm text-muted">Cierra publicaciones desde servidor con confirmacion explicita.</p>
         <div className="mt-4 space-y-2">
           {posts.length === 0 ? (
@@ -241,6 +262,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           )}
         </div>
       </section>
-    </div>
+    </main>
   );
 }

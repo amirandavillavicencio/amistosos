@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 
 export const ADMIN_SESSION_COOKIE = 'amistosos_admin_session';
@@ -27,10 +27,6 @@ function fromBase64Url(value: string): string {
   return Buffer.from(value, 'base64url').toString('utf8');
 }
 
-function normalizeHash(hash: string): string {
-  return hash.trim().toLowerCase().replace(/^sha256[:$]/, '');
-}
-
 function getSessionSecret(): string {
   const value = String(process.env.ADMIN_SESSION_SECRET || '').trim();
   if (!value) {
@@ -39,21 +35,17 @@ function getSessionSecret(): string {
   return value;
 }
 
-function getAdminPasswordHash(): string {
-  const value = String(process.env.ADMIN_PASSWORD_HASH || '').trim();
+function getAdminPassword(): string {
+  const value = String(process.env.ADMIN_PASSWORD || '');
   if (!value) {
-    throw new Error('Missing required env var: ADMIN_PASSWORD_HASH');
+    throw new Error('Missing required env var: ADMIN_PASSWORD');
   }
-  return normalizeHash(value);
+  return value;
 }
 
 export function getAdminUsername(): string {
   const value = String(process.env.ADMIN_USERNAME || DEFAULT_ADMIN_USERNAME).trim().toLowerCase();
   return value || DEFAULT_ADMIN_USERNAME;
-}
-
-export function hashPasswordSha256(password: string): string {
-  return createHash('sha256').update(password, 'utf8').digest('hex');
 }
 
 function safeEqualString(a: string, b: string): boolean {
@@ -100,12 +92,12 @@ function parseToken(token: string): AdminSessionPayload | null {
 
 export function verifyAdminCredentials(input: { username: string; password: string }): boolean {
   const expectedUser = getAdminUsername();
-  const expectedHash = getAdminPasswordHash();
+  const expectedPassword = getAdminPassword();
 
   const username = String(input.username || '').trim().toLowerCase();
-  const passwordHash = hashPasswordSha256(String(input.password || ''));
+  const password = String(input.password || '');
 
-  return safeEqualString(username, expectedUser) && safeEqualString(normalizeHash(passwordHash), expectedHash);
+  return safeEqualString(username, expectedUser) && safeEqualString(password, expectedPassword);
 }
 
 export async function createAdminSession(username: string): Promise<void> {
