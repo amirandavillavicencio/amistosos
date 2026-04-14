@@ -8,11 +8,11 @@ import SuggestedMatchCardView from '@/components/suggested-match-card';
 import {
   getClubStatsRanking,
   getFeaturedSuggestedMatch,
+  getLiveSuggestedMatches,
+  getOpenAvailabilities,
   getRecentMatchPhotos,
-  getRemainingSuggestedMatches,
-  getSuggestedMatches
+  getRemainingSuggestedMatches
 } from '@/lib/data';
-import { getSupabasePublic } from '@/lib/supabase';
 import type { AvailabilityWithTeam, ClubStatsCard, MatchPhotoRow, SuggestedMatchCard } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +32,7 @@ const howItWorks = [
     step: '03',
     title: 'Sube partidos reales',
     description: 'Comparte fotos y resultados para dar visibilidad a la actividad.'
-  },
+  }
 ];
 
 const branchLabel: Record<string, string> = {
@@ -56,41 +56,31 @@ export default async function HomePage() {
   let suggestedMatches: SuggestedMatchCard[] = [];
 
   try {
-    const supabase = getSupabasePublic();
-    const [{ data: availabilityRows, error: availabilityError }, recentPhotos, clubRanking, matches] = await Promise.all([
-      supabase
-        .from('availabilities')
-        .select('*')
-        .eq('status', 'open')
-        .order('created_at', { ascending: false })
-        .limit(6),
+    const [availablePosts, recentPhotos, clubRanking, liveMatches] = await Promise.all([
+      getOpenAvailabilities(6),
       getRecentMatchPhotos(6),
       getClubStatsRanking(6),
-      getSuggestedMatches(12)
+      getLiveSuggestedMatches(12)
     ]);
 
-    if (availabilityError) {
-      console.error('HomePage get availabilities failed', availabilityError);
-      posts = [];
-    } else {
-      posts = (availabilityRows || []) as AvailabilityWithTeam[];
-    }
-
+    posts = availablePosts;
     photos = recentPhotos;
     ranking = clubRanking;
-    suggestedMatches = matches;
+    suggestedMatches = liveMatches;
   } catch (error) {
     console.error('HomePage data load failed', error);
   }
 
   const safeSuggestedMatches = suggestedMatches.filter((match) => {
-    const isValid = Boolean(match?.a && match?.b);
+    const isValid = Boolean(match?.a?.id && match?.b?.id);
+
     if (!isValid) {
       console.error('HomePage invalid suggested match payload', {
         route: '/',
         matchId: match?.id || 'unknown'
       });
     }
+
     return isValid;
   });
 
@@ -98,11 +88,7 @@ export default async function HomePage() {
   const remainingMatches = getRemainingSuggestedMatches(safeSuggestedMatches, featuredMatch);
 
   const groupedPosts = groupByBranch(posts);
-  const groupedMatches = {
-    femenina: remainingMatches.filter((m) => m.a.branch === 'femenina'),
-    mixta: remainingMatches.filter((m) => m.a.branch === 'mixta'),
-    masculina: remainingMatches.filter((m) => m.a.branch === 'masculina')
-  };
+  const groupedMatches = groupByBranch(remainingMatches);
 
   return (
     <main className="pb-16">
@@ -207,6 +193,7 @@ export default async function HomePage() {
             {(['femenina', 'mixta', 'masculina'] as const).map((branch) => {
               const branchPosts = groupedPosts[branch];
               if (!branchPosts.length) return null;
+
               return (
                 <div key={branch}>
                   <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-muted">{branchLabel[branch]}</h3>
@@ -226,7 +213,6 @@ export default async function HomePage() {
         <h2 className="mb-6 display-serif text-3xl text-ink sm:text-4xl">Publica cuándo puedes jugar</h2>
         <PublishForm />
       </section>
-
 
       <section className="section pt-0">
         <div className="mb-6 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-end sm:gap-3">
@@ -251,11 +237,14 @@ export default async function HomePage() {
                 {(['femenina', 'mixta', 'masculina'] as const).map((branch) => {
                   const branchMatches = groupedMatches[branch];
                   if (!branchMatches.length) return null;
+
                   return (
                     <div key={branch}>
                       <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-muted">{branchLabel[branch]}</h3>
                       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        {branchMatches.map((match) => (<SuggestedMatchCardView key={match.id} match={match} />))}
+                        {branchMatches.map((match) => (
+                          <SuggestedMatchCardView key={match.id} match={match} />
+                        ))}
                       </div>
                     </div>
                   );
@@ -311,8 +300,6 @@ export default async function HomePage() {
           </div>
         )}
       </section>
-
-
     </main>
   );
 }

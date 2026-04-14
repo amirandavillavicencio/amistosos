@@ -1,5 +1,5 @@
+import { buildLiveSuggestedMatches, USABLE_AVAILABILITY_STATUSES } from '@/lib/matching';
 import { getSupabasePublic } from '@/lib/supabase';
-import { canonicalPairKey, canPostsMatch, scoreMatch } from '@/lib/matching';
 import type {
   AvailabilityRow,
   AvailabilityWithTeam,
@@ -8,7 +8,6 @@ import type {
   MatchPhotoRow,
   MatchResultRow,
   SuggestedMatchCard,
-  SuggestedMatchRow,
   TeamProfile,
   TeamRow
 } from '@/lib/types';
@@ -27,7 +26,7 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
     let query = supabase
       .from('availabilities')
       .select('*')
-      .in('status', ['open', 'active', 'published'])
+      .in('status', [...USABLE_AVAILABILITY_STATUSES])
       .order('created_at', { ascending: false });
 
     if (filters?.branch) {
@@ -56,96 +55,38 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
   }
 }
 
-export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
+export async function getLiveSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
   try {
     const supabase = getSupabasePublic();
-    const overscan = Math.max(limit * 4, 24);
-
-    const { data: rows, error } = await supabase
-      .from('suggested_matches')
-      .select('*')
-      .eq('status', 'active')
-      .order('compatibility_score', { ascending: false })
-      .limit(overscan)
-      .returns<SuggestedMatchRow[]>();
-
-    if (error) {
-      console.error('getSuggestedMatches failed', error);
-      return [];
-    }
-
-    if (!rows?.length) {
-      return [];
-    }
-
-    const ids = [
-      ...new Set(
-        rows
-          .flatMap((row) => [row.post_a_id, row.post_b_id])
-          .filter(Boolean)
-      )
-    ];
-
-    if (!ids.length) {
-      return [];
-    }
-
-    const { data: availabilities, error: availabilitiesError } = await supabase
+    const { data, error } = await supabase
       .from('availabilities')
       .select('*')
-      .in('id', ids);
+      .in('status', [...USABLE_AVAILABILITY_STATUSES])
+      .order('created_at', { ascending: false });
 
-    if (availabilitiesError) {
-      console.error('getSuggestedMatches availabilities failed', availabilitiesError);
+    if (error) {
+      console.error('getLiveSuggestedMatches availabilities failed', error);
       return [];
     }
 
-    const map = new Map<string, AvailabilityWithTeam>();
+    const sourcePosts = (data || []) as AvailabilityWithTeam[];
+    const { matches, stats } = buildLiveSuggestedMatches(sourcePosts, limit);
 
-    for (const row of (availabilities || []) as AvailabilityWithTeam[]) {
-      if (!row?.id) continue;
-      map.set(row.id, row);
-    }
+    console.log('[getLiveSuggestedMatches] total availabilities:', stats.totalAvailabilities);
+    console.log('[getLiveSuggestedMatches] eligibles:', stats.eligibleAvailabilities);
+    console.log('[getLiveSuggestedMatches] pares evaluados:', stats.pairsEvaluated);
+    console.log('[getLiveSuggestedMatches] matches validos:', stats.validMatches);
+    console.log('[getLiveSuggestedMatches] matches finales devueltos:', stats.returnedMatches);
 
-    const seenPairs = new Set<string>();
-    const cards: SuggestedMatchCard[] = [];
-
-    for (const row of rows) {
-      const a = map.get(row.post_a_id);
-      const b = map.get(row.post_b_id);
-
-      if (!a || !b) continue;
-      if (a.id === b.id) continue;
-      if (!canPostsMatch(a, b)) continue;
-
-      const pairKey = canonicalPairKey(a.id, b.id);
-      if (seenPairs.has(pairKey)) continue;
-      seenPairs.add(pairKey);
-
-      const calculated = scoreMatch(a, b);
-
-      cards.push({
-        id: row.id,
-        totalScore: calculated.total,
-        scheduleScore: row.schedule_score,
-        locationScore: row.location_score,
-        levelScore: row.level_score,
-        eloScore: row.elo_score,
-        a,
-        b,
-        breakdown: calculated.breakdown
-      });
-
-      if (cards.length >= limit) {
-        break;
-      }
-    }
-
-    return cards;
+    return matches;
   } catch (error) {
-    console.error('getSuggestedMatches crashed', error);
+    console.error('getLiveSuggestedMatches crashed', error);
     return [];
   }
+}
+
+export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
+  return getLiveSuggestedMatches(limit);
 }
 
 export function getFeaturedSuggestedMatch(matches: SuggestedMatchCard[]): SuggestedMatchCard | null {

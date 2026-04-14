@@ -2,6 +2,7 @@ export type Branch = 'femenina' | 'masculina' | 'mixta';
 export type AgeCategory = 'sub-12' | 'sub-14' | 'sub-16' | 'sub-18' | 'sub-20' | 'tc';
 export type Level = 'principiante' | 'novato' | 'intermedio' | 'avanzado' | 'competitivo';
 export type MatchType = 'amistoso' | 'torneo' | 'entrenamiento' | 'competitivo';
+export type AvailabilityStatus = 'open' | 'active' | 'published' | 'closed' | 'archived' | (string & {});
 
 export interface TeamRow {
   id: string;
@@ -29,7 +30,7 @@ export interface AvailabilityRow {
   comuna: string;
   city: string;
   weekday: string | null;
-  weekdays: string[];
+  weekdays: string[] | null;
   start_time: string;
   end_time: string;
   branch: Branch;
@@ -37,7 +38,7 @@ export interface AvailabilityRow {
   level: Level | null;
   has_court: boolean;
   notes: string | null;
-  status: 'open' | 'closed';
+  status: AvailabilityStatus;
   created_at: string;
   contact_email: string | null;
   responsible_name: string | null;
@@ -47,10 +48,7 @@ export interface AvailabilityRow {
 }
 
 export type AvailabilityWithTeam = AvailabilityRow;
-export type MatchingAvailability = Pick<
-  AvailabilityWithTeam,
-  'id' | 'club_name' | 'comuna' | 'weekday' | 'weekdays' | 'start_time' | 'end_time' | 'branch' | 'age_category' | 'has_court' | 'status'
->;
+export type MatchingAvailability = AvailabilityWithTeam;
 
 export interface SuggestedMatchRow {
   id: string;
@@ -65,17 +63,25 @@ export interface SuggestedMatchRow {
   created_at: string;
 }
 
+export interface SuggestedMatchBreakdownItem {
+  key: 'base' | 'sameComuna' | 'courtAvailability' | 'overlapScore' | 'sharedDaysScore' | 'startTimeScore';
+  label: string;
+  points: number;
+  detail?: string;
+}
+
 export interface SuggestedMatchScoreBreakdown {
   base: number;
-  sharedDays: number;
-  overlapMinutes: number;
   sameComuna: number;
   courtAvailability: number;
-  timeCloseness: number;
-  strongMatchBonus: number;
-  marginalOverlapPenalty: number;
-  overlapRawMinutes: number;
+  overlapScore: number;
+  sharedDaysScore: number;
+  startTimeScore: number;
+  overlapMinutes: number;
   sharedWeekdays: string[];
+  startTimeDifferenceMinutes: number;
+  totalBeforeClamp: number;
+  items: SuggestedMatchBreakdownItem[];
 }
 
 export interface SuggestedMatchInsertRow {
@@ -91,14 +97,27 @@ export interface SuggestedMatchInsertRow {
 
 export interface SuggestedMatchCard {
   id: string;
+  pairKey: string;
   totalScore: number;
   scheduleScore: number;
   locationScore: number;
   levelScore: number;
   eloScore: number;
+  branch: Branch;
+  ageCategory: AgeCategory;
+  overlapMinutes: number;
+  sharedWeekdays: string[];
   a: AvailabilityWithTeam;
   b: AvailabilityWithTeam;
   breakdown: SuggestedMatchScoreBreakdown;
+}
+
+export interface SuggestedMatchBuildStats {
+  totalAvailabilities: number;
+  eligibleAvailabilities: number;
+  pairsEvaluated: number;
+  validMatches: number;
+  returnedMatches: number;
 }
 
 export interface MatchResultRow {
