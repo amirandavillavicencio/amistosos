@@ -32,7 +32,7 @@ function parseNonNegativeInt(value: FormDataEntryValue | null): number | null {
   return parsed;
 }
 
-function redirectWithNotice(path: '/admin' | '/admin/login', params: Record<string, string>) {
+function redirectWithNotice(path: '/admin' | '/admin/login', params: Record<string, string>): never {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (!value) continue;
