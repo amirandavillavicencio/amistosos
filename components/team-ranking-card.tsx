@@ -9,18 +9,18 @@ export default function TeamRankingCard({ team, position }: { team: ClubStatsCar
           <h3 className="display-serif break-words text-xl font-semibold text-ink sm:text-2xl">{team.club_name}</h3>
           {team.comuna && <p className="text-sm text-muted">{team.comuna}</p>}
         </div>
-        <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm font-medium text-accent">{team.win_rate}%</span>
+        <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">{team.win_rate}%</span>
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
-        <div className="rounded-xl border border-line bg-[#fffdf9] p-2">
+        <div className="rounded-xl border border-line bg-white/70 p-2">
           <p className="text-muted">Partidos</p>
           <p className="font-semibold text-ink">{team.matches_played}</p>
         </div>
-        <div className="rounded-xl border border-line bg-[#fffdf9] p-2">
+        <div className="rounded-xl border border-line bg-white/70 p-2">
           <p className="text-muted">Victorias</p>
           <p className="font-semibold text-ink">{team.wins}</p>
         </div>
-        <div className="rounded-xl border border-line bg-[#fffdf9] p-2">
+        <div className="rounded-xl border border-line bg-white/70 p-2">
           <p className="text-muted">Derrotas</p>
           <p className="font-semibold text-ink">{team.losses}</p>
         </div>
