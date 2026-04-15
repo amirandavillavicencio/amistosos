@@ -106,6 +106,36 @@ create table if not exists suggested_matches (
 
 create index if not exists idx_matches_score on suggested_matches(status, compatibility_score desc);
 
+create table if not exists match_intents (
+  id uuid primary key default gen_random_uuid(),
+  from_post_id uuid not null references availabilities(id) on delete cascade,
+  to_post_id uuid not null references availabilities(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  check (from_post_id <> to_post_id)
+);
+
+create unique index if not exists uq_match_intents_pair_direction
+  on match_intents(from_post_id, to_post_id);
+create index if not exists idx_match_intents_from_created
+  on match_intents(from_post_id, created_at desc);
+create index if not exists idx_match_intents_to_created
+  on match_intents(to_post_id, created_at desc);
+
+create table if not exists confirmed_matches (
+  id uuid primary key default gen_random_uuid(),
+  post_a_id uuid not null references availabilities(id) on delete cascade,
+  post_b_id uuid not null references availabilities(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'played')),
+  check (post_a_id <> post_b_id),
+  check (post_a_id < post_b_id)
+);
+
+create unique index if not exists uq_confirmed_matches_pair
+  on confirmed_matches(post_a_id, post_b_id);
+create index if not exists idx_confirmed_matches_status_created
+  on confirmed_matches(status, created_at desc);
+
 -- Backfill migration for legacy MVP (table posts)
 do $$
 begin

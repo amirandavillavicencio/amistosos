@@ -1,10 +1,14 @@
 import type {
+  AvailabilityRow,
+  ConfirmedMatchRow,
+  MatchIntentRow,
   MatchingAvailability,
   SuggestedMatchBuildStats,
   SuggestedMatchCard,
   SuggestedMatchInsertRow,
   SuggestedMatchScoreBreakdown
 } from '@/lib/types';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 export const USABLE_AVAILABILITY_STATUSES = ['open', 'active', 'published'] as const;
 
@@ -445,4 +449,122 @@ export function getMatchReasons(match: SuggestedMatchCard): string[] {
   reasons.push(getMatchTier(match.totalScore));
 
   return [...new Set(reasons)];
+}
+
+function pickRandom<T>(items: T[]): T | null {
+  if (!items.length) return null;
+  const index = Math.floor(Math.random() * items.length);
+  return items[index] ?? null;
+}
+
+export async function getNextCard(fromPostId: string, excludePostIds: string[] = []): Promise<AvailabilityRow | null> {
+  const normalizedFromId = normalizeId(fromPostId);
+  if (!normalizedFromId) return null;
+
+  const supabase = getSupabaseAdmin();
+  const { data: intents, error: intentsError } = await supabase
+    .from('match_intents')
+    .select('to_post_id')
+    .eq('from_post_id', normalizedFromId)
+    .returns<Pick<MatchIntentRow, 'to_post_id'>[]>();
+
+  if (intentsError) {
+    console.error('getNextCard intents query failed', intentsError);
+    throw new Error('No pudimos cargar tu siguiente tarjeta.');
+  }
+
+  const blockedIds = new Set<string>([normalizedFromId, ...excludePostIds.map((id) => normalizeId(id))]);
+  for (const intent of intents || []) {
+    blockedIds.add(normalizeId(intent.to_post_id));
+  }
+
+  const { data: posts, error } = await supabase
+    .from('availabilities')
+    .select('*')
+    .in('status', ['open', 'active', 'published'])
+    .returns<AvailabilityRow[]>();
+
+  if (error) {
+    console.error('getNextCard availabilities query failed', error);
+    throw new Error('No pudimos cargar equipos disponibles.');
+  }
+
+  const candidates = (posts || []).filter((post) => !blockedIds.has(normalizeId(post.id)));
+  return pickRandom(candidates);
+}
+
+export async function createMatchIntent(fromPostId: string, toPostId: string): Promise<{
+  intent: MatchIntentRow;
+  confirmedMatch: ConfirmedMatchRow | null;
+}> {
+  const fromId = normalizeId(fromPostId);
+  const toId = normalizeId(toPostId);
+
+  if (!fromId || !toId || fromId === toId) {
+    throw new Error('Intento de match inválido.');
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: intentRow, error: insertError } = await supabase
+    .from('match_intents')
+    .insert({ from_post_id: fromId, to_post_id: toId })
+    .select('*')
+    .single<MatchIntentRow>();
+
+  if (insertError) {
+    console.error('createMatchIntent insert failed', insertError);
+    throw new Error('No pudimos guardar tu intención de partido.');
+  }
+
+  const { data: reciprocalIntent, error: reciprocalError } = await supabase
+    .from('match_intents')
+    .select('*')
+    .eq('from_post_id', toId)
+    .eq('to_post_id', fromId)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle<MatchIntentRow>();
+
+  if (reciprocalError) {
+    console.error('createMatchIntent reciprocal lookup failed', reciprocalError);
+    throw new Error('No pudimos validar reciprocidad del match.');
+  }
+
+  if (!reciprocalIntent) {
+    return { intent: intentRow, confirmedMatch: null };
+  }
+
+  const pair = canonicalPairIds(fromId, toId);
+  const { data: existingMatch, error: existingError } = await supabase
+    .from('confirmed_matches')
+    .select('*')
+    .eq('post_a_id', pair.post_a_id)
+    .eq('post_b_id', pair.post_b_id)
+    .maybeSingle<ConfirmedMatchRow>();
+
+  if (existingError) {
+    console.error('createMatchIntent existing confirmed match query failed', existingError);
+    throw new Error('No pudimos revisar matches confirmados.');
+  }
+
+  if (existingMatch) {
+    return { intent: intentRow, confirmedMatch: existingMatch };
+  }
+
+  const { data: confirmed, error: confirmedError } = await supabase
+    .from('confirmed_matches')
+    .insert({
+      post_a_id: pair.post_a_id,
+      post_b_id: pair.post_b_id,
+      status: 'pending'
+    })
+    .select('*')
+    .single<ConfirmedMatchRow>();
+
+  if (confirmedError) {
+    console.error('createMatchIntent confirmed insert failed', confirmedError);
+    throw new Error('No pudimos crear el match confirmado.');
+  }
+
+  return { intent: intentRow, confirmedMatch: confirmed };
 }
