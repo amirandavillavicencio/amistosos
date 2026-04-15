@@ -1,10 +1,14 @@
+import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import SwipeActions from '@/components/swipe-actions';
-import SwipeCard from '@/components/swipe-card';
+import HomeHero from '@/components/home-hero';
+import HomeRankingPreview from '@/components/home-ranking-preview';
+import HomeResultsPreview from '@/components/home-results-preview';
+import PostCard from '@/components/post-card';
 import { createMatchIntent, getNextCard } from '@/lib/matching';
+import { getClubStatsRanking, getOpenAvailabilities, getRecentResults } from '@/lib/data';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import type { AvailabilityRow } from '@/lib/types';
+import type { AvailabilityRow, AvailabilityWithTeam, ClubStatsCard, MatchResultRow } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +60,14 @@ async function getDefaultFromPostId(): Promise<string | null> {
   return data?.[0]?.id ?? null;
 }
 
+function formatAvailability(post: AvailabilityWithTeam): string {
+  const weekdays = Array.isArray(post.weekdays) ? post.weekdays : post.weekday ? [post.weekday] : [];
+  const daysLabel = weekdays.filter(Boolean).join(', ') || 'Días por confirmar';
+  const start = post.start_time?.slice(0, 5) || '--:--';
+  const end = post.end_time?.slice(0, 5) || '--:--';
+  return `${daysLabel} · ${start}-${end}`;
+}
+
 export default async function HomePage({ searchParams }: PageProps) {
   const skipIds = getSkipIds(searchParams?.skip);
   const fromPostId = searchParams?.from || (await getDefaultFromPostId());
@@ -88,48 +100,125 @@ export default async function HomePage({ searchParams }: PageProps) {
     redirect(buildRedirect(fromPostId, nextSkipIds, status));
   }
 
-  let card: AvailabilityRow | null = null;
+  let featuredMatch: AvailabilityRow | null = null;
+  let posts: AvailabilityWithTeam[] = [];
+  let ranking: ClubStatsCard[] = [];
+  let recentResults: MatchResultRow[] = [];
 
-  if (fromPostId) {
-    try {
-      card = await getNextCard(fromPostId, skipIds);
-    } catch (error) {
-      console.error('HomePage getNextCard failed', error);
-    }
+  try {
+    const [suggested, openPosts, topRanking, results] = await Promise.all([
+      fromPostId ? getNextCard(fromPostId, skipIds) : Promise.resolve(null),
+      getOpenAvailabilities(4),
+      getClubStatsRanking(5),
+      getRecentResults(5)
+    ]);
+
+    featuredMatch = suggested;
+    posts = Array.isArray(openPosts) ? openPosts : [];
+    ranking = Array.isArray(topRanking) ? topRanking : [];
+    recentResults = Array.isArray(results) ? results : [];
+  } catch (error) {
+    console.error('HomePage data load failed', error);
   }
 
-  const hasFromPost = Boolean(fromPostId);
   const statusMessage =
     searchParams?.ok === 'match'
-      ? '¡Match confirmado! Ambos equipos se propusieron partido.'
+      ? '¡Match confirmado! Ambos equipos ya se propusieron partido.'
       : searchParams?.ok === 'intent'
         ? 'Propuesta enviada. Si el otro equipo también da ❤️, se confirma el match.'
         : null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-900 px-4 py-6">
-      <section className="w-full max-w-md space-y-4">
-        <header className="text-center">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Amistosos Vóley</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Encuentra rival en segundos</h2>
-        </header>
+    <main className="section py-8 sm:py-10 md:py-12">
+      <div className="space-y-5 sm:space-y-6">
+        <HomeHero />
 
         {statusMessage ? (
-          <div className="rounded-2xl bg-emerald-500/20 px-4 py-3 text-sm font-medium text-emerald-100">{statusMessage}</div>
+          <div className="rounded-2xl border border-emerald-300/30 bg-emerald-500/15 px-4 py-3 text-sm font-medium text-emerald-100">
+            {statusMessage}
+          </div>
         ) : null}
 
-        {!hasFromPost ? (
-          <article className="rounded-3xl bg-slate-100 p-8 text-center shadow-xl shadow-black/10">
-            <p className="text-lg font-semibold text-slate-800">No hay publicaciones activas</p>
-            <p className="mt-2 text-sm text-slate-600">Publica disponibilidad para empezar a hacer match.</p>
-          </article>
-        ) : (
-          <>
-            <SwipeCard post={card} />
-            <SwipeActions postId={card?.id ?? null} onPass={passCard} onLike={likeCard} />
-          </>
-        )}
-      </section>
+        <section className="rounded-3xl border border-line/80 bg-slate-900 p-4 shadow-soft sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Match destacado</p>
+              <h2 className="mt-1 text-xl font-semibold text-white">Encuentra rival ahora</h2>
+            </div>
+            <Link href="/explorar" className="text-sm font-medium text-slate-200 hover:text-white">
+              Ver todas las publicaciones
+            </Link>
+          </div>
+
+          {!featuredMatch ? (
+            <article className="rounded-2xl border border-slate-700/80 bg-slate-800/70 p-5 text-sm text-slate-200">
+              <p className="text-base font-semibold text-white">No encontramos un rival sugerido por ahora</p>
+              <p className="mt-1 text-slate-300">Publica o actualiza tu disponibilidad y revisa nuevamente en unos minutos.</p>
+              <Link href="/publicar" className="mt-4 inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
+                Publica tu disponibilidad
+              </Link>
+            </article>
+          ) : (
+            <article className="max-w-lg rounded-3xl border border-white/10 bg-gradient-to-b from-slate-800 to-slate-900 p-5 shadow-xl shadow-black/20">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">Sugerido para ti</p>
+              <h3 className="mt-2 text-2xl font-semibold text-white">{featuredMatch.club_name}</h3>
+              <p className="mt-1 text-sm text-slate-300">{featuredMatch.comuna || featuredMatch.city} · Nivel {featuredMatch.level || 'por definir'}</p>
+
+              <div className="mt-4 space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm text-slate-200">
+                <p><span className="text-slate-400">Disponibilidad:</span> {formatAvailability(featuredMatch)}</p>
+                <p><span className="text-slate-400">Cancha:</span> {featuredMatch.has_court ? 'Sí tiene cancha' : 'Busca cancha'}</p>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2.5">
+                <Link href={`/publicaciones/${featuredMatch.id}`} className="btn-secondary border-white/20 bg-white/10 text-white hover:text-white">
+                  Ver detalle
+                </Link>
+                <form action={likeCard}>
+                  <input type="hidden" name="to_post_id" value={featuredMatch.id} />
+                  <button type="submit" className="btn-accent">
+                    Proponer amistoso
+                  </button>
+                </form>
+                <form action={passCard}>
+                  <input type="hidden" name="to_post_id" value={featuredMatch.id} />
+                  <button type="submit" className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10">
+                    Ver otro rival
+                  </button>
+                </form>
+              </div>
+            </article>
+          )}
+        </section>
+
+        <section className="card-panel p-4 sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-accent">Publicaciones disponibles</p>
+              <h2 className="mt-1 text-lg font-semibold text-ink">Equipos activos en búsqueda</h2>
+            </div>
+            <Link href="/explorar" className="text-sm font-medium text-accent hover:underline">
+              Ver todas
+            </Link>
+          </div>
+
+          {posts.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-line p-4 text-sm text-muted">
+              Aún no hay publicaciones activas. Publica la tuya para abrir la rueda de amistosos.
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {posts.map((post) => (
+                <PostCard key={post.id} post={post} compact />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <HomeRankingPreview teams={ranking} />
+          <HomeResultsPreview results={recentResults} />
+        </div>
+      </div>
     </main>
   );
 }
