@@ -63,6 +63,21 @@ export interface SuggestedMatchRow {
   created_at: string;
 }
 
+export interface MatchIntentRow {
+  id: string;
+  from_post_id: string;
+  to_post_id: string;
+  created_at: string;
+}
+
+export interface ConfirmedMatchRow {
+  id: string;
+  post_a_id: string;
+  post_b_id: string;
+  created_at: string;
+  status: 'pending' | 'accepted' | 'played';
+}
+
 export interface SuggestedMatchBreakdownItem {
   key: 'base' | 'sameComuna' | 'courtAvailability' | 'overlapScore' | 'sharedDaysScore' | 'startTimeScore';
   label: string;
