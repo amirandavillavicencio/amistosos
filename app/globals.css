@@ -3,18 +3,19 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
-  @apply bg-bg text-ink antialiased;
-  background-image: radial-gradient(circle at 8% 8%, rgba(131, 163, 189, 0.16), transparent 30%),
-    radial-gradient(circle at 90% 3%, rgba(157, 183, 206, 0.16), transparent 30%);
+  @apply bg-slate-950 text-slate-100 antialiased;
+  background-image: radial-gradient(circle at 10% 8%, rgba(99, 102, 241, 0.2), transparent 32%),
+    radial-gradient(circle at 85% 0%, rgba(236, 72, 153, 0.16), transparent 34%),
+    radial-gradient(circle at 50% 95%, rgba(14, 165, 233, 0.12), transparent 32%);
   overflow-x: clip;
 }
 
 .section {
-  @apply mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-12 md:px-10 md:py-20;
+  @apply mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10;
 }
 
 .display-serif {
@@ -22,50 +23,36 @@ body {
   letter-spacing: -0.01em;
 }
 
+.app-title {
+  @apply text-2xl font-black tracking-tight text-white sm:text-3xl md:text-4xl;
+}
+
+.app-eyebrow,
 .eyebrow {
-  @apply text-xs uppercase tracking-[0.2em] text-accent;
+  @apply text-xs font-semibold uppercase tracking-[0.22em] text-fuchsia-200;
 }
 
-.nav-shell {
-  @apply rounded-[1.5rem] border border-line/80 bg-ivory/90 px-3 py-3 shadow-soft backdrop-blur sm:rounded-[1.75rem] sm:px-4 md:px-6;
-}
-
-.nav-link {
-  @apply rounded-full border border-transparent px-3 py-2 text-sm text-muted transition hover:border-line hover:text-ink;
-}
-
-.hero-shell {
-  @apply grid gap-6 rounded-[1.7rem] border border-line bg-ivory p-5 shadow-soft sm:gap-8 sm:rounded-[2.2rem] sm:p-7 md:grid-cols-[1.1fr_0.9fr] md:gap-10 md:p-12;
-}
-
-.step-card {
-  @apply rounded-2xl border border-line/90 bg-white/70 px-4 py-4 sm:px-5;
-}
-
-.feature-strip {
-  @apply flex flex-col justify-between gap-4 rounded-[1.6rem] border border-line/80 bg-ivory p-5 sm:rounded-3xl sm:p-7 md:flex-row md:items-center md:p-9;
-}
-
+.app-card,
 .card-panel {
-  @apply rounded-2xl border border-line bg-ivory/95 shadow-soft;
+  @apply rounded-3xl border border-slate-700/80 bg-slate-900/80 shadow-[0_20px_52px_rgba(2,6,23,0.55)] backdrop-blur;
+}
+
+.app-card-muted {
+  @apply bg-slate-900/50;
 }
 
 .field {
-  @apply w-full min-w-0 rounded-xl border border-line bg-white/80 px-3 py-3 text-sm text-ink outline-none transition placeholder:text-slate-400 focus:border-accent focus:ring-2 focus:ring-accent/20;
-}
-
-.editorial-link {
-  @apply text-sm text-accent underline-offset-4 transition hover:text-copper hover:underline;
+  @apply w-full min-w-0 rounded-xl border border-slate-600/80 bg-slate-950/60 px-3 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-fuchsia-300 focus:ring-2 focus:ring-fuchsia-400/25;
 }
 
 .btn-accent {
-  @apply rounded-full border border-accent/30 bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-copper;
+  @apply inline-flex items-center justify-center rounded-full border border-fuchsia-300/60 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-orange-400 px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-200/60;
 }
 
 .btn-secondary {
-  @apply rounded-full border border-line bg-white/80 px-5 py-2.5 text-sm font-medium text-ink transition hover:border-accent/50 hover:text-accent;
+  @apply inline-flex items-center justify-center rounded-full border border-slate-500/70 bg-slate-900/70 px-5 py-2.5 text-sm font-medium text-slate-100 transition hover:border-fuchsia-300/50 hover:text-fuchsia-100 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/40;
 }
 
-.cta-shell {
-  @apply rounded-[1.6rem] border border-line bg-ivory p-6 shadow-soft sm:rounded-[2rem] sm:p-8 md:p-10;
+.editorial-link {
+  @apply text-sm text-fuchsia-200 underline-offset-4 transition hover:text-fuchsia-100 hover:underline;
 }

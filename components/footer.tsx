@@ -1,8 +1,8 @@
 export default function Footer() {
   return (
-    <footer className="border-t border-line/80 bg-ivory/80 px-4 py-5 text-center text-xs text-muted backdrop-blur-sm sm:px-6">
+    <footer className="border-t border-slate-800 bg-slate-950/90 px-4 py-5 text-center text-xs text-slate-400 backdrop-blur sm:px-6">
       <p className="mx-auto max-w-4xl leading-relaxed">
-        Desarrollado por <span className="font-medium text-ink">Andrés Miranda</span> · Versión beta
+        Desarrollado por <span className="font-medium text-slate-200">Andrés Miranda</span> · Versión beta
       </p>
     </footer>
   );
