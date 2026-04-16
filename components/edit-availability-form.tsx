@@ -34,23 +34,23 @@ export default function EditAvailabilityForm({ post }: { post: AvailabilityWithT
         }
         setMessage('Disponibilidad actualizada correctamente.');
       }}
-      className="card-panel mt-5 grid gap-4 p-4 sm:p-6"
+      className="app-card mt-5 grid gap-4 p-4 sm:p-6"
     >
       <input type="hidden" name="id" value={post.id} />
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
 
       <div>
-        <label className="mb-1 block text-sm text-muted">Correo de contacto (verificación obligatoria)</label>
+        <label className="mb-1 block text-sm text-slate-300">Correo de contacto (verificación obligatoria)</label>
         <input name="contact_email" type="email" required className="field" placeholder="correo usado al publicar" />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm text-muted">Comuna</label>
+          <label className="mb-1 block text-sm text-slate-300">Comuna</label>
           <input name="comuna" defaultValue={post.comuna} required className="field" />
         </div>
         <div>
-          <label className="mb-1 block text-sm text-muted">Cancha</label>
+          <label className="mb-1 block text-sm text-slate-300">Cancha</label>
           <select name="has_court" defaultValue={post.has_court ? 'true' : 'false'} className="field">
             <option value="false">No tenemos cancha</option>
             <option value="true">Sí, ponemos cancha</option>
@@ -58,12 +58,12 @@ export default function EditAvailabilityForm({ post }: { post: AvailabilityWithT
         </div>
       </div>
 
-      <div className="grid gap-3 rounded-xl border border-line/80 p-3">
-        <p className="text-sm text-muted">Días disponibles</p>
+      <div className="grid gap-3 rounded-2xl border border-slate-700 p-3">
+        <p className="text-sm text-slate-300">Días disponibles</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {weekdays.map((day) => (
-            <label key={day} className="flex items-center gap-2 text-sm text-ink">
-              <input type="checkbox" name="weekdays" value={day} defaultChecked={post.weekdays?.includes(day)} className="h-4 w-4" />
+            <label key={day} className="flex items-center gap-2 rounded-xl border border-slate-700/70 bg-slate-950/30 px-2 py-2 text-sm text-slate-100">
+              <input type="checkbox" name="weekdays" value={day} defaultChecked={post.weekdays?.includes(day)} className="h-4 w-4 accent-fuchsia-500" />
               <span className="capitalize">{day}</span>
             </label>
           ))}
@@ -72,11 +72,11 @@ export default function EditAvailabilityForm({ post }: { post: AvailabilityWithT
 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm text-muted">Hora inicio</label>
+          <label className="mb-1 block text-sm text-slate-300">Hora inicio</label>
           <input name="start_time" type="time" required defaultValue={post.start_time?.slice(0, 5)} className="field" />
         </div>
         <div>
-          <label className="mb-1 block text-sm text-muted">Hora término</label>
+          <label className="mb-1 block text-sm text-slate-300">Hora término</label>
           <input name="end_time" type="time" required defaultValue={post.end_time?.slice(0, 5)} className="field" />
         </div>
       </div>
@@ -101,18 +101,16 @@ export default function EditAvailabilityForm({ post }: { post: AvailabilityWithT
         <input name="responsible_name" defaultValue={post.responsible_name || ''} placeholder="Responsable (opcional)" className="field" />
         <input name="phone" defaultValue={post.phone || ''} placeholder="Teléfono (opcional)" className="field" />
         <input name="instagram" defaultValue={post.instagram ? `@${post.instagram}` : ''} placeholder="Instagram (opcional)" className="field" />
-        <input name="logo" type="file" accept="image/jpeg,image/png,image/webp" className="field file:mr-2 file:mt-1 file:rounded-lg file:border file:border-line file:bg-sand file:px-3 file:py-2 file:text-ink sm:file:mr-3 sm:file:mt-0" />
+        <input name="logo" type="file" accept="image/jpeg,image/png,image/webp" className="field file:mr-2 file:rounded-lg file:border file:border-slate-500/80 file:bg-slate-900 file:px-3 file:py-2 file:text-slate-200" />
         <input name="logo_url" defaultValue={post.logo_url || ''} placeholder="URL logo (opcional)" className="field" />
       </div>
 
       <textarea name="notes" defaultValue={post.notes || ''} placeholder="Observaciones" className="field min-h-24" />
 
-      <button type="submit" className="btn-accent w-full justify-center md:w-auto">
-        Guardar cambios
-      </button>
+      <button type="submit" className="btn-accent w-full justify-center md:w-auto">Guardar cambios</button>
 
-      {error && <p className="text-sm text-red-700">{error}</p>}
-      {message && <p className="text-sm text-emerald-700">{message}</p>}
+      {error && <p className="text-sm text-rose-300">{error}</p>}
+      {message && <p className="text-sm text-emerald-300">{message}</p>}
     </form>
   );
 }

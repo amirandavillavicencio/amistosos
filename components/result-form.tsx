@@ -14,7 +14,7 @@ const requiredFields = ['club_id', 'opponent_club_id', 'match_date', 'branch', '
 type FieldErrors = Partial<Record<(typeof requiredFields)[number], string>>;
 
 function fieldClass(hasError: boolean) {
-  return `field ${hasError ? 'border-red-500 ring-2 ring-red-200 focus:border-red-600 focus:ring-red-200' : ''}`;
+  return `field ${hasError ? 'border-rose-400 ring-2 ring-rose-500/30 focus:border-rose-300 focus:ring-rose-500/30' : ''}`;
 }
 
 export default function ResultForm({ teams }: ResultFormProps) {
@@ -24,7 +24,7 @@ export default function ResultForm({ teams }: ResultFormProps) {
   const [opponentId, setOpponentId] = useState('');
 
   const isSubmitDisabled = !opponentId;
-  const successClass = useMemo(() => (success ? 'text-sm text-emerald-700' : 'hidden'), [success]);
+  const successClass = useMemo(() => (success ? 'text-sm text-emerald-300' : 'hidden'), [success]);
 
   return (
     <form
@@ -55,96 +55,72 @@ export default function ResultForm({ teams }: ResultFormProps) {
           setError(err instanceof Error ? err.message : 'Error inesperado al guardar.');
         }
       }}
-      className="card-panel grid gap-4 p-4 sm:p-6"
+      className="app-card grid gap-4 p-4 sm:p-6"
     >
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
+          <label className="mb-1 block text-xs text-slate-300">Mi club *</label>
           <select name="club_id" className={fieldClass(Boolean(fieldErrors.club_id))} required>
             <option value="">Mi club</option>
             {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.club_name}
-              </option>
+              <option key={team.id} value={team.id}>{team.club_name}</option>
             ))}
           </select>
-          {fieldErrors.club_id && <p className="mt-1 text-xs text-red-600">{fieldErrors.club_id}</p>}
+          {fieldErrors.club_id && <p className="mt-1 text-xs text-rose-300">{fieldErrors.club_id}</p>}
         </div>
 
         <div>
-          <select
-            name="opponent_club_id"
-            className={fieldClass(Boolean(fieldErrors.opponent_club_id))}
-            required
-            value={opponentId}
-            onChange={(event) => setOpponentId(event.target.value)}
-          >
+          <label className="mb-1 block text-xs text-slate-300">Rival existente *</label>
+          <select name="opponent_club_id" className={fieldClass(Boolean(fieldErrors.opponent_club_id))} required value={opponentId} onChange={(event) => setOpponentId(event.target.value)}>
             <option value="">Rival existente</option>
             {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.club_name}
-              </option>
+              <option key={team.id} value={team.id}>{team.club_name}</option>
             ))}
           </select>
-          {fieldErrors.opponent_club_id && <p className="mt-1 text-xs text-red-600">{fieldErrors.opponent_club_id}</p>}
+          {fieldErrors.opponent_club_id && <p className="mt-1 text-xs text-rose-300">{fieldErrors.opponent_club_id}</p>}
         </div>
 
-        <input
-          name="opponent_name"
-          className="field md:col-span-2 bg-slate-100"
-          placeholder="Rival manual deshabilitado en esta versión"
-          disabled
-        />
+        <input name="opponent_name" className="field md:col-span-2 opacity-80" placeholder="Rival manual deshabilitado en esta versión" disabled />
 
         <div>
+          <label className="mb-1 block text-xs text-slate-300">Fecha *</label>
           <input type="date" name="match_date" required className={fieldClass(Boolean(fieldErrors.match_date))} />
-          {fieldErrors.match_date && <p className="mt-1 text-xs text-red-600">{fieldErrors.match_date}</p>}
+          {fieldErrors.match_date && <p className="mt-1 text-xs text-rose-300">{fieldErrors.match_date}</p>}
         </div>
 
         <div>
+          <label className="mb-1 block text-xs text-slate-300">Rama *</label>
           <select name="branch" required className={fieldClass(Boolean(fieldErrors.branch))}>
             <option value="">Rama</option>
             <option value="femenina">Femenina</option>
             <option value="masculina">Masculina</option>
             <option value="mixta">Mixta</option>
           </select>
-          {fieldErrors.branch && <p className="mt-1 text-xs text-red-600">{fieldErrors.branch}</p>}
+          {fieldErrors.branch && <p className="mt-1 text-xs text-rose-300">{fieldErrors.branch}</p>}
         </div>
 
         <div>
+          <label className="mb-1 block text-xs text-slate-300">Tipo de partido *</label>
           <select name="match_type" required className={fieldClass(Boolean(fieldErrors.match_type))}>
             <option value="">Tipo de partido</option>
             {matchTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
+              <option key={type} value={type}>{type}</option>
             ))}
           </select>
-          {fieldErrors.match_type && <p className="mt-1 text-xs text-red-600">{fieldErrors.match_type}</p>}
+          {fieldErrors.match_type && <p className="mt-1 text-xs text-rose-300">{fieldErrors.match_type}</p>}
         </div>
 
         <div>
-          <input
-            type="number"
-            name="sets_won"
-            min={0}
-            required
-            className={fieldClass(Boolean(fieldErrors.sets_won))}
-            placeholder="Sets ganados"
-          />
-          {fieldErrors.sets_won && <p className="mt-1 text-xs text-red-600">{fieldErrors.sets_won}</p>}
+          <label className="mb-1 block text-xs text-slate-300">Sets ganados *</label>
+          <input type="number" name="sets_won" min={0} required className={fieldClass(Boolean(fieldErrors.sets_won))} placeholder="Sets ganados" />
+          {fieldErrors.sets_won && <p className="mt-1 text-xs text-rose-300">{fieldErrors.sets_won}</p>}
         </div>
         <div>
-          <input
-            type="number"
-            name="sets_lost"
-            min={0}
-            required
-            className={fieldClass(Boolean(fieldErrors.sets_lost))}
-            placeholder="Sets perdidos"
-          />
-          {fieldErrors.sets_lost && <p className="mt-1 text-xs text-red-600">{fieldErrors.sets_lost}</p>}
+          <label className="mb-1 block text-xs text-slate-300">Sets perdidos *</label>
+          <input type="number" name="sets_lost" min={0} required className={fieldClass(Boolean(fieldErrors.sets_lost))} placeholder="Sets perdidos" />
+          {fieldErrors.sets_lost && <p className="mt-1 text-xs text-rose-300">{fieldErrors.sets_lost}</p>}
         </div>
 
         <input name="set_scores" className="field" placeholder="Marcador por sets (ej: 25-22, 22-25, 15-12)" />
@@ -153,16 +129,10 @@ export default function ResultForm({ teams }: ResultFormProps) {
 
       <textarea name="notes" className="field min-h-20" placeholder="Notas adicionales (opcional)" />
 
-      <button
-        type="submit"
-        disabled={isSubmitDisabled}
-        className="w-full rounded-xl border border-accent/30 bg-accent px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 md:w-fit"
-      >
-        Registrar resultado
-      </button>
+      <button type="submit" disabled={isSubmitDisabled} className="btn-accent w-full disabled:cursor-not-allowed disabled:opacity-60 md:w-fit">Registrar resultado</button>
 
-      {isSubmitDisabled && <p className="text-xs text-red-600">Debes seleccionar un rival existente para continuar.</p>}
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {isSubmitDisabled && <p className="text-xs text-rose-300">Debes seleccionar un rival existente para continuar.</p>}
+      {error && <p className="text-sm text-rose-300">{error}</p>}
       <p className={successClass}>{success}</p>
     </form>
   );

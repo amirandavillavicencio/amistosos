@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import PostCard from '@/components/post-card';
+import { EmptyState, PageHeader, SectionShell } from '@/components/ui-shell';
 import { getOpenAvailabilities } from '@/lib/data';
 import type { AvailabilityWithTeam } from '@/lib/types';
 
@@ -40,55 +41,54 @@ export default async function ExplorarPage({ searchParams }: ExplorarPageProps) 
 
   return (
     <main className="section">
-      <div className="mb-8 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <p className="text-sm text-accent">Explorar equipos</p>
-          <h1 className="display-serif text-4xl text-ink sm:text-5xl">Disponibilidades abiertas</h1>
-        </div>
-        <Link href="/" className="rounded-xl border border-line bg-ivory px-4 py-2 text-sm text-ink">
-          Volver al inicio
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Explorar equipos"
+        title="Disponibilidades abiertas"
+        description="Filtra por rama, día y categoría para encontrar rivales que sí calzan con tu disponibilidad real."
+        action={<Link href="/" className="btn-secondary">Volver al inicio</Link>}
+      />
 
-      <form className="card-panel mb-6 grid gap-3 p-4 sm:grid-cols-4" method="GET">
-        <select name="categoria" defaultValue={ageCategory} className="field">
-          <option value="">Todas las categorías</option>
-          <option value="sub-12">Sub-12</option>
-          <option value="sub-14">Sub-14</option>
-          <option value="sub-16">Sub-16</option>
-          <option value="sub-18">Sub-18</option>
-          <option value="sub-20">Sub-20</option>
-          <option value="tc">Todo Competidor (TC)</option>
-        </select>
+      <SectionShell className="mb-5">
+        <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" method="GET">
+          <select name="categoria" defaultValue={ageCategory} className="field">
+            <option value="">Todas las categorías</option>
+            <option value="sub-12">Sub-12</option>
+            <option value="sub-14">Sub-14</option>
+            <option value="sub-16">Sub-16</option>
+            <option value="sub-18">Sub-18</option>
+            <option value="sub-20">Sub-20</option>
+            <option value="tc">Todo Competidor (TC)</option>
+          </select>
 
-        <select name="rama" defaultValue={branch} className="field">
-          <option value="">Todas las ramas</option>
-          <option value="femenina">Femenina</option>
-          <option value="masculina">Masculina</option>
-          <option value="mixta">Mixta</option>
-        </select>
+          <select name="rama" defaultValue={branch} className="field">
+            <option value="">Todas las ramas</option>
+            <option value="femenina">Femenina</option>
+            <option value="masculina">Masculina</option>
+            <option value="mixta">Mixta</option>
+          </select>
 
-        <select name="dia" defaultValue={weekday} className="field">
-          <option value="">Cualquier día</option>
-          {weekdays.map((day) => (
-            <option key={day} value={day}>
-              {day}
-            </option>
-          ))}
-        </select>
+          <select name="dia" defaultValue={weekday} className="field">
+            <option value="">Cualquier día</option>
+            {weekdays.map((day) => (
+              <option key={day} value={day}>
+                {day}
+              </option>
+            ))}
+          </select>
 
-        <div className="sm:col-span-4 flex gap-2">
-          <button type="submit" className="btn-accent">Aplicar filtros</button>
-          <Link href="/explorar" className="btn-secondary">Limpiar</Link>
-        </div>
-      </form>
+          <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1 lg:justify-end">
+            <button type="submit" className="btn-accent">Aplicar filtros</button>
+            <Link href="/explorar" className="btn-secondary">Limpiar</Link>
+          </div>
+        </form>
+      </SectionShell>
 
       {posts.length === 0 ? (
-        <div className="card-panel flex flex-col items-center gap-4 p-8 text-center">
-          <h2 className="display-serif text-2xl text-ink">Todavía no hay partidos publicados</h2>
-          <p className="max-w-xl text-sm text-muted">Tu equipo puede ser el primero en activar la rueda de amistosos en tu zona.</p>
-          <Link href="/publicar" className="btn-accent">Publicar mi disponibilidad</Link>
-        </div>
+        <EmptyState
+          title="Todavía no hay partidos publicados"
+          description="Tu equipo puede ser el primero en activar la rueda de amistosos en tu zona."
+          action={<Link href="/publicar" className="btn-accent">Publicar mi disponibilidad</Link>}
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {posts.map((post) => (

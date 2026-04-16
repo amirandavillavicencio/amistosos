@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import ResultForm from '@/components/result-form';
+import { EmptyState, PageHeader, SectionShell, StatusBadge } from '@/components/ui-shell';
 import { getAllTeamsMinimal, getRecentResults } from '@/lib/data';
 import type { MatchResultRow, TeamRow } from '@/lib/types';
 
@@ -26,33 +27,42 @@ export default async function ResultadosPage() {
 
   return (
     <main className="section">
-      <div className="mb-8 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <p className="text-sm text-accent">Carga de historial</p>
-          <h1 className="display-serif text-4xl text-ink sm:text-5xl">Registrar resultado</h1>
-        </div>
-        <Link href="/" className="rounded-xl border border-line bg-ivory px-4 py-2 text-sm text-ink">
-          Volver al inicio
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Carga de historial"
+        title="Registrar resultado"
+        description="Carga marcadores oficiales para actualizar ranking y trazabilidad deportiva."
+        action={<Link href="/" className="btn-secondary">Volver al inicio</Link>}
+      />
 
       <ResultForm teams={teams} />
 
-      <section className="mt-10">
-        <h2 className="display-serif text-3xl text-ink sm:text-4xl">Historial reciente</h2>
-        <div className="mt-4 grid gap-3">
-          {recent.map((result) => (
-            <article key={result.id} className="card-panel p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="font-semibold text-ink">
-                  {result.sets_won > result.sets_lost ? 'Victoria' : result.sets_won < result.sets_lost ? 'Derrota' : 'Empate'} · {result.sets_won}-{result.sets_lost}
-                </p>
-                <p className="text-sm text-muted">{result.match_date}</p>
-              </div>
-              <p className="mt-1 text-sm text-muted">Rival: {result.opponent_name || 'Club registrado'} · {result.match_type}</p>
-            </article>
-          ))}
-        </div>
+      <section className="mt-6">
+        <h2 className="mb-3 text-xl font-bold text-white sm:text-2xl">Historial reciente</h2>
+        {recent.length === 0 ? (
+          <EmptyState
+            title="Sin resultados recientes"
+            description="Registra el primer resultado para comenzar el historial del torneo."
+          />
+        ) : (
+          <div className="grid gap-3">
+            {recent.map((result) => {
+              const tone = result.sets_won > result.sets_lost ? 'success' : result.sets_won < result.sets_lost ? 'danger' : 'warning';
+              const label = result.sets_won > result.sets_lost ? 'Victoria' : result.sets_won < result.sets_lost ? 'Derrota' : 'Empate';
+              return (
+                <SectionShell key={result.id} className="rounded-2xl p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <StatusBadge tone={tone}>{label}</StatusBadge>
+                    <p className="text-xs text-slate-400">{result.match_date}</p>
+                  </div>
+                  <div className="mt-2 flex items-end justify-between gap-3">
+                    <p className="text-sm text-slate-200">Rival: {result.opponent_name || 'Club registrado'} · {result.match_type}</p>
+                    <p className="text-xl font-black text-white">{result.sets_won}-{result.sets_lost}</p>
+                  </div>
+                </SectionShell>
+              );
+            })}
+          </div>
+        )}
       </section>
     </main>
   );

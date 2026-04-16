@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import TeamRankingCard from '@/components/team-ranking-card';
+import { EmptyState, PageHeader, SectionShell } from '@/components/ui-shell';
 import { getClubStatsRanking } from '@/lib/data';
 import type { ClubStatsCard } from '@/lib/types';
 
@@ -13,38 +14,35 @@ export default async function RankingPage() {
     console.error('RankingPage data load failed', error);
   }
 
-  const mostActive = [...teams].sort((a, b) => b.matches_played - a.matches_played).slice(0, 3);
+  const topThree = teams.slice(0, 3);
 
   return (
     <main className="section">
-      <div className="mb-8 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <p className="text-sm text-accent">Ranking de equipos</p>
-          <h1 className="display-serif text-4xl text-ink sm:text-5xl">Ranking ELO</h1>
-          <p className="mt-2 text-muted">Se actualiza con fotos que incluyan resultado válido (por ejemplo 3-1).</p>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">
-            El ranking se basa en un sistema ELO. Cada equipo tiene un puntaje que sube cuando gana y baja cuando
-            pierde. Si ganas contra un equipo con más victorias, subes más puntos. Si pierdes contra uno con menos
-            victorias, bajas más puntos.
-          </p>
-        </div>
-        <Link href="/" className="rounded-xl border border-line bg-ivory px-4 py-2 text-sm text-ink">
-          Ir al inicio
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Ranking de equipos"
+        title="Ranking ELO"
+        description="Se actualiza con resultados válidos. Si ganas ante rivales fuertes, subes más puntos."
+        action={<Link href="/" className="btn-secondary">Ir al inicio</Link>}
+      />
 
-      <div className="mb-8 grid gap-4 md:grid-cols-3">
-        {mostActive.map((team) => (
-          <article key={team.id} className="card-panel p-4">
-            <p className="text-xs text-muted">Equipo más activo</p>
-            <p className="mt-2 display-serif text-2xl text-ink">{team.club_name}</p>
-            <p className="text-sm text-muted">{team.matches_played} partidos registrados</p>
-          </article>
-        ))}
-      </div>
+      {topThree.length > 0 ? (
+        <div className="mb-5 grid gap-3 sm:grid-cols-3">
+          {topThree.map((team, index) => (
+            <SectionShell key={team.id} className={index === 0 ? 'border-yellow-300/35 bg-yellow-500/10' : ''}>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-300">Top {index + 1}</p>
+              <p className="mt-2 text-lg font-bold text-white">{team.club_name}</p>
+              <p className="text-sm text-slate-300">{team.wins} G · {team.losses} P · {team.matches_played} PJ</p>
+            </SectionShell>
+          ))}
+        </div>
+      ) : null}
 
       {teams.length === 0 ? (
-        <p className="text-muted">Todavía no hay ranking. Sube una foto con resultado para iniciar la tabla.</p>
+        <EmptyState
+          title="Todavía no hay ranking"
+          description="Sube un resultado válido para iniciar la tabla de posiciones."
+          action={<Link href="/resultados" className="btn-accent">Registrar primer resultado</Link>}
+        />
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {teams.map((team, index) => (
