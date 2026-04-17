@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
 import { getActiveBannedClubNameKeys, isClubBannedByName, normalizeClubNameKey } from '@/lib/banned-clubs';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import type { AgeCategory, AvailabilityRow, Branch, MatchType, TeamRow } from '@/lib/types';
+import type { AgeCategory, Branch, MatchType, TeamRow } from '@/lib/types';
 
 const validBranches = new Set<Branch>(['femenina', 'masculina', 'mixta']);
 const validAgeCategories = new Set<AgeCategory>(['sub-12', 'sub-14', 'sub-16', 'sub-18', 'sub-20', 'tc']);
@@ -54,6 +54,74 @@ function normalizeInstagram(value: FormDataEntryValue | null) {
   return withoutAt.split('/')[0].trim().toLowerCase() || null;
 }
 
+function normalizeForComparison(value: unknown): string {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function safeString(value: unknown): string {
+  return String(value ?? '').trim();
+}
+
+function isUuid(value: unknown): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(safeString(value));
+}
+
+function parseMinutesSafe(value: unknown): number | null {
+  const raw = safeString(value);
+  if (!raw) return null;
+
+  const normalized = raw.length >= 5 ? raw.slice(0, 5) : raw;
+  const parsed = parseTime(normalized);
+  if (parsed < 0) return null;
+
+  return parsed;
+}
+
+function toWeekdaySet(weekdayValue: unknown, weekdaysValue: unknown): Set<string> {
+  const set = new Set<string>();
+  const pushValue = (value: unknown) => {
+    const normalized = normalizeForComparison(value);
+    if (normalized) {
+      set.add(normalized);
+    }
+  };
+
+  pushValue(weekdayValue);
+
+  if (Array.isArray(weekdaysValue)) {
+    for (const day of weekdaysValue) {
+      pushValue(day);
+    }
+    return set;
+  }
+
+  if (typeof weekdaysValue === 'string') {
+    const raw = weekdaysValue.trim();
+    if (!raw) return set;
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        for (const day of parsed) {
+          pushValue(day);
+        }
+        return set;
+      }
+    } catch {}
+
+    const withoutBraces = raw.replace(/^\{/, '').replace(/\}$/, '');
+    for (const day of withoutBraces.split(',')) {
+      pushValue(day);
+    }
+  }
+
+  return set;
+}
+
 function assertHoneypot(formData: FormData) {
   const honeypot = String(formData.get('website') || '').trim();
   if (honeypot) {
@@ -96,20 +164,63 @@ export async function rebuildSuggestedMatches() {
   try {
     const supabase = getSupabaseAdmin();
 
-    const { data: openAvailabilities, error: openError } = await supabase
+    const { data: allAvailabilities, error: allError } = await supabase
       .from('availabilities')
-      .select('*')
-      .in('status', ['open', 'active', 'published'])
-      .returns<AvailabilityRow[]>();
+      .select('*');
 
-    if (openError) {
-      console.error('rebuildSuggestedMatches open availabilities failed', openError);
+    if (allError) {
+      console.error('rebuildSuggestedMatches availabilities read failed', allError);
       return { ok: false, error: 'match_rebuild_failed' as const };
     }
 
+    const availabilities = Array.isArray(allAvailabilities) ? allAvailabilities : [];
+    const discoveredAvailabilityColumns = new Set<string>();
+    for (const row of availabilities.slice(0, 50)) {
+      for (const key of Object.keys(row || {})) {
+        discoveredAvailabilityColumns.add(key);
+      }
+    }
+
+    const availabilitiesWithValidId = availabilities.filter((row) => isUuid((row as { id?: unknown })?.id)).length;
+    const availabilitiesWithWeekdays = availabilities.filter((row) => {
+      const weekdays = toWeekdaySet((row as { weekday?: unknown })?.weekday, (row as { weekdays?: unknown })?.weekdays);
+      return weekdays.size > 0;
+    }).length;
+    const availabilitiesWithTimeRange = availabilities.filter((row) => {
+      const start = parseMinutesSafe((row as { start_time?: unknown })?.start_time);
+      const end = parseMinutesSafe((row as { end_time?: unknown })?.end_time);
+      return start !== null && end !== null && end > start;
+    }).length;
+    const weekdayOnlyCount = availabilities.filter((row) => {
+      const weekday = normalizeForComparison((row as { weekday?: unknown })?.weekday);
+      const weekdays = (row as { weekdays?: unknown })?.weekdays;
+      const weekdayArrayCount = Array.isArray(weekdays)
+        ? weekdays.filter((day) => normalizeForComparison(day)).length
+        : 0;
+      return Boolean(weekday) && weekdayArrayCount === 0;
+    }).length;
+    const weekdaysOnlyCount = availabilities.filter((row) => {
+      const weekday = normalizeForComparison((row as { weekday?: unknown })?.weekday);
+      const weekdays = (row as { weekdays?: unknown })?.weekdays;
+      const weekdayArrayCount = Array.isArray(weekdays)
+        ? weekdays.filter((day) => normalizeForComparison(day)).length
+        : 0;
+      return !weekday && weekdayArrayCount > 0;
+    }).length;
+
+    const usableStatus = new Set(['open', 'active', 'published']);
+    const activeAvailabilities = availabilities.filter((post) => {
+      const status = normalizeForComparison((post as { status?: unknown })?.status);
+      if (!status) return true;
+      return usableStatus.has(status);
+    });
+
     const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
-    const sourcePosts = (openAvailabilities || []).filter(
-      (post) => !bannedClubNameKeys.has(normalizeClubNameKey(post.club_name))
+    const sourcePosts = activeAvailabilities.filter(
+      (post) =>
+        !bannedClubNameKeys.has(
+          normalizeClubNameKey(safeString((post as { club_name?: unknown })?.club_name))
+        )
     );
 
     const rows: Array<{
@@ -123,28 +234,13 @@ export async function rebuildSuggestedMatches() {
       status: 'active';
     }> = [];
 
-    let totalPairsEvaluated = 0;
-    let skippedMissingIds = 0;
+    let pairsEvaluated = 0;
     let skippedSameClub = 0;
     let skippedByScore = 0;
-
-    const normalizeText = (value: string | null | undefined) => String(value || '').trim().toLowerCase();
-    const parseOptionalTime = (value: string | null | undefined) => {
-      const raw = String(value || '').trim();
-      if (!raw) return null;
-      const parsed = parseTime(raw);
-      return parsed >= 0 ? parsed : null;
-    };
-    const weekdaysToSet = (value: string[] | null | undefined) => {
-      if (!Array.isArray(value)) return new Set<string>();
-      return new Set(value.map((day) => String(day || '').trim().toLowerCase()).filter(Boolean));
-    };
-    const hasSharedWeekday = (aDays: Set<string>, bDays: Set<string>) => {
-      for (const day of aDays) {
-        if (bDays.has(day)) return true;
-      }
-      return false;
-    };
+    let invalidRowsSkipped = 0;
+    let pairsWithSharedDays = 0;
+    let pairsWithTimeOverlap = 0;
+    let pairsPassingThreshold = 0;
 
     const pairKeys = new Set<string>();
 
@@ -152,18 +248,18 @@ export async function rebuildSuggestedMatches() {
       const a = sourcePosts[i];
       for (let j = i + 1; j < sourcePosts.length; j += 1) {
         const b = sourcePosts[j];
-        totalPairsEvaluated += 1;
+        pairsEvaluated += 1;
 
-        const postAId = String(a?.id || '').trim();
-        const postBId = String(b?.id || '').trim();
+        const postAId = safeString((a as { id?: unknown })?.id);
+        const postBId = safeString((b as { id?: unknown })?.id);
 
-        if (!postAId || !postBId) {
-          skippedMissingIds += 1;
+        if (!isUuid(postAId) || !isUuid(postBId)) {
+          invalidRowsSkipped += 1;
           continue;
         }
 
         if (postAId === postBId) {
-          skippedMissingIds += 1;
+          invalidRowsSkipped += 1;
           continue;
         }
 
@@ -174,28 +270,35 @@ export async function rebuildSuggestedMatches() {
         }
         pairKeys.add(pairKey);
 
-        const aClub = normalizeText(a.club_name);
-        const bClub = normalizeText(b.club_name);
+        const aClub = normalizeForComparison((a as { club_name?: unknown })?.club_name);
+        const bClub = normalizeForComparison((b as { club_name?: unknown })?.club_name);
         if (aClub && bClub && aClub === bClub) {
           skippedSameClub += 1;
           continue;
         }
 
-        const aCity = normalizeText(a.city);
-        const bCity = normalizeText(b.city);
-        const aComuna = normalizeText(a.comuna);
-        const bComuna = normalizeText(b.comuna);
-        const aLevel = normalizeText(a.level);
-        const bLevel = normalizeText(b.level);
+        const aCity = normalizeForComparison((a as { city?: unknown })?.city);
+        const bCity = normalizeForComparison((b as { city?: unknown })?.city);
+        const aComuna = normalizeForComparison((a as { comuna?: unknown })?.comuna);
+        const bComuna = normalizeForComparison((b as { comuna?: unknown })?.comuna);
+        const aLevel =
+          normalizeForComparison((a as { level?: unknown })?.level)
+          || normalizeForComparison((a as { desired_level?: unknown })?.desired_level);
+        const bLevel =
+          normalizeForComparison((b as { level?: unknown })?.level)
+          || normalizeForComparison((b as { desired_level?: unknown })?.desired_level);
 
-        const aDays = weekdaysToSet(a.weekdays);
-        const bDays = weekdaysToSet(b.weekdays);
-        const sharedDays = hasSharedWeekday(aDays, bDays);
+        const aDays = toWeekdaySet((a as { weekday?: unknown })?.weekday, (a as { weekdays?: unknown })?.weekdays);
+        const bDays = toWeekdaySet((b as { weekday?: unknown })?.weekday, (b as { weekdays?: unknown })?.weekdays);
+        const sharedDays = [...aDays].some((day) => bDays.has(day));
+        if (sharedDays) {
+          pairsWithSharedDays += 1;
+        }
 
-        const aStart = parseOptionalTime(a.start_time);
-        const aEnd = parseOptionalTime(a.end_time);
-        const bStart = parseOptionalTime(b.start_time);
-        const bEnd = parseOptionalTime(b.end_time);
+        const aStart = parseMinutesSafe((a as { start_time?: unknown })?.start_time);
+        const aEnd = parseMinutesSafe((a as { end_time?: unknown })?.end_time);
+        const bStart = parseMinutesSafe((b as { start_time?: unknown })?.start_time);
+        const bEnd = parseMinutesSafe((b as { end_time?: unknown })?.end_time);
         const hasTimeOverlap =
           aStart !== null &&
           aEnd !== null &&
@@ -203,6 +306,9 @@ export async function rebuildSuggestedMatches() {
           bEnd !== null &&
           aStart < bEnd &&
           bStart < aEnd;
+        if (hasTimeOverlap) {
+          pairsWithTimeOverlap += 1;
+        }
 
         let compatibilityScore = 0;
         let locationScore = 0;
@@ -234,7 +340,7 @@ export async function rebuildSuggestedMatches() {
           levelScore += 4;
         }
 
-        if (Boolean(a.has_court) && Boolean(b.has_court)) {
+        if (Boolean((a as { has_court?: unknown })?.has_court) && Boolean((b as { has_court?: unknown })?.has_court)) {
           compatibilityScore += 3;
           locationScore += 3;
         }
@@ -243,6 +349,7 @@ export async function rebuildSuggestedMatches() {
           skippedByScore += 1;
           continue;
         }
+        pairsPassingThreshold += 1;
 
         rows.push({
           post_a_id: stableA,
@@ -258,13 +365,14 @@ export async function rebuildSuggestedMatches() {
     }
 
     const safeRows = rows.filter((row) => {
-      const postAId = String(row?.post_a_id || '').trim();
-      const postBId = String(row?.post_b_id || '').trim();
-      if (!postAId || !postBId || postAId === postBId) {
+      const postAId = safeString(row?.post_a_id);
+      const postBId = safeString(row?.post_b_id);
+      if (!isUuid(postAId) || !isUuid(postBId) || postAId === postBId) {
         return false;
       }
       return true;
     });
+    invalidRowsSkipped += rows.length - safeRows.length;
 
     const { error: deleteError } = await supabase
       .from('suggested_matches')
@@ -290,12 +398,50 @@ export async function rebuildSuggestedMatches() {
       insertedMatches = Array.isArray(inserted) ? inserted.length : safeRows.length;
     }
 
+    const { count: suggestedMatchesFinalCount, error: suggestedMatchesCountError } = await supabase
+      .from('suggested_matches')
+      .select('id', { count: 'exact', head: true });
+
+    if (suggestedMatchesCountError) {
+      console.warn('rebuildSuggestedMatches suggested_matches count failed', suggestedMatchesCountError);
+    }
+
+    let bannedClubsTableAvailable = true;
+    const { error: bannedClubsReadError } = await supabase.from('banned_clubs').select('id').limit(1);
+    if (bannedClubsReadError) {
+      bannedClubsTableAvailable = false;
+      console.warn('rebuildSuggestedMatches banned_clubs unavailable, fallback to no banned clubs filtering', bannedClubsReadError);
+    }
+
+    let mainCause = 'matches_generated_normally';
+    if (sourcePosts.length < 2) {
+      mainCause = 'not_enough_active_availabilities';
+    } else if (!pairsWithSharedDays) {
+      mainCause = 'weekday_data_missing_or_not_overlapping';
+    } else if (!pairsWithTimeOverlap) {
+      mainCause = 'time_ranges_missing_or_not_overlapping';
+    } else if (!pairsPassingThreshold) {
+      mainCause = 'score_threshold_filtered_all_pairs';
+    }
+
     console.log('rebuildSuggestedMatches completed', {
-      availabilitiesCount: sourcePosts.length,
-      totalPairsEvaluated,
+      availabilitiesCount: availabilities.length,
+      activeAvailabilitiesCount: sourcePosts.length,
+      pairsEvaluated,
       generatedMatches: rows.length,
       insertedMatches,
-      skippedMissingIds,
+      invalidRowsSkipped,
+      pairsWithSharedDays,
+      pairsWithTimeOverlap,
+      discoveredAvailabilityColumns: [...discoveredAvailabilityColumns].sort(),
+      availabilitiesWithValidId,
+      availabilitiesWithWeekdays,
+      availabilitiesWithTimeRange,
+      weekdayOnlyCount,
+      weekdaysOnlyCount,
+      suggestedMatchesFinalCount: suggestedMatchesFinalCount ?? null,
+      bannedClubsTableAvailable,
+      mainCause,
       skippedSameClub,
       skippedByScore
     });
