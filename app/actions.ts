@@ -62,6 +62,50 @@ function normalizeForComparison(value: unknown): string {
     .toLowerCase();
 }
 
+function normalizeDay(day: string): string {
+  return day
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+function getNormalizedDaysFromAvailability(
+  weekdayValue: unknown,
+  weekdaysValue: unknown
+): string[] {
+  const normalizeDays = (days: unknown[]): string[] => (
+    days
+      .map((day) => normalizeDay(String(day ?? '')))
+      .filter(Boolean)
+  );
+
+  if (Array.isArray(weekdaysValue)) {
+    return normalizeDays(weekdaysValue);
+  }
+
+  if (typeof weekdaysValue === 'string') {
+    const raw = weekdaysValue.trim();
+    if (!raw) return [];
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return normalizeDays(parsed);
+      }
+    } catch {}
+
+    const withoutBraces = raw.replace(/^\{/, '').replace(/\}$/, '');
+    return normalizeDays(withoutBraces.split(','));
+  }
+
+  if (typeof weekdayValue === 'string' && weekdayValue.trim()) {
+    return [normalizeDay(weekdayValue)];
+  }
+
+  return [];
+}
+
 function safeString(value: unknown): string {
   return String(value ?? '').trim();
 }
@@ -79,47 +123,6 @@ function parseMinutesSafe(value: unknown): number | null {
   if (parsed < 0) return null;
 
   return parsed;
-}
-
-function toWeekdaySet(weekdayValue: unknown, weekdaysValue: unknown): Set<string> {
-  const set = new Set<string>();
-  const pushValue = (value: unknown) => {
-    const normalized = normalizeForComparison(value);
-    if (normalized) {
-      set.add(normalized);
-    }
-  };
-
-  pushValue(weekdayValue);
-
-  if (Array.isArray(weekdaysValue)) {
-    for (const day of weekdaysValue) {
-      pushValue(day);
-    }
-    return set;
-  }
-
-  if (typeof weekdaysValue === 'string') {
-    const raw = weekdaysValue.trim();
-    if (!raw) return set;
-
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        for (const day of parsed) {
-          pushValue(day);
-        }
-        return set;
-      }
-    } catch {}
-
-    const withoutBraces = raw.replace(/^\{/, '').replace(/\}$/, '');
-    for (const day of withoutBraces.split(',')) {
-      pushValue(day);
-    }
-  }
-
-  return set;
 }
 
 function assertHoneypot(formData: FormData) {
@@ -183,8 +186,11 @@ export async function rebuildSuggestedMatches() {
 
     const availabilitiesWithValidId = availabilities.filter((row) => isUuid((row as { id?: unknown })?.id)).length;
     const availabilitiesWithWeekdays = availabilities.filter((row) => {
-      const weekdays = toWeekdaySet((row as { weekday?: unknown })?.weekday, (row as { weekdays?: unknown })?.weekdays);
-      return weekdays.size > 0;
+      const normalizedDays = getNormalizedDaysFromAvailability(
+        (row as { weekday?: unknown })?.weekday,
+        (row as { weekdays?: unknown })?.weekdays
+      );
+      return normalizedDays.length > 0;
     }).length;
     const availabilitiesWithTimeRange = availabilities.filter((row) => {
       const start = parseMinutesSafe((row as { start_time?: unknown })?.start_time);
@@ -288,10 +294,23 @@ export async function rebuildSuggestedMatches() {
           normalizeForComparison((b as { level?: unknown })?.level)
           || normalizeForComparison((b as { expected_level?: unknown })?.expected_level);
 
-        const aDays = toWeekdaySet((a as { weekday?: unknown })?.weekday, (a as { weekdays?: unknown })?.weekdays);
-        const bDays = toWeekdaySet((b as { weekday?: unknown })?.weekday, (b as { weekdays?: unknown })?.weekdays);
-        const sharedDays = [...aDays].some((day) => bDays.has(day));
-        if (sharedDays) {
+        const daysA = getNormalizedDaysFromAvailability(
+          (a as { weekday?: unknown })?.weekday,
+          (a as { weekdays?: unknown })?.weekdays
+        );
+        const daysB = getNormalizedDaysFromAvailability(
+          (b as { weekday?: unknown })?.weekday,
+          (b as { weekdays?: unknown })?.weekdays
+        );
+        const hasSharedDay = daysA.some((d) => daysB.includes(d));
+        console.log('rebuildSuggestedMatches shared day evaluation', {
+          postAId,
+          postBId,
+          daysA,
+          daysB,
+          hasSharedDay
+        });
+        if (hasSharedDay) {
           pairsWithSharedDays += 1;
         }
 
@@ -325,7 +344,7 @@ export async function rebuildSuggestedMatches() {
           locationScore += 5;
         }
 
-        if (sharedDays) {
+        if (hasSharedDay) {
           compatibilityScore += 8;
           scheduleScore += 8;
         }
