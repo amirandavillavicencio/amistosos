@@ -5,6 +5,7 @@ import HomeHero from "@/components/home-hero";
 import HomeRankingPreview from "@/components/home-ranking-preview";
 import HomeResultsPreview from "@/components/home-results-preview";
 import PostCard from "@/components/post-card";
+import { rebuildSuggestedMatches } from "@/app/actions";
 import { createMatchIntent, getNextCard } from "@/lib/matching";
 import {
   getClubStatsRanking,
@@ -82,6 +83,8 @@ function formatAvailability(post: AvailabilityWithTeam): string {
 }
 
 export default async function HomePage({ searchParams }: PageProps) {
+  await rebuildSuggestedMatches();
+
   const skipIds = getSkipIds(searchParams?.skip);
   const fromPostId = searchParams?.from || (await getDefaultFromPostId());
 
