@@ -94,43 +94,69 @@ async function assertClubNotBanned(clubName: string) {
 }
 
 export async function rebuildSuggestedMatches() {
-  const supabase = getSupabaseAdmin();
+  try {
+    const supabase = getSupabaseAdmin();
 
-  const { data: openAvailabilities, error: openError } = await supabase
-    .from('availabilities')
-    .select('*')
-    .in('status', ['open', 'active', 'published'])
-    .returns<AvailabilityRow[]>();
+    const { data: openAvailabilities, error: openError } = await supabase
+      .from('availabilities')
+      .select('*')
+      .in('status', ['open', 'active', 'published'])
+      .returns<AvailabilityRow[]>();
 
-  if (openError) {
-    console.error('rebuildSuggestedMatches open availabilities failed', openError);
-    throw new Error('No pudimos reconstruir los matches sugeridos.');
-  }
-
-  const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
-  const sourcePosts = (openAvailabilities || []).filter(
-    (post) => !bannedClubNameKeys.has(normalizeClubNameKey(post.club_name))
-  );
-  const rows = buildSuggestedMatches(sourcePosts);
-
-  const { error: deleteError } = await supabase.from('suggested_matches').delete().neq('id', '');
-  if (deleteError) {
-    console.error('rebuildSuggestedMatches truncate failed', deleteError);
-    throw new Error('No pudimos limpiar la tabla derivada de matches.');
-  }
-
-  if (rows.length > 0) {
-    const { error: insertError } = await supabase.from('suggested_matches').insert(rows);
-    if (insertError) {
-      console.error('rebuildSuggestedMatches insert failed', insertError);
-      throw new Error('No pudimos insertar los matches reconstruidos.');
+    if (openError) {
+      console.error('rebuildSuggestedMatches open availabilities failed', openError);
+      return { ok: false, error: 'match_rebuild_failed' as const };
     }
-  }
 
-  console.log('rebuildSuggestedMatches completed', { openPosts: sourcePosts.length, generatedMatches: rows.length });
-  revalidatePath('/');
-  revalidatePath('/explorar');
-  revalidatePath('/publicaciones');
+    const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
+    const sourcePosts = (openAvailabilities || []).filter(
+      (post) => !bannedClubNameKeys.has(normalizeClubNameKey(post.club_name))
+    );
+    const rows = buildSuggestedMatches(sourcePosts);
+    const safeRows: typeof rows = [];
+
+    for (const row of rows) {
+      if (!row?.post_a_id || !row?.post_b_id) {
+        const a = sourcePosts.find((post) => post.id === row?.post_a_id);
+        const b = sourcePosts.find((post) => post.id === row?.post_b_id);
+        console.error('MATCH INVALIDO', { a, b });
+        continue;
+      }
+
+      safeRows.push(row);
+    }
+
+    const { error: deleteError } = await supabase
+      .from('suggested_matches')
+      .delete()
+      .not('id', 'is', null);
+    if (deleteError) {
+      console.error('rebuildSuggestedMatches truncate failed', deleteError);
+      return { ok: false, error: 'match_rebuild_failed' as const };
+    }
+
+    if (safeRows.length > 0) {
+      const { error: insertError } = await supabase.from('suggested_matches').insert(safeRows);
+      if (insertError) {
+        console.error('rebuildSuggestedMatches insert failed', insertError);
+        return { ok: false, error: 'match_rebuild_failed' as const };
+      }
+    }
+
+    console.log('rebuildSuggestedMatches completed', {
+      openPosts: sourcePosts.length,
+      generatedMatches: rows.length,
+      insertedMatches: safeRows.length
+    });
+    revalidatePath('/');
+    revalidatePath('/explorar');
+    revalidatePath('/publicaciones');
+
+    return { ok: true, inserted: safeRows.length };
+  } catch (error) {
+    console.error('rebuildSuggestedMatches ERROR', error);
+    return { ok: false, error: 'match_rebuild_failed' as const };
+  }
 }
 
 function validateAvailabilityPayload(input: {
