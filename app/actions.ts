@@ -4,7 +4,6 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
 import { getActiveBannedClubNameKeys, isClubBannedByName, normalizeClubNameKey } from '@/lib/banned-clubs';
-import { buildSuggestedMatches } from '@/lib/matching';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type { AgeCategory, AvailabilityRow, Branch, MatchType, TeamRow } from '@/lib/types';
 
@@ -112,19 +111,160 @@ export async function rebuildSuggestedMatches() {
     const sourcePosts = (openAvailabilities || []).filter(
       (post) => !bannedClubNameKeys.has(normalizeClubNameKey(post.club_name))
     );
-    const rows = buildSuggestedMatches(sourcePosts);
-    const safeRows: typeof rows = [];
 
-    for (const row of rows) {
-      if (!row?.post_a_id || !row?.post_b_id) {
-        const a = sourcePosts.find((post) => post.id === row?.post_a_id);
-        const b = sourcePosts.find((post) => post.id === row?.post_b_id);
-        console.error('MATCH INVALIDO', { a, b });
-        continue;
+    const rows: Array<{
+      post_a_id: string;
+      post_b_id: string;
+      compatibility_score: number;
+      schedule_score: number;
+      location_score: number;
+      level_score: number;
+      elo_score: number;
+      status: 'active';
+    }> = [];
+
+    let totalPairsEvaluated = 0;
+    let skippedMissingIds = 0;
+    let skippedSameClub = 0;
+    let skippedByScore = 0;
+
+    const normalizeText = (value: string | null | undefined) => String(value || '').trim().toLowerCase();
+    const parseOptionalTime = (value: string | null | undefined) => {
+      const raw = String(value || '').trim();
+      if (!raw) return null;
+      const parsed = parseTime(raw);
+      return parsed >= 0 ? parsed : null;
+    };
+    const weekdaysToSet = (value: string[] | null | undefined) => {
+      if (!Array.isArray(value)) return new Set<string>();
+      return new Set(value.map((day) => String(day || '').trim().toLowerCase()).filter(Boolean));
+    };
+    const hasSharedWeekday = (aDays: Set<string>, bDays: Set<string>) => {
+      for (const day of aDays) {
+        if (bDays.has(day)) return true;
       }
+      return false;
+    };
 
-      safeRows.push(row);
+    const pairKeys = new Set<string>();
+
+    for (let i = 0; i < sourcePosts.length; i += 1) {
+      const a = sourcePosts[i];
+      for (let j = i + 1; j < sourcePosts.length; j += 1) {
+        const b = sourcePosts[j];
+        totalPairsEvaluated += 1;
+
+        const postAId = String(a?.id || '').trim();
+        const postBId = String(b?.id || '').trim();
+
+        if (!postAId || !postBId) {
+          skippedMissingIds += 1;
+          continue;
+        }
+
+        if (postAId === postBId) {
+          skippedMissingIds += 1;
+          continue;
+        }
+
+        const [stableA, stableB] = postAId < postBId ? [postAId, postBId] : [postBId, postAId];
+        const pairKey = `${stableA}::${stableB}`;
+        if (pairKeys.has(pairKey)) {
+          continue;
+        }
+        pairKeys.add(pairKey);
+
+        const aClub = normalizeText(a.club_name);
+        const bClub = normalizeText(b.club_name);
+        if (aClub && bClub && aClub === bClub) {
+          skippedSameClub += 1;
+          continue;
+        }
+
+        const aCity = normalizeText(a.city);
+        const bCity = normalizeText(b.city);
+        const aComuna = normalizeText(a.comuna);
+        const bComuna = normalizeText(b.comuna);
+        const aLevel = normalizeText(a.level);
+        const bLevel = normalizeText(b.level);
+
+        const aDays = weekdaysToSet(a.weekdays);
+        const bDays = weekdaysToSet(b.weekdays);
+        const sharedDays = hasSharedWeekday(aDays, bDays);
+
+        const aStart = parseOptionalTime(a.start_time);
+        const aEnd = parseOptionalTime(a.end_time);
+        const bStart = parseOptionalTime(b.start_time);
+        const bEnd = parseOptionalTime(b.end_time);
+        const hasTimeOverlap =
+          aStart !== null &&
+          aEnd !== null &&
+          bStart !== null &&
+          bEnd !== null &&
+          aStart < bEnd &&
+          bStart < aEnd;
+
+        let compatibilityScore = 0;
+        let locationScore = 0;
+        let scheduleScore = 0;
+        let levelScore = 0;
+
+        if (aCity && bCity && aCity === bCity) {
+          compatibilityScore += 10;
+          locationScore += 10;
+        }
+
+        if (aComuna && bComuna && aComuna === bComuna) {
+          compatibilityScore += 5;
+          locationScore += 5;
+        }
+
+        if (sharedDays) {
+          compatibilityScore += 8;
+          scheduleScore += 8;
+        }
+
+        if (hasTimeOverlap) {
+          compatibilityScore += 8;
+          scheduleScore += 8;
+        }
+
+        if (aLevel && bLevel && aLevel === bLevel) {
+          compatibilityScore += 4;
+          levelScore += 4;
+        }
+
+        if (Boolean(a.has_court) && Boolean(b.has_court)) {
+          compatibilityScore += 3;
+          locationScore += 3;
+        }
+
+        if (compatibilityScore < 15) {
+          skippedByScore += 1;
+          continue;
+        }
+
+        rows.push({
+          post_a_id: stableA,
+          post_b_id: stableB,
+          compatibility_score: compatibilityScore,
+          schedule_score: scheduleScore,
+          location_score: locationScore,
+          level_score: levelScore,
+          elo_score: 0,
+          status: 'active'
+        });
+      }
     }
+
+    const safeRows = rows.filter((row) => {
+      const postAId = String(row?.post_a_id || '').trim();
+      const postBId = String(row?.post_b_id || '').trim();
+      if (!postAId || !postBId || postAId === postBId) {
+        return false;
+      }
+      return true;
+    });
 
     const { error: deleteError } = await supabase
       .from('suggested_matches')
@@ -135,24 +275,36 @@ export async function rebuildSuggestedMatches() {
       return { ok: false, error: 'match_rebuild_failed' as const };
     }
 
+    let insertedMatches = 0;
     if (safeRows.length > 0) {
-      const { error: insertError } = await supabase.from('suggested_matches').insert(safeRows);
+      const { data: inserted, error: insertError } = await supabase
+        .from('suggested_matches')
+        .insert(safeRows)
+        .select('id');
+
       if (insertError) {
         console.error('rebuildSuggestedMatches insert failed', insertError);
         return { ok: false, error: 'match_rebuild_failed' as const };
       }
+
+      insertedMatches = Array.isArray(inserted) ? inserted.length : safeRows.length;
     }
 
     console.log('rebuildSuggestedMatches completed', {
-      openPosts: sourcePosts.length,
+      availabilitiesCount: sourcePosts.length,
+      totalPairsEvaluated,
       generatedMatches: rows.length,
-      insertedMatches: safeRows.length
+      insertedMatches,
+      skippedMissingIds,
+      skippedSameClub,
+      skippedByScore
     });
+
     revalidatePath('/');
     revalidatePath('/explorar');
     revalidatePath('/publicaciones');
 
-    return { ok: true, inserted: safeRows.length };
+    return { ok: true, inserted: insertedMatches };
   } catch (error) {
     console.error('rebuildSuggestedMatches ERROR', error);
     return { ok: false, error: 'match_rebuild_failed' as const };
