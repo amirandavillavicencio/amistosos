@@ -283,10 +283,10 @@ export async function rebuildSuggestedMatches() {
         const bComuna = normalizeForComparison((b as { comuna?: unknown })?.comuna);
         const aLevel =
           normalizeForComparison((a as { level?: unknown })?.level)
-          || normalizeForComparison((a as { desired_level?: unknown })?.desired_level);
+          || normalizeForComparison((a as { expected_level?: unknown })?.expected_level);
         const bLevel =
           normalizeForComparison((b as { level?: unknown })?.level)
-          || normalizeForComparison((b as { desired_level?: unknown })?.desired_level);
+          || normalizeForComparison((b as { expected_level?: unknown })?.expected_level);
 
         const aDays = toWeekdaySet((a as { weekday?: unknown })?.weekday, (a as { weekdays?: unknown })?.weekdays);
         const bDays = toWeekdaySet((b as { weekday?: unknown })?.weekday, (b as { weekdays?: unknown })?.weekdays);
