@@ -83,6 +83,7 @@ function formatAvailability(post: AvailabilityWithTeam): string {
 }
 
 export default async function HomePage({ searchParams }: PageProps) {
+  console.log("HOME_SERVER_RUNNING");
   await rebuildSuggestedMatches();
 
   const skipIds = getSkipIds(searchParams?.skip);
@@ -157,143 +158,14 @@ export default async function HomePage({ searchParams }: PageProps) {
         ) : null}
 
         <section className="relative overflow-hidden rounded-3xl border border-violet-300/25 bg-slate-950 p-4 shadow-[0_24px_60px_rgba(2,6,23,0.75)] sm:p-5">
-          <div className="pointer-events-none absolute -left-12 top-10 h-40 w-40 rounded-full bg-violet-500/20 blur-3xl" />
-          <div className="pointer-events-none absolute -right-10 bottom-0 h-40 w-40 rounded-full bg-fuchsia-500/20 blur-3xl" />
           <div className="relative">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-fuchsia-200">
-                  Match destacado
-                </p>
-                <h2 className="mt-1 text-xl font-black text-white sm:text-2xl">
-                  Encuentra rival ahora
-                </h2>
-              </div>
-              <Link
-                href="/explorar"
-                className="text-sm font-semibold text-slate-200 hover:text-fuchsia-200"
-              >
-                Ver todas las publicaciones
-              </Link>
-            </div>
-
             {!featuredMatch ? (
-              <article className="rounded-2xl border border-slate-600/80 bg-slate-900/80 p-5 text-sm text-slate-100">
-                <p className="text-base font-semibold text-white">
-                  No encontramos un rival sugerido por ahora
-                </p>
-                <p className="mt-1 text-slate-300">
-                  Publica o actualiza tu disponibilidad y revisa nuevamente en
-                  unos minutos.
-                </p>
-                <Link
-                  href="/publicar"
-                  className="mt-4 inline-flex rounded-full border border-violet-300/50 bg-gradient-to-r from-violet-500/80 to-fuchsia-500/80 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
-                >
-                  Publica tu disponibilidad
-                </Link>
-              </article>
+              <article>No encontramos rival</article>
             ) : (
-              <article className="max-w-lg rounded-3xl border border-fuchsia-300/30 bg-gradient-to-br from-slate-900 via-indigo-950/90 to-slate-900 p-5 shadow-[0_24px_52px_rgba(12,8,30,0.8)]">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">
-                  Sugerido para ti
-                </p>
-                <h3 className="mt-2 text-2xl font-semibold text-white">
-                  {featuredMatch.club_name}
-                </h3>
-                <p className="mt-1 text-sm text-slate-300">
-                  {featuredMatch.comuna || featuredMatch.city} · Nivel{" "}
-                  {featuredMatch.level || "por definir"}
-                </p>
-
-                <div className="mt-4 space-y-2 rounded-2xl border border-white/15 bg-white/10 p-3 text-sm text-slate-100">
-                  <p>
-                    <span className="text-slate-400">Disponibilidad:</span>{" "}
-                    {formatAvailability(featuredMatch)}
-                  </p>
-                  <p>
-                    <span className="text-slate-400">Cancha:</span>{" "}
-                    {featuredMatch.has_court
-                      ? "Sí tiene cancha"
-                      : "Busca cancha"}
-                  </p>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2.5">
-                  <Link
-                    href={`/publicaciones/${featuredMatch.id}`}
-                    className="btn-secondary border-white/20 bg-white/10 text-white hover:text-white"
-                  >
-                    Ver detalle
-                  </Link>
-                  <form action={likeCard}>
-                    <input
-                      type="hidden"
-                      name="to_post_id"
-                      value={featuredMatch.id}
-                    />
-                    <button
-                      type="submit"
-                      className="inline-flex rounded-full border border-fuchsia-300/60 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-orange-400 px-4 py-2 text-sm font-bold text-white transition hover:brightness-110"
-                    >
-                      Proponer amistoso
-                    </button>
-                  </form>
-                  <form action={passCard}>
-                    <input
-                      type="hidden"
-                      name="to_post_id"
-                      value={featuredMatch.id}
-                    />
-                    <button
-                      type="submit"
-                      className="rounded-full border border-white/25 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/15"
-                    >
-                      Ver otro rival
-                    </button>
-                  </form>
-                </div>
-              </article>
+              <article>{featuredMatch.club_name}</article>
             )}
           </div>
         </section>
-
-        <section className="rounded-3xl border border-slate-700/70 bg-slate-900/80 p-4 shadow-[0_18px_50px_rgba(2,6,23,0.55)] sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-blue-300">
-                Publicaciones disponibles
-              </p>
-              <h2 className="mt-1 text-lg font-bold text-white">
-                Equipos activos en búsqueda
-              </h2>
-            </div>
-            <Link
-              href="/explorar"
-              className="text-sm font-semibold text-blue-200 hover:text-blue-100"
-            >
-              Ver todas
-            </Link>
-          </div>
-
-          {posts.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-600 p-4 text-sm text-slate-300">
-              Aún no hay publicaciones activas. Publica la tuya para abrir la
-              rueda de amistosos.
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {posts.map((post) => (
-                <PostCard key={post.id} post={post} compact />
-              ))}
-            </div>
-          )}
-        </section>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <HomeRankingPreview teams={ranking} />
-          <HomeResultsPreview results={recentResults} />
-        </div>
       </div>
     </main>
   );
