@@ -45,10 +45,10 @@ export default async function HomePage() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-violet-200/80">Matchmaking activo</p>
               <h2 className="text-2xl font-black text-white">Sugerencias reales para coordinar amistosos</h2>
-              <p className="mt-1 text-sm text-slate-300">Elige un cruce, revisa el detalle y carga el resultado cuando se juegue.</p>
+              <p className="mt-1 text-sm text-slate-300">Elige un cruce, confirma el match y coordina el amistoso antes de jugarlo.</p>
             </div>
             <Link href="/resultados" className="btn-accent">
-              Cargar resultado
+              Ver resultados
             </Link>
           </div>
 

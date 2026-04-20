@@ -128,8 +128,10 @@ create table if not exists confirmed_matches (
   id uuid primary key default gen_random_uuid(),
   post_a_id uuid not null references availabilities(id) on delete cascade,
   post_b_id uuid not null references availabilities(id) on delete cascade,
+  club_a_email text,
+  club_b_email text,
   created_at timestamptz not null default now(),
-  status text not null default 'pending' check (status in ('pending', 'accepted', 'played')),
+  status text not null default 'suggested' check (status in ('suggested', 'pending', 'accepted', 'confirmed', 'played')),
   check (post_a_id <> post_b_id),
   check (post_a_id < post_b_id)
 );
@@ -249,6 +251,12 @@ alter table if exists teams drop constraint if exists teams_age_category_check;
 alter table if exists teams add constraint teams_age_category_check check (age_category in ('sub-12', 'sub-14', 'sub-16', 'sub-18', 'sub-20', 'tc'));
 alter table if exists teams drop constraint if exists teams_declared_level_check;
 alter table if exists teams add constraint teams_declared_level_check check (declared_level in ('principiante', 'novato', 'intermedio', 'avanzado', 'competitivo'));
+
+alter table if exists confirmed_matches add column if not exists club_a_email text;
+alter table if exists confirmed_matches add column if not exists club_b_email text;
+alter table if exists confirmed_matches alter column status set default 'suggested';
+alter table if exists confirmed_matches drop constraint if exists confirmed_matches_status_check;
+alter table if exists confirmed_matches add constraint confirmed_matches_status_check check (status in ('suggested', 'pending', 'accepted', 'confirmed', 'played'));
 
 alter table if exists availabilities alter column address drop not null;
 alter table if exists availabilities add column if not exists weekdays text[];

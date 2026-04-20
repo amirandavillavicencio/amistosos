@@ -74,8 +74,10 @@ export interface ConfirmedMatchRow {
   id: string;
   post_a_id: string;
   post_b_id: string;
+  club_a_email: string | null;
+  club_b_email: string | null;
   created_at: string;
-  status: 'pending' | 'accepted' | 'played';
+  status: 'suggested' | 'pending' | 'accepted' | 'confirmed' | 'played';
 }
 
 export interface SuggestedMatchBreakdownItem {
