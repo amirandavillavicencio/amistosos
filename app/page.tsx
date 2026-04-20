@@ -83,7 +83,7 @@ function formatAvailability(post: AvailabilityWithTeam): string {
 }
 
 export default async function HomePage({ searchParams }: PageProps) {
-  console.log("HOME_SERVER_RUNNING");
+  // Fuerza el recálculo en cada request del render de la home (server-side).
   await rebuildSuggestedMatches();
 
   const skipIds = getSkipIds(searchParams?.skip);
