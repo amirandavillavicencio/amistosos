@@ -55,9 +55,7 @@ function getAdminPassword(): string {
 
 export function getAdminUsername(): string {
   logAdminEnvDebug();
-  const value = String(process.env.ADMIN_USERNAME || DEFAULT_ADMIN_USERNAME)
-    .trim()
-    .toLowerCase();
+  const value = String(process.env.ADMIN_USERNAME || DEFAULT_ADMIN_USERNAME).trim().toLowerCase();
   return value || DEFAULT_ADMIN_USERNAME;
 }
 
@@ -73,9 +71,7 @@ function safeEqualString(a: string, b: string): boolean {
 }
 
 function signPayload(payloadB64: string): string {
-  return createHmac('sha256', getSessionSecret())
-    .update(payloadB64)
-    .digest('base64url');
+  return createHmac('sha256', getSessionSecret()).update(payloadB64).digest('base64url');
 }
 
 function createToken(payload: AdminSessionPayload): string {
@@ -96,12 +92,7 @@ function parseToken(token: string): AdminSessionPayload | null {
 
   try {
     const parsed = JSON.parse(fromBase64Url(payloadB64)) as Partial<AdminSessionPayload>;
-    if (
-      !parsed ||
-      typeof parsed.u !== 'string' ||
-      typeof parsed.iat !== 'number' ||
-      typeof parsed.exp !== 'number'
-    ) {
+    if (!parsed || typeof parsed.u !== 'string' || typeof parsed.iat !== 'number' || typeof parsed.exp !== 'number') {
       return null;
     }
     return { u: parsed.u, iat: parsed.iat, exp: parsed.exp };
@@ -125,7 +116,7 @@ export async function createAdminSession(username: string): Promise<void> {
   const payload: AdminSessionPayload = {
     u: String(username || '').trim().toLowerCase(),
     iat: now,
-    exp: now + SESSION_TTL_SECONDS,
+    exp: now + SESSION_TTL_SECONDS
   };
   const token = createToken(payload);
 
@@ -135,7 +126,7 @@ export async function createAdminSession(username: string): Promise<void> {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: SESSION_TTL_SECONDS,
+    maxAge: SESSION_TTL_SECONDS
   });
 }
 
@@ -146,7 +137,7 @@ export async function clearAdminSession(): Promise<void> {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 0,
+    maxAge: 0
   });
 }
 
@@ -162,6 +153,6 @@ export async function getAdminSession(): Promise<AdminSession | null> {
   return {
     username: parsed.u,
     issuedAt: parsed.iat,
-    expiresAt: parsed.exp,
+    expiresAt: parsed.exp
   };
 }
