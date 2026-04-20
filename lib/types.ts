@@ -80,6 +80,23 @@ export interface ConfirmedMatchRow {
   status: 'suggested' | 'pending' | 'accepted' | 'confirmed' | 'played';
 }
 
+export interface MatchConversationRow {
+  id: string;
+  match_id: string;
+  club_a_email: string;
+  club_b_email: string;
+  status: 'active' | 'closed';
+  created_at: string;
+}
+
+export interface MatchMessageRow {
+  id: string;
+  conversation_id: string;
+  sender_email: string;
+  message_text: string;
+  created_at: string;
+}
+
 export interface SuggestedMatchBreakdownItem {
   key: 'base' | 'sameComuna' | 'courtAvailability' | 'overlapScore' | 'sharedDaysScore' | 'startTimeScore';
   label: string;
