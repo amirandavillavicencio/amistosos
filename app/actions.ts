@@ -526,89 +526,94 @@ function validateAvailabilityPayload(input: {
 }
 
 export async function createAvailability(formData: FormData) {
-  assertHoneypot(formData);
-  await assertRateLimit('publish');
+  try {
+    assertHoneypot(formData);
+    await assertRateLimit('publish');
 
-  const club_name = String(formData.get('club_name') || '').trim();
-  const comuna = String(formData.get('comuna') || '').trim();
-  const city = String(formData.get('city') || 'Santiago').trim() || 'Santiago';
-  const weekdays = formData.getAll('weekdays').map((day) => String(day || '').trim()).filter(Boolean);
-  const start_time = String(formData.get('start_time') || '').trim();
-  const end_time = String(formData.get('end_time') || '').trim();
-  const branch = String(formData.get('branch') || '').trim() as Branch;
-  const age_category = String(formData.get('age_category') || '').trim() as AgeCategory;
-  const levelRaw = normalizeOptional(formData.get('level'));
-  const phone = normalizePhone(formData.get('phone'));
-  const instagram = normalizeInstagram(formData.get('instagram'));
-  const responsible_name = normalizeOptional(formData.get('responsible_name'));
-  const logo_url = normalizeOptional(formData.get('logo_url'));
-  const has_court = String(formData.get('has_court') || 'false') === 'true';
-  const notes = normalizeOptional(formData.get('notes'));
-  const contact_email = normalizeOptional(formData.get('contact_email'));
+    const club_name = String(formData.get('club_name') || '').trim();
+    const comuna = String(formData.get('comuna') || '').trim();
+    const city = String(formData.get('city') || 'Santiago').trim() || 'Santiago';
+    const weekdays = formData.getAll('weekdays').map((day) => String(day || '').trim()).filter(Boolean);
+    const start_time = String(formData.get('start_time') || '').trim();
+    const end_time = String(formData.get('end_time') || '').trim();
+    const branch = String(formData.get('branch') || '').trim() as Branch;
+    const age_category = String(formData.get('age_category') || '').trim() as AgeCategory;
+    const levelRaw = normalizeOptional(formData.get('level'));
+    const phone = normalizePhone(formData.get('phone'));
+    const instagram = normalizeInstagram(formData.get('instagram'));
+    const responsible_name = normalizeOptional(formData.get('responsible_name'));
+    const logo_url = normalizeOptional(formData.get('logo_url'));
+    const has_court = String(formData.get('has_court') || 'false') === 'true';
+    const notes = normalizeOptional(formData.get('notes'));
+    const contact_email = normalizeOptional(formData.get('contact_email'));
 
-  if (!club_name || !comuna) {
-    throw new Error('Completa todos los campos requeridos.');
-  }
+    if (!club_name || !comuna) {
+      throw new Error('Completa todos los campos requeridos.');
+    }
 
-  validateAvailabilityPayload({ comuna, weekdays, start_time, end_time, branch, age_category });
+    validateAvailabilityPayload({ comuna, weekdays, start_time, end_time, branch, age_category });
 
-  if (!contact_email) {
-    throw new Error('El correo de contacto es obligatorio para editar luego la publicación.');
-  }
+    if (!contact_email) {
+      throw new Error('El correo de contacto es obligatorio para editar luego la publicación.');
+    }
 
-  await assertClubNotBanned(club_name);
+    await assertClubNotBanned(club_name);
 
-  const supabase = getSupabaseAdmin();
+    const supabase = getSupabaseAdmin();
 
-  const { data: inserted, error } = await supabase
-    .from('availabilities')
-    .insert({
-      club_name,
-      comuna,
-      city,
-      weekday: weekdays?.[0] ?? null,
-      weekdays,
-      start_time,
-      end_time,
-      branch,
-      age_category,
-      level: levelRaw,
-      has_court,
-      notes,
-      contact_email,
-      responsible_name,
-      phone,
-      instagram,
-      logo_url,
-      status: 'open'
-    })
-    .select('id')
-    .single();
-
-  if (error || !inserted) {
-    console.error('[createAvailability ERROR]', {
-      error,
-      inserted,
-      payload: {
+    const { data: inserted, error } = await supabase
+      .from('availabilities')
+      .insert({
         club_name,
         comuna,
         city,
+        weekday: weekdays?.[0] ?? null,
         weekdays,
         start_time,
-        end_time
-      }
-    });
+        end_time,
+        branch,
+        age_category,
+        level: levelRaw,
+        has_court,
+        notes,
+        contact_email,
+        responsible_name,
+        phone,
+        instagram,
+        logo_url,
+        status: 'open'
+      })
+      .select('id')
+      .single();
 
-    return { ok: false, message: 'Insert falló' };
+    if (error || !inserted) {
+      console.error('[createAvailability ERROR]', {
+        error,
+        inserted,
+        payload: {
+          club_name,
+          comuna,
+          city,
+          weekdays,
+          start_time,
+          end_time
+        }
+      });
+
+      return { ok: false, message: error?.message || 'No se pudo guardar la publicación.' };
+    }
+
+    await rebuildSuggestedMatches();
+
+    revalidatePath('/');
+    revalidatePath('/explorar');
+    revalidatePath('/ranking');
+
+    return { ok: true, id: inserted.id };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'No se pudo guardar la publicación.';
+    return { ok: false, message };
   }
-
-  await rebuildSuggestedMatches();
-
-  revalidatePath('/');
-  revalidatePath('/explorar');
-  revalidatePath('/ranking');
-
-  return { ok: true, id: inserted.id };
 }
 
 
