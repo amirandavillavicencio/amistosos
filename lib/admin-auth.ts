@@ -19,6 +19,12 @@ export interface AdminSession {
   expiresAt: number;
 }
 
+export interface AdminEnvStatus {
+  hasUsername: boolean;
+  hasPassword: boolean;
+  hasSessionSecret: boolean;
+}
+
 function toBase64Url(value: string): string {
   return Buffer.from(value, 'utf8').toString('base64url');
 }
@@ -27,16 +33,29 @@ function fromBase64Url(value: string): string {
   return Buffer.from(value, 'base64url').toString('utf8');
 }
 
-function logAdminEnvDebug() {
+export function getAdminEnvStatus(): AdminEnvStatus {
+  return {
+    hasUsername: Boolean(String(process.env.ADMIN_USERNAME || DEFAULT_ADMIN_USERNAME).trim()),
+    hasPassword: Boolean(String(process.env.ADMIN_PASSWORD || '')),
+    hasSessionSecret: Boolean(String(process.env.ADMIN_SESSION_SECRET || '').trim())
+  };
+}
+
+export function isAdminEnvConfigured(): boolean {
+  const status = getAdminEnvStatus();
+  return status.hasUsername && status.hasPassword && status.hasSessionSecret;
+}
+
+function logAdminEnvDebug(context: string) {
   console.log('ADMIN_ENV_DEBUG', {
-    ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'MISSING',
+    context,
+    ADMIN_USERNAME: process.env.ADMIN_USERNAME || DEFAULT_ADMIN_USERNAME,
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD ? 'OK' : 'MISSING',
-    ADMIN_SESSION_SECRET: process.env.ADMIN_SESSION_SECRET ? 'OK' : 'MISSING',
+    ADMIN_SESSION_SECRET: process.env.ADMIN_SESSION_SECRET ? 'OK' : 'MISSING'
   });
 }
 
 function getSessionSecret(): string {
-  logAdminEnvDebug();
   const value = String(process.env.ADMIN_SESSION_SECRET || '').trim();
   if (!value) {
     throw new Error('Missing required env var: ADMIN_SESSION_SECRET');
@@ -45,7 +64,6 @@ function getSessionSecret(): string {
 }
 
 function getAdminPassword(): string {
-  logAdminEnvDebug();
   const value = String(process.env.ADMIN_PASSWORD || '');
   if (!value) {
     throw new Error('Missing required env var: ADMIN_PASSWORD');
@@ -54,7 +72,6 @@ function getAdminPassword(): string {
 }
 
 export function getAdminUsername(): string {
-  logAdminEnvDebug();
   const value = String(process.env.ADMIN_USERNAME || DEFAULT_ADMIN_USERNAME).trim().toLowerCase();
   return value || DEFAULT_ADMIN_USERNAME;
 }
@@ -80,24 +97,42 @@ function createToken(payload: AdminSessionPayload): string {
   return `${payloadB64}.${signature}`;
 }
 
-function parseToken(token: string): AdminSessionPayload | null {
+function parseToken(token: string): { payload: AdminSessionPayload | null; reason: string } {
   const clean = String(token || '').trim();
-  if (!clean) return null;
+  if (!clean) {
+    return { payload: null, reason: 'cookie_missing' };
+  }
 
   const [payloadB64, signature] = clean.split('.');
-  if (!payloadB64 || !signature) return null;
+  if (!payloadB64 || !signature) {
+    return { payload: null, reason: 'token_malformed' };
+  }
 
-  const expected = signPayload(payloadB64);
-  if (!safeEqualString(signature, expected)) return null;
+  let expected = '';
+
+  try {
+    expected = signPayload(payloadB64);
+  } catch (error) {
+    logAdminEnvDebug('parse_token');
+    console.error('ADMIN_SESSION_MISSING', {
+      reason: 'session_secret_unavailable',
+      error: error instanceof Error ? error.message : String(error)
+    });
+    return { payload: null, reason: 'session_secret_unavailable' };
+  }
+
+  if (!safeEqualString(signature, expected)) {
+    return { payload: null, reason: 'signature_mismatch' };
+  }
 
   try {
     const parsed = JSON.parse(fromBase64Url(payloadB64)) as Partial<AdminSessionPayload>;
     if (!parsed || typeof parsed.u !== 'string' || typeof parsed.iat !== 'number' || typeof parsed.exp !== 'number') {
-      return null;
+      return { payload: null, reason: 'payload_invalid' };
     }
-    return { u: parsed.u, iat: parsed.iat, exp: parsed.exp };
+    return { payload: { u: parsed.u, iat: parsed.iat, exp: parsed.exp }, reason: 'ok' };
   } catch {
-    return null;
+    return { payload: null, reason: 'payload_parse_failed' };
   }
 }
 
@@ -112,15 +147,18 @@ export function verifyAdminCredentials(input: { username: string; password: stri
 }
 
 export async function createAdminSession(username: string): Promise<void> {
+  logAdminEnvDebug('create_session');
+
+  const normalizedUsername = String(username || '').trim().toLowerCase();
   const now = Math.floor(Date.now() / 1000);
   const payload: AdminSessionPayload = {
-    u: String(username || '').trim().toLowerCase(),
+    u: normalizedUsername,
     iat: now,
     exp: now + SESSION_TTL_SECONDS
   };
   const token = createToken(payload);
 
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   cookieStore.set(ADMIN_SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -131,7 +169,7 @@ export async function createAdminSession(username: string): Promise<void> {
 }
 
 export async function clearAdminSession(): Promise<void> {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   cookieStore.set(ADMIN_SESSION_COOKIE, '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -142,13 +180,35 @@ export async function clearAdminSession(): Promise<void> {
 }
 
 export async function getAdminSession(): Promise<AdminSession | null> {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const raw = cookieStore.get(ADMIN_SESSION_COOKIE)?.value || '';
-  const parsed = parseToken(raw);
-  if (!parsed) return null;
+  const tokenState = parseToken(raw);
+  const parsed = tokenState.payload;
+
+  if (!parsed) {
+    console.log('ADMIN_SESSION_MISSING', {
+      reason: tokenState.reason,
+      cookiePresent: Boolean(raw)
+    });
+    return null;
+  }
 
   const now = Math.floor(Date.now() / 1000);
-  if (parsed.exp <= now) return null;
+  if (parsed.exp <= now) {
+    console.log('ADMIN_SESSION_MISSING', {
+      reason: 'session_expired',
+      username: parsed.u,
+      expiresAt: parsed.exp,
+      now
+    });
+    return null;
+  }
+
+  console.log('ADMIN_SESSION_FOUND', {
+    username: parsed.u,
+    issuedAt: parsed.iat,
+    expiresAt: parsed.exp
+  });
 
   return {
     username: parsed.u,
