@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import EditAvailabilityForm from '@/components/edit-availability-form';
 import { EmptyState, SectionShell, StatusBadge } from '@/components/ui-shell';
 import { getAvailabilityById } from '@/lib/data';
 
@@ -29,6 +28,15 @@ export default async function PublicacionDetallePage({ params }: { params: { id:
         <div className="mt-3 space-y-1 text-sm text-slate-300">
           {post.phone ? <p>Teléfono: <a href={`tel:${post.phone.replace(/[\s()\-]/g, '')}`} className="text-fuchsia-200 hover:underline">{post.phone}</a></p> : null}
           {post.instagram ? <p>Instagram: <a href={`https://instagram.com/${post.instagram}`} target="_blank" rel="noreferrer" className="text-fuchsia-200 hover:underline">@{post.instagram}</a></p> : null}
+          <p>Cancha: {post.has_court ? 'Sí pone cancha' : 'No pone cancha'}</p>
+          <p>Ciudad: {post.city || 'No informada'}</p>
+        </div>
+
+        {post.notes ? <p className="mt-4 rounded-2xl border border-slate-700/80 bg-slate-900/50 p-3 text-sm text-slate-200">{post.notes}</p> : null}
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href={`/publicaciones/${post.id}/editar`} className="btn-accent">Editar disponibilidad</Link>
+          <Link href="/explorar" className="btn-secondary">Ver más publicaciones</Link>
         </div>
       </SectionShell>
 
@@ -39,13 +47,7 @@ export default async function PublicacionDetallePage({ params }: { params: { id:
             description="No tiene correo asociado para validación."
           />
         </div>
-      ) : (
-        <>
-          <h2 className="mt-6 text-xl font-bold text-white sm:text-2xl">Editar disponibilidad</h2>
-          <p className="mt-2 text-sm text-slate-300">Primero verifica el correo usado al crear la publicación.</p>
-          <EditAvailabilityForm post={post} />
-        </>
-      )}
+      ) : null}
     </main>
   );
 }

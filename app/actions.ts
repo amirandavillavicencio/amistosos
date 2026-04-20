@@ -11,6 +11,7 @@ const validBranches = new Set<Branch>(['femenina', 'masculina', 'mixta']);
 const validAgeCategories = new Set<AgeCategory>(['sub-12', 'sub-14', 'sub-16', 'sub-18', 'sub-20', 'tc']);
 const validMatchTypes = new Set<MatchType>(['amistoso', 'torneo', 'entrenamiento', 'competitivo']);
 const validWeekdays = new Set(['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']);
+const validLevels = new Set(['principiante', 'novato', 'intermedio', 'avanzado', 'competitivo']);
 const requestStore = new Map<string, number[]>();
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
@@ -526,6 +527,7 @@ export async function createAvailability(formData: FormData) {
   const end_time = String(formData.get('end_time') || '').trim();
   const branch = String(formData.get('branch') || '').trim() as Branch;
   const age_category = String(formData.get('age_category') || '').trim() as AgeCategory;
+  const levelRaw = normalizeOptional(formData.get('level'));
   const phone = normalizePhone(formData.get('phone'));
   const instagram = normalizeInstagram(formData.get('instagram'));
   const responsible_name = normalizeOptional(formData.get('responsible_name'));
@@ -560,6 +562,7 @@ export async function createAvailability(formData: FormData) {
       end_time,
       branch,
       age_category,
+      level: levelRaw,
       has_court,
       notes,
       contact_email,
@@ -598,12 +601,52 @@ export async function createAvailability(formData: FormData) {
   return { ok: true, id: inserted.id };
 }
 
+
+export async function verifyAvailabilityOwnership(id: string, emailInput: string) {
+  const safeId = String(id || '').trim();
+  const email = normalizeOptional(emailInput);
+
+  if (!safeId) {
+    return { ok: false, message: 'No encontramos la publicación a editar.' };
+  }
+
+  if (!email) {
+    return { ok: false, message: 'Debes ingresar un correo para verificar.' };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: existing, error: existingError } = await supabase
+    .from('availabilities')
+    .select('id, contact_email')
+    .eq('id', safeId)
+    .maybeSingle<{ id: string; contact_email: string | null }>();
+
+  if (existingError || !existing) {
+    return { ok: false, message: 'No encontramos la publicación indicada.' };
+  }
+
+  if (!existing.contact_email) {
+    return { ok: false, message: 'Esta publicación no se puede editar porque no tiene correo asociado.' };
+  }
+
+  if (existing.contact_email.trim().toLowerCase() !== email.toLowerCase()) {
+    return { ok: false, message: 'Este correo no tiene permiso para modificar esta publicación.' };
+  }
+
+  return {
+    ok: true,
+    verifiedEmail: email,
+    message: 'Correo verificado, puedes editar esta disponibilidad.'
+  };
+}
+
 export async function updateAvailability(formData: FormData) {
   assertHoneypot(formData);
 
   const id = String(formData.get('id') || '').trim();
   const email = normalizeOptional(formData.get('contact_email'));
   const comuna = String(formData.get('comuna') || '').trim();
+  const city = String(formData.get('city') || 'Santiago').trim() || 'Santiago';
   const weekdays = formData.getAll('weekdays').map((day) => String(day || '').trim()).filter(Boolean);
   const start_time = String(formData.get('start_time') || '').trim();
   const end_time = String(formData.get('end_time') || '').trim();
@@ -611,6 +654,7 @@ export async function updateAvailability(formData: FormData) {
   const notes = normalizeOptional(formData.get('notes'));
   const branch = String(formData.get('branch') || '').trim() as Branch;
   const age_category = String(formData.get('age_category') || '').trim() as AgeCategory;
+  const levelRaw = normalizeOptional(formData.get('level'));
   const phone = normalizePhone(formData.get('phone'));
   const instagram = normalizeInstagram(formData.get('instagram'));
   const responsible_name = normalizeOptional(formData.get('responsible_name'));
@@ -620,6 +664,10 @@ export async function updateAvailability(formData: FormData) {
   if (!email) return { ok: false, message: 'Debes ingresar el correo de contacto.' };
 
   validateAvailabilityPayload({ comuna, weekdays, start_time, end_time, branch, age_category });
+
+  if (levelRaw && !validLevels.has(levelRaw)) {
+    return { ok: false, message: 'Nivel inválido. Revisa el campo nivel.' };
+  }
 
   const supabase = getSupabaseAdmin();
   const { data: existing, error: existingError } = await supabase
@@ -644,6 +692,7 @@ export async function updateAvailability(formData: FormData) {
 
   const payload = {
     comuna,
+    city,
     weekday: weekdays[0] || null,
     weekdays,
     start_time,
@@ -652,6 +701,7 @@ export async function updateAvailability(formData: FormData) {
     notes,
     branch,
     age_category,
+    level: levelRaw,
     phone,
     instagram,
     responsible_name,

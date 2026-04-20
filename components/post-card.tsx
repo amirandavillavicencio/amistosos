@@ -65,10 +65,15 @@ export default function PostCard({ post, compact = false }: PostCardProps) {
         )}
       </ul>
       {!compact && post.notes && <p className="mt-3 border-t border-slate-700/80 pt-3 text-sm text-slate-300">{post.notes}</p>}
-      <div className="mt-3 border-t border-slate-700/80 pt-3">
+      <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-700/80 pt-3">
         <Link href={`/publicaciones/${post.id}`} className={`font-semibold text-fuchsia-200 hover:text-fuchsia-100 hover:underline ${compact ? 'text-xs' : 'text-sm'}`}>
-          Ver detalle / Editar disponibilidad
+          Ver detalle
         </Link>
+        {post.contact_email ? (
+          <Link href={`/publicaciones/${post.id}/editar`} className={`font-semibold text-emerald-200 hover:text-emerald-100 hover:underline ${compact ? 'text-xs' : 'text-sm'}`}>
+            Editar
+          </Link>
+        ) : null}
       </div>
     </article>
   );
