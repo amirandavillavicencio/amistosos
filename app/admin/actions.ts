@@ -10,6 +10,7 @@ import {
   getAdminUsername,
   verifyAdminCredentials
 } from '@/lib/admin-auth';
+import { rebuildSuggestedMatches } from '@/app/actions';
 import { normalizeClubNameKey } from '@/lib/banned-clubs';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
@@ -74,6 +75,20 @@ async function requireAdminSession() {
     redirectWithNotice('/admin/login', { error: 'Sesion expirada. Inicia sesion nuevamente.' });
   }
   return session;
+}
+
+
+async function rebuildMatchesAndRevalidateAvailabilityPaths(availabilityId: string) {
+  await rebuildSuggestedMatches();
+
+  revalidatePath('/admin');
+  revalidatePath('/');
+  revalidatePath('/explorar');
+  revalidatePath('/publicaciones');
+  revalidatePath(`/publicaciones/${availabilityId}`);
+  revalidatePath(`/publicaciones/${availabilityId}/editar`);
+  revalidatePath('/ranking');
+  revalidatePath('/matches/aceptar');
 }
 
 export async function adminLogin(formData: FormData) {
@@ -255,13 +270,55 @@ export async function adminCloseAvailability(formData: FormData) {
     redirectWithNotice('/admin', { section: 'posts', error: 'No se pudo cerrar la publicacion.' });
   }
 
-  revalidatePath('/admin');
-  revalidatePath('/');
-  revalidatePath('/explorar');
-  revalidatePath('/publicaciones');
-  revalidatePath(`/publicaciones/${availabilityId}`);
+  await rebuildMatchesAndRevalidateAvailabilityPaths(availabilityId);
 
-  redirectWithNotice('/admin', { section: 'posts', notice: 'Publicacion cerrada.' });
+  redirectWithNotice('/admin', { section: 'posts', notice: 'Publicacion desactivada y matches reconstruidos.' });
+}
+
+export async function adminDeleteAvailability(formData: FormData) {
+  await requireAdminSession();
+
+  const availabilityId = sanitizeText(formData.get('availability_id'), 80);
+  const confirmWord = sanitizeText(formData.get('confirm_word'), 20).toUpperCase();
+
+  if (!availabilityId) {
+    redirectWithNotice('/admin', { section: 'posts', error: 'Publicacion invalida.' });
+  }
+
+  if (confirmWord !== 'ELIMINAR') {
+    redirectWithNotice('/admin', { section: 'posts', error: 'Para eliminar una publicacion, escribe ELIMINAR.' });
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  const { data: existing, error: existingError } = await supabase
+    .from('availabilities')
+    .select('id')
+    .eq('id', availabilityId)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error('adminDeleteAvailability exists lookup failed', existingError);
+    redirectWithNotice('/admin', { section: 'posts', error: 'No se pudo verificar la publicacion a eliminar.' });
+  }
+
+  if (!existing) {
+    redirectWithNotice('/admin', { section: 'posts', error: 'La publicacion ya no existe o fue eliminada.' });
+  }
+
+  const { error: deleteError } = await supabase
+    .from('availabilities')
+    .delete()
+    .eq('id', availabilityId);
+
+  if (deleteError) {
+    console.error('adminDeleteAvailability failed', deleteError);
+    redirectWithNotice('/admin', { section: 'posts', error: 'No se pudo eliminar la publicacion.' });
+  }
+
+  await rebuildMatchesAndRevalidateAvailabilityPaths(availabilityId);
+
+  redirectWithNotice('/admin', { section: 'posts', notice: 'Publicacion eliminada y matches reconstruidos.' });
 }
 
 export async function adminBanClub(formData: FormData) {
