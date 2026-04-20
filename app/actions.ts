@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
 import { getActiveBannedClubNameKeys, isClubBannedByName, normalizeClubNameKey } from '@/lib/banned-clubs';
+import { USABLE_AVAILABILITY_STATUSES } from '@/lib/matching';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type { AgeCategory, Branch, MatchType, TeamRow } from '@/lib/types';
 
@@ -217,7 +218,7 @@ export async function rebuildSuggestedMatches() {
       return !weekday && weekdayArrayCount > 0;
     }).length;
 
-    const usableStatus = new Set(['open', 'active', 'published']);
+    const usableStatus = new Set<string>(USABLE_AVAILABILITY_STATUSES);
     const activeAvailabilities = availabilities.filter((post) => {
       const status = normalizeForComparison((post as { status?: unknown })?.status);
       if (!status) return true;
@@ -645,6 +646,7 @@ export async function updateAvailability(formData: FormData) {
 
   const id = String(formData.get('id') || '').trim();
   const email = normalizeOptional(formData.get('contact_email'));
+  const intent = String(formData.get('intent') || 'update').trim().toLowerCase();
   const comuna = String(formData.get('comuna') || '').trim();
   const city = String(formData.get('city') || 'Santiago').trim() || 'Santiago';
   const weekdays = formData.getAll('weekdays').map((day) => String(day || '').trim()).filter(Boolean);
@@ -663,12 +665,6 @@ export async function updateAvailability(formData: FormData) {
   if (!id) return { ok: false, message: 'No encontramos la publicación a editar.' };
   if (!email) return { ok: false, message: 'Debes ingresar el correo de contacto.' };
 
-  validateAvailabilityPayload({ comuna, weekdays, start_time, end_time, branch, age_category });
-
-  if (levelRaw && !validLevels.has(levelRaw)) {
-    return { ok: false, message: 'Nivel inválido. Revisa el campo nivel.' };
-  }
-
   const supabase = getSupabaseAdmin();
   const { data: existing, error: existingError } = await supabase
     .from('availabilities')
@@ -686,6 +682,33 @@ export async function updateAvailability(formData: FormData) {
 
   if (existing.contact_email.trim().toLowerCase() !== email.toLowerCase()) {
     return { ok: false, message: 'Correo incorrecto. No tienes permiso para editar esta publicación.' };
+  }
+
+  if (intent === 'deactivate') {
+    const { error: deactivateError } = await supabase
+      .from('availabilities')
+      .update({ status: 'closed' })
+      .eq('id', id);
+
+    if (deactivateError) {
+      return { ok: false, message: 'No pudimos desactivar la publicación.' };
+    }
+
+    await rebuildSuggestedMatches();
+
+    revalidatePath('/');
+    revalidatePath('/explorar');
+    revalidatePath('/publicaciones');
+    revalidatePath(`/publicaciones/${id}`);
+    revalidatePath(`/publicaciones/${id}/editar`);
+
+    return { ok: true, id, action: 'deactivated' as const };
+  }
+
+  validateAvailabilityPayload({ comuna, weekdays, start_time, end_time, branch, age_category });
+
+  if (levelRaw && !validLevels.has(levelRaw)) {
+    return { ok: false, message: 'Nivel inválido. Revisa el campo nivel.' };
   }
 
   await assertClubNotBanned(existing.club_name || '');
@@ -720,6 +743,7 @@ export async function updateAvailability(formData: FormData) {
   revalidatePath('/explorar');
   revalidatePath('/publicaciones');
   revalidatePath(`/publicaciones/${id}`);
+  revalidatePath(`/publicaciones/${id}/editar`);
 
   return { ok: true, id };
 }

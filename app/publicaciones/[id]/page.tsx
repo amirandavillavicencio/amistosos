@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 export default async function PublicacionDetallePage({ params }: { params: { id: string } }) {
   const post = await getAvailabilityById(params.id);
   if (!post) return notFound();
+  const isActive = ['open', 'active', 'published'].includes(String(post.status || '').toLowerCase());
 
   return (
     <main className="section">
@@ -22,7 +23,9 @@ export default async function PublicacionDetallePage({ params }: { params: { id:
             <p className="mt-2 text-sm text-slate-300">{post.comuna} · {post.branch} · {post.age_category}</p>
             <p className="mt-1 text-sm text-slate-300">Horario: {post.start_time?.slice(0, 5)} - {post.end_time?.slice(0, 5)}</p>
           </div>
-          <StatusBadge tone="accent">Publicación activa</StatusBadge>
+          <StatusBadge tone={isActive ? 'accent' : 'neutral'}>
+            {isActive ? 'Publicación activa' : 'Publicación desactivada'}
+          </StatusBadge>
         </div>
 
         {post.logo_url ? <img src={post.logo_url} alt={`Logo ${post.club_name}`} className="mt-3 h-20 w-20 rounded-full border border-slate-600 object-cover" /> : null}

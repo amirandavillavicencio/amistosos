@@ -467,7 +467,7 @@ export async function getNextCard(fromPostId: string, excludePostIds: string[] =
   const { data: posts, error } = await supabase
     .from('availabilities')
     .select('*')
-    .in('status', ['open', 'active', 'published'])
+    .in('status', [...USABLE_AVAILABILITY_STATUSES])
     .returns<AvailabilityRow[]>();
 
   if (error) {
