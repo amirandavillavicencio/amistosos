@@ -1,6 +1,11 @@
 import 'server-only';
 
-import { buildLiveSuggestedMatches, USABLE_AVAILABILITY_STATUSES } from '@/lib/matching';
+import {
+  buildLiveSuggestedMatches,
+  getSharedWeekdays,
+  getTimeOverlapMinutes,
+  USABLE_AVAILABILITY_STATUSES
+} from '@/lib/matching';
 import { getActiveBannedClubNameKeys, normalizeClubNameKey } from '@/lib/banned-clubs';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type {
@@ -11,6 +16,7 @@ import type {
   MatchPhotoRow,
   MatchResultRow,
   SuggestedMatchCard,
+  SuggestedMatchRow,
   TeamProfile,
   TeamRow
 } from '@/lib/types';
@@ -101,7 +107,90 @@ export async function getLiveSuggestedMatches(limit = 12): Promise<SuggestedMatc
 }
 
 export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
-  return getLiveSuggestedMatches(limit);
+  try {
+    const supabase = getSupabaseAdmin();
+    const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
+    const { data: rows, error } = await supabase
+      .from('suggested_matches')
+      .select('*')
+      .eq('status', 'active')
+      .order('compatibility_score', { ascending: false })
+      .limit(limit)
+      .returns<SuggestedMatchRow[]>();
+
+    if (error) {
+      console.error('getSuggestedMatches table lookup failed', error);
+      return getLiveSuggestedMatches(limit);
+    }
+
+    const selected = rows || [];
+    if (!selected.length) {
+      return [];
+    }
+
+    const ids = Array.from(
+      new Set(selected.flatMap((row) => [row.post_a_id, row.post_b_id]).filter(Boolean))
+    );
+
+    const { data: posts, error: postsError } = await supabase
+      .from('availabilities')
+      .select('*')
+      .in('id', ids)
+      .in('status', [...USABLE_AVAILABILITY_STATUSES])
+      .returns<AvailabilityWithTeam[]>();
+
+    if (postsError) {
+      console.error('getSuggestedMatches availabilities lookup failed', postsError);
+      return getLiveSuggestedMatches(limit);
+    }
+
+    const safePosts = filterOutBannedAvailabilities(posts || [], bannedClubNameKeys);
+    const postsById = new Map(safePosts.map((post) => [post.id, post]));
+
+    const cards: SuggestedMatchCard[] = [];
+    for (const row of selected) {
+      const a = postsById.get(row.post_a_id);
+      const b = postsById.get(row.post_b_id);
+      if (!a || !b) continue;
+
+      const sharedWeekdays = getSharedWeekdays(a, b);
+      const overlapMinutes = getTimeOverlapMinutes(a, b);
+
+      cards.push({
+        id: row.id,
+        pairKey: `${row.post_a_id}::${row.post_b_id}`,
+        totalScore: row.compatibility_score,
+        scheduleScore: row.schedule_score,
+        locationScore: row.location_score,
+        levelScore: row.level_score,
+        eloScore: row.elo_score,
+        branch: a.branch,
+        ageCategory: a.age_category,
+        overlapMinutes,
+        sharedWeekdays,
+        a,
+        b,
+        breakdown: {
+          base: 0,
+          sameComuna: row.location_score,
+          courtAvailability: row.level_score,
+          overlapScore: row.schedule_score,
+          sharedDaysScore: 0,
+          startTimeScore: 0,
+          overlapMinutes,
+          sharedWeekdays,
+          startTimeDifferenceMinutes: Number.POSITIVE_INFINITY,
+          totalBeforeClamp: row.compatibility_score,
+          items: []
+        }
+      });
+    }
+
+    return cards;
+  } catch (error) {
+    console.error('getSuggestedMatches crashed', error);
+    return getLiveSuggestedMatches(limit);
+  }
 }
 
 export function getFeaturedSuggestedMatch(matches: SuggestedMatchCard[]): SuggestedMatchCard | null {

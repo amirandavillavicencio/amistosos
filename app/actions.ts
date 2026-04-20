@@ -680,6 +680,8 @@ export async function registerMatchResult(formData: FormData) {
   const setScores = normalizeOptional(formData.get('set_scores'));
   const location = normalizeOptional(formData.get('location'));
   const notes = normalizeOptional(formData.get('notes'));
+  const winnerClubId = String(formData.get('winner_club_id') || '').trim();
+  const proofPhoto = formData.get('proof_photo');
 
   if (!clubId || !matchDate || !validBranches.has(branch) || !validMatchTypes.has(matchType)) {
     throw new Error('Completa los datos requeridos del resultado.');
@@ -691,6 +693,9 @@ export async function registerMatchResult(formData: FormData) {
 
   if (!opponentClubIdRaw) {
     throw new Error('Debes seleccionar un rival existente para registrar el resultado.');
+  }
+  if (!winnerClubId) {
+    throw new Error('Debes indicar quién ganó el partido.');
   }
 
   const supabase = getSupabaseAdmin();
@@ -705,6 +710,45 @@ export async function registerMatchResult(formData: FormData) {
 
   if (!opponent) {
     throw new Error('Debes seleccionar un rival existente para actualizar el ranking ELO.');
+  }
+  if (winnerClubId !== club.id && winnerClubId !== opponent.id) {
+    throw new Error('El ganador debe ser el club local o el rival seleccionado.');
+  }
+  if (winnerClubId === club.id && setsWon <= setsLost) {
+    throw new Error('El ganador seleccionado no coincide con el marcador.');
+  }
+  if (winnerClubId === opponent.id && setsLost <= setsWon) {
+    throw new Error('El ganador seleccionado no coincide con el marcador.');
+  }
+
+  let proofPhotoUrl: string | null = null;
+  if (proofPhoto instanceof File && proofPhoto.size > 0) {
+    if (proofPhoto.size > 6 * 1024 * 1024) {
+      throw new Error('La foto comprobante debe pesar menos de 6MB.');
+    }
+
+    const allowedMime = new Set(['image/jpeg', 'image/png', 'image/webp']);
+    if (!allowedMime.has(proofPhoto.type)) {
+      throw new Error('Formato de foto no permitido. Usa JPG, PNG o WEBP.');
+    }
+
+    const ext = proofPhoto.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const safeExt = ['jpg', 'jpeg', 'png', 'webp'].includes(ext) ? ext : 'jpg';
+    const filePath = `results/${club.id}/${Date.now()}-${crypto.randomUUID()}.${safeExt}`;
+    const fileBuffer = Buffer.from(await proofPhoto.arrayBuffer());
+
+    const { error: uploadError } = await supabase.storage.from('match-photos').upload(filePath, fileBuffer, {
+      contentType: proofPhoto.type,
+      cacheControl: '3600',
+      upsert: false
+    });
+
+    if (uploadError) {
+      throw new Error('No pudimos subir la foto comprobante.');
+    }
+
+    const { data: urlData } = supabase.storage.from('match-photos').getPublicUrl(filePath);
+    proofPhotoUrl = urlData.publicUrl;
   }
 
   const ownActual = resolveMatchOutcome(setsWon, setsLost);
@@ -734,6 +778,8 @@ export async function registerMatchResult(formData: FormData) {
     set_scores: setScores,
     location,
     notes,
+    winner_club_id: winnerClubId,
+    proof_photo_url: proofPhotoUrl,
     elo_before: club.current_elo,
     elo_after: ownUpdate.newRating,
     elo_delta: ownUpdate.delta
@@ -777,6 +823,8 @@ export async function registerMatchResult(formData: FormData) {
     set_scores: setScores,
     location,
     notes,
+    winner_club_id: winnerClubId,
+    proof_photo_url: proofPhotoUrl,
     elo_before: opponent.current_elo,
     elo_after: opponentUpdate.newRating,
     elo_delta: opponentUpdate.delta

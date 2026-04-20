@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { formatTimeLabel, getMatchReasons, getMatchTier } from '@/lib/matching';
+import { formatTimeLabel, formatWeekdayList, getMatchReasons, getMatchTier } from '@/lib/matching';
 import type { SuggestedMatchCard } from '@/lib/types';
 
 const categoryLabel: Record<string, string> = {
@@ -53,6 +53,9 @@ export default function SuggestedMatchCardView({
   const teamB = buildTeamViewModel(match, 'b', 1);
   const category = safeText(categoryLabel[match?.ageCategory] || match?.a?.age_category, 'Categoría no informada');
   const branch = safeText(branchLabel[match?.branch] || match?.a?.branch, 'No informada');
+  const availabilitySummary = match.sharedWeekdays.length
+    ? `${formatWeekdayList(match.sharedWeekdays)} · ${teamA.schedule} / ${teamB.schedule}`
+    : `${teamA.schedule} / ${teamB.schedule}`;
 
   return (
     <article className={`card-panel p-4 ${featured ? 'border-accent/50 bg-accent/5' : ''}`}>
@@ -69,6 +72,7 @@ export default function SuggestedMatchCardView({
       <p className="mt-1 text-sm text-muted">
         {category} · Rama {branch}
       </p>
+      <p className="mt-1 text-xs text-muted">Disponibilidad: {availabilitySummary}</p>
 
       <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted">
         {[teamA, teamB].map((team) => (
@@ -98,22 +102,18 @@ export default function SuggestedMatchCardView({
         ))}
       </ul>
 
-      <div className="mt-3 flex flex-wrap gap-3 text-sm">
+      <div className="mt-4 flex flex-wrap gap-2">
         {teamA.postId ? (
-          <Link href={`/publicaciones/${teamA.postId}`} className="text-accent hover:underline">
-            Ver publicación de {teamA.clubName}
+          <Link href={`/publicaciones/${teamA.postId}`} className="btn-secondary text-xs">
+            Ver detalle
           </Link>
-        ) : (
-          <span className="text-muted">Publicación A no disponible</span>
-        )}
-
-        {teamB.postId ? (
-          <Link href={`/publicaciones/${teamB.postId}`} className="text-accent hover:underline">
-            Ver publicación de {teamB.clubName}
-          </Link>
-        ) : (
-          <span className="text-muted">Publicación B no disponible</span>
-        )}
+        ) : null}
+        <Link
+          href={`/resultados?club_name=${encodeURIComponent(teamA.clubName)}&opponent_name=${encodeURIComponent(teamB.clubName)}`}
+          className="btn-accent text-xs"
+        >
+          Cargar resultado
+        </Link>
       </div>
     </article>
   );

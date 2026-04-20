@@ -6,7 +6,16 @@ import type { MatchResultRow, TeamRow } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ResultadosPage() {
+type ResultadosPageProps = {
+  searchParams?: {
+    club_id?: string;
+    opponent_club_id?: string;
+    club_name?: string;
+    opponent_name?: string;
+  };
+};
+
+export default async function ResultadosPage({ searchParams }: ResultadosPageProps) {
   let teams: TeamRow[] = [];
   let recent: MatchResultRow[] = [];
   try {
@@ -29,12 +38,18 @@ export default async function ResultadosPage() {
     <main className="section">
       <PageHeader
         eyebrow="Carga de historial"
-        title="Registrar resultado"
-        description="Carga marcadores oficiales para actualizar ranking y trazabilidad deportiva."
+        title="Cargar resultado"
+        description="Carga marcadores oficiales indicando claramente contra quién fue el amistoso."
         action={<Link href="/" className="btn-secondary">Volver al inicio</Link>}
       />
 
-      <ResultForm teams={teams} />
+      <ResultForm
+        teams={teams}
+        initialClubId={searchParams?.club_id}
+        initialOpponentClubId={searchParams?.opponent_club_id}
+        initialClubName={searchParams?.club_name}
+        initialOpponentName={searchParams?.opponent_name}
+      />
 
       <section className="mt-6">
         <h2 className="mb-3 text-xl font-bold text-white sm:text-2xl">Historial reciente</h2>
@@ -58,6 +73,13 @@ export default async function ResultadosPage() {
                     <p className="text-sm text-slate-200">Rival: {result.opponent_name || 'Club registrado'} · {result.match_type}</p>
                     <p className="text-xl font-black text-white">{result.sets_won}-{result.sets_lost}</p>
                   </div>
+                  {result.proof_photo_url ? (
+                    <div className="mt-3">
+                      <a href={result.proof_photo_url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-violet-200 hover:underline">
+                        Ver foto comprobante
+                      </a>
+                    </div>
+                  ) : null}
                 </SectionShell>
               );
             })}
