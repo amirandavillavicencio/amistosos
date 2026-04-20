@@ -2,7 +2,6 @@
 
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
 import { getActiveBannedClubNameKeys, isClubBannedByName, normalizeClubNameKey } from '@/lib/banned-clubs';
 import { USABLE_AVAILABILITY_STATUSES } from '@/lib/matching';
@@ -923,51 +922,94 @@ export async function sendMessage(conversationId: string, senderEmail: string, m
   }
 }
 
-export async function acceptSuggestedMatch(formData: FormData) {
-  assertHoneypot(formData);
+export async function acceptSuggestedMatch(formData: FormData): Promise<{ ok: true } | { ok: false; message: string }> {
+  try {
+    assertHoneypot(formData);
 
-  const postAId = String(formData.get('post_a_id') || '').trim();
-  const postBId = String(formData.get('post_b_id') || '').trim();
-  const clubAEmailInput = normalizeEmail(formData.get('club_a_email'));
-  const clubBEmailInput = normalizeEmail(formData.get('club_b_email'));
+    const postAId = String(formData.get('post_a_id') || '').trim();
+    const postBId = String(formData.get('post_b_id') || '').trim();
+    const clubAEmailInput = normalizeEmail(formData.get('club_a_email'));
+    const clubBEmailInput = normalizeEmail(formData.get('club_b_email'));
 
-  if (!isUuid(postAId) || !isUuid(postBId) || postAId === postBId) {
-    throw new Error('El match seleccionado no es válido.');
+    if (!isUuid(postAId) || !isUuid(postBId) || postAId === postBId) {
+      return { ok: false, message: 'El match seleccionado no es válido.' };
+    }
+
+    if (!isValidEmail(clubAEmailInput) || !isValidEmail(clubBEmailInput)) {
+      return { ok: false, message: 'Debes completar correos de contacto válidos para ambos equipos.' };
+    }
+
+    const [stableAId, stableBId] = postAId < postBId ? [postAId, postBId] : [postBId, postAId];
+    const [stableAEmail, stableBEmail] = postAId < postBId
+      ? [clubAEmailInput, clubBEmailInput]
+      : [clubBEmailInput, clubAEmailInput];
+
+    const supabase = getSupabaseAdmin();
+
+    const { data: posts, error: postsError } = await supabase
+      .from('availabilities')
+      .select('id')
+      .in('id', [stableAId, stableBId]);
+
+    if (postsError || !posts || posts.length !== 2) {
+      console.error('acceptSuggestedMatch availabilities check failed', postsError);
+      return { ok: false, message: 'No encontramos ambas disponibilidades para confirmar este match.' };
+    }
+
+    const { data: suggestion, error: suggestionError } = await supabase
+      .from('suggested_matches')
+      .select('id,status')
+      .or(`and(post_a_id.eq.${stableAId},post_b_id.eq.${stableBId}),and(post_a_id.eq.${stableBId},post_b_id.eq.${stableAId})`)
+      .limit(1)
+      .maybeSingle<{ id: string; status: string }>();
+
+    if (suggestionError) {
+      console.error('acceptSuggestedMatch suggestion lookup failed', suggestionError);
+      return { ok: false, message: 'No pudimos validar la sugerencia del match. Intenta nuevamente.' };
+    }
+
+    if (!suggestion) {
+      return { ok: false, message: 'Este match ya no está disponible para confirmar.' };
+    }
+
+    const { data: confirmedMatch, error } = await supabase
+      .from('confirmed_matches')
+      .upsert({
+        post_a_id: stableAId,
+        post_b_id: stableBId,
+        club_a_email: stableAEmail,
+        club_b_email: stableBEmail,
+        status: 'accepted'
+      }, { onConflict: 'post_a_id,post_b_id' })
+      .select('id')
+      .single<{ id: string }>();
+
+    if (error || !confirmedMatch?.id) {
+      console.error('acceptSuggestedMatch confirmed_matches upsert failed', error);
+      return { ok: false, message: 'No pudimos aceptar este match. Intenta nuevamente.' };
+    }
+
+    const { error: updateSuggestedError } = await supabase
+      .from('suggested_matches')
+      .update({ status: 'archived' })
+      .eq('id', suggestion.id);
+
+    if (updateSuggestedError) {
+      console.error('acceptSuggestedMatch suggested_matches update failed', updateSuggestedError);
+      return { ok: false, message: 'Match guardado, pero no pudimos cerrar la sugerencia. Intenta recargar.' };
+    }
+
+    await createConversationIfNotExists(confirmedMatch.id);
+
+    revalidatePath('/');
+    revalidatePath('/matches/aceptar');
+    revalidatePath('/match-confirmado');
+
+    return { ok: true };
+  } catch (error) {
+    console.error('acceptSuggestedMatch unexpected error', error);
+    return { ok: false, message: 'No pudimos confirmar el match en este momento. Intenta nuevamente.' };
   }
-
-  if (!isValidEmail(clubAEmailInput) || !isValidEmail(clubBEmailInput)) {
-    throw new Error('Debes completar correos de contacto válidos para ambos equipos.');
-  }
-
-  const [stableAId, stableBId] = postAId < postBId ? [postAId, postBId] : [postBId, postAId];
-  const [stableAEmail, stableBEmail] = postAId < postBId
-    ? [clubAEmailInput, clubBEmailInput]
-    : [clubBEmailInput, clubAEmailInput];
-
-  const supabase = getSupabaseAdmin();
-
-  const { data: confirmedMatch, error } = await supabase
-    .from('confirmed_matches')
-    .upsert({
-      post_a_id: stableAId,
-      post_b_id: stableBId,
-      club_a_email: stableAEmail,
-      club_b_email: stableBEmail,
-      status: 'accepted'
-    }, { onConflict: 'post_a_id,post_b_id' })
-    .select('id')
-    .single<{ id: string }>();
-
-  if (error || !confirmedMatch?.id) {
-    console.error('acceptSuggestedMatch failed', error);
-    throw new Error('No pudimos aceptar este match. Intenta nuevamente.');
-  }
-
-  await createConversationIfNotExists(confirmedMatch.id);
-
-  revalidatePath('/');
-  revalidatePath('/matches/aceptar');
-  redirect(`/matches/${confirmedMatch.id}/chat?email=${encodeURIComponent(stableAEmail)}`);
 }
 export async function registerMatchResult(formData: FormData) {
   assertHoneypot(formData);
