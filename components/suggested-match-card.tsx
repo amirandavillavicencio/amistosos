@@ -49,33 +49,49 @@ export default function SuggestedMatchCardView({
   const totalScore = Number.isFinite(match?.totalScore) ? match.totalScore : 0;
   const tier = getMatchTier(totalScore);
   const fallbackReasons = ['Misma rama y categoría', 'Cruce horario real', 'Al menos un equipo tiene cancha'];
-  const computedReasons = getMatchReasons(match).filter(Boolean).slice(0, 4);
-  const reasons = (computedReasons.length ? computedReasons : fallbackReasons).slice(0, 4);
+  const computedReasons = getMatchReasons(match).filter(Boolean).slice(0, 3);
+  const reasons = (computedReasons.length ? computedReasons : fallbackReasons).slice(0, 3);
 
   const teamA = buildTeamViewModel(match, 'a', 0);
   const teamB = buildTeamViewModel(match, 'b', 1);
   const category = safeText(categoryLabel[match?.ageCategory] || match?.a?.age_category, 'Categoría no informada');
   const branch = safeText(branchLabel[match?.branch] || match?.a?.branch, 'No informada');
-  const availabilitySummary = match.sharedWeekdays.length
-    ? `${formatWeekdayList(match.sharedWeekdays)} · ${teamA.schedule} / ${teamB.schedule}`
-    : `${teamA.schedule} / ${teamB.schedule}`;
+  const weekdays = match.sharedWeekdays.length ? formatWeekdayList(match.sharedWeekdays) : 'Sin cruce exacto';
+  const availabilitySummary = `${teamA.schedule} / ${teamB.schedule}`;
 
   return (
-    <article className={`card-panel p-4 ${featured ? 'border-accent/50 bg-accent/5' : ''}`}>
-      <p className="text-xs font-medium text-accent">
-        {featured ? 'Destacado · ' : ''}
-        {tier}
-        <span className="ml-2 text-muted">{totalScore}/100</span>
-      </p>
+    <article
+      className={`card-panel p-4 ${featured ? 'border-accent/55 bg-accent/5 shadow-[0_18px_42px_rgba(217,70,239,0.2)]' : ''}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium text-accent">
+            {featured ? 'Match destacado · ' : ''}
+            {tier}
+          </p>
+          <h3 className="mt-1 display-serif text-xl text-ink">
+            {teamA.clubName} vs {teamB.clubName}
+          </h3>
+          <p className="mt-1 text-sm text-muted">
+            {category} · Rama {branch}
+          </p>
+        </div>
+        <div className="rounded-xl border border-line/70 bg-panel/70 px-3 py-1 text-right">
+          <p className="text-[11px] uppercase tracking-wider text-muted">Compatibilidad</p>
+          <p className="text-lg font-black text-accent">{totalScore}/100</p>
+        </div>
+      </div>
 
-      <h3 className="mt-1 display-serif text-xl text-ink">
-        {teamA.clubName} vs {teamB.clubName}
-      </h3>
-
-      <p className="mt-1 text-sm text-muted">
-        {category} · Rama {branch}
-      </p>
-      <p className="mt-1 text-xs text-muted">Disponibilidad: {availabilitySummary}</p>
+      <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+        <div className="rounded-lg border border-line/80 bg-panel/40 px-2.5 py-2 text-muted">
+          <p className="font-semibold text-ink">Días en común</p>
+          <p className="mt-0.5">{weekdays}</p>
+        </div>
+        <div className="rounded-lg border border-line/80 bg-panel/40 px-2.5 py-2 text-muted">
+          <p className="font-semibold text-ink">Horario cruzado</p>
+          <p className="mt-0.5">{availabilitySummary}</p>
+        </div>
+      </div>
 
       <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted">
         {[teamA, teamB].map((team) => (
@@ -93,7 +109,6 @@ export default function SuggestedMatchCardView({
             )}
             <p className="font-medium text-ink">{team.clubName}</p>
             <p>{team.comuna}</p>
-            <p>{team.schedule}</p>
             <p>{team.courtLabel}</p>
             <TeamContact
               instagram={team.instagram}
@@ -113,17 +128,17 @@ export default function SuggestedMatchCardView({
       </ul>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {teamA.postId ? (
-          <Link href={`/publicaciones/${teamA.postId}`} className="btn-secondary text-xs">
-            Ver detalle
-          </Link>
-        ) : null}
         {teamA.postId && teamB.postId ? (
           <Link
             href={`/matches/aceptar?postA=${encodeURIComponent(teamA.postId)}&postB=${encodeURIComponent(teamB.postId)}`}
             className="btn-accent text-xs"
           >
-            Aceptar match
+            Confirmar match ahora
+          </Link>
+        ) : null}
+        {teamA.postId ? (
+          <Link href={`/publicaciones/${teamA.postId}`} className="btn-secondary text-xs">
+            Ver detalle
           </Link>
         ) : null}
       </div>
