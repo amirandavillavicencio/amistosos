@@ -43,7 +43,6 @@ export default function EditAvailabilityForm({ post }: { post: AvailabilityWithT
         <label className="mb-1 block text-sm text-slate-300">Correo de contacto (verificación obligatoria)</label>
         <input name="contact_email" type="email" required className="field" placeholder="correo usado al publicar" />
       </div>
-
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm text-slate-300">Comuna</label>
@@ -69,18 +68,16 @@ export default function EditAvailabilityForm({ post }: { post: AvailabilityWithT
           ))}
         </div>
       </div>
-
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm text-slate-300">Hora inicio</label>
-          <input name="start_time" type="time" required defaultValue={post.start_time?.slice(0, 5)} className="field" />
+          <input name="start_time" type="time" required min="08:00" max="23:00" step={1800} defaultValue={post.start_time?.slice(0, 5)} className="field" />
         </div>
         <div>
           <label className="mb-1 block text-sm text-slate-300">Hora término</label>
-          <input name="end_time" type="time" required defaultValue={post.end_time?.slice(0, 5)} className="field" />
+          <input name="end_time" type="time" required min="08:00" max="23:00" step={1800} defaultValue={post.end_time?.slice(0, 5)} className="field" />
         </div>
       </div>
-
       <div className="grid gap-4 md:grid-cols-2">
         <select name="age_category" required defaultValue={post.age_category} className="field">
           <option value="sub-12">Sub-12</option>
@@ -96,6 +93,7 @@ export default function EditAvailabilityForm({ post }: { post: AvailabilityWithT
           <option value="mixta">Mixta</option>
         </select>
       </div>
+      <p className="text-xs text-slate-400">Horario permitido: entre 08:00 y 23:00. La hora de término debe ser mayor a la de inicio.</p>
 
       <div className="grid gap-4 md:grid-cols-2">
         <input name="responsible_name" defaultValue={post.responsible_name || ''} placeholder="Responsable (opcional)" className="field" />

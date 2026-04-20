@@ -39,7 +39,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   const supabase = getSupabaseAdmin();
 
-  const [teamsQuery, postsQuery, manualMatchesQuery, bannedQuery] = await Promise.all([
+  const [teamsQuery, postsQuery, manualMatchesQuery] = await Promise.all([
     supabase
       .from('teams')
       .select('id, club_name, current_elo, matches_played, wins, losses, draws, created_at, updated_at')
@@ -54,13 +54,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       .from('admin_manual_matches')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(40),
-    supabase
-      .from('banned_clubs')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(60)
+      .limit(40)
   ]);
 
   if (teamsQuery.error) {
@@ -72,14 +66,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   if (manualMatchesQuery.error) {
     console.error('AdminPage manual matches query failed', manualMatchesQuery.error);
   }
-  if (bannedQuery.error) {
-    console.error('AdminPage banned clubs query failed', bannedQuery.error);
-  }
 
   const teams = ((teamsQuery.data || []) as TeamRow[]).filter(Boolean);
   const posts = ((postsQuery.data || []) as AvailabilityWithTeam[]).filter(Boolean);
   const manualMatches = ((manualMatchesQuery.data || []) as AdminManualMatchRow[]).filter(Boolean);
-  const bannedClubs = ((bannedQuery.data || []) as BannedClubRow[]).filter(Boolean);
+  const bannedClubs: BannedClubRow[] = [];
   const openPosts = posts.filter((post) => ['open', 'active', 'published'].includes(String(post.status || '').toLowerCase()));
 
   const section = readSafeParam(searchParams?.section);

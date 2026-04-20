@@ -232,20 +232,34 @@ export async function getClubStatsRanking(limit = 20): Promise<ClubStatsCard[]> 
   try {
     const supabase = getSupabaseAdmin();
     const { data: stats, error } = await supabase
-      .from('club_stats')
-      .select('*')
+      .from('teams')
+      .select('club_name, current_elo, matches_played, wins, losses, draws, updated_at')
       .order('wins', { ascending: false })
       .order('matches_played', { ascending: false })
-      .order('last_match_date', { ascending: false })
-      .limit(limit)
-      .returns<ClubStatsRow[]>();
+      .limit(limit);
 
     if (error) {
-      console.error('getClubStatsRanking failed', error);
+      console.error('getClubStatsRanking teams fallback failed', error);
       return [];
     }
 
-    const base = stats || [];
+    const base = ((stats || []) as Array<{
+      club_name: string;
+      current_elo: number | null;
+      matches_played: number | null;
+      wins: number | null;
+      losses: number | null;
+      draws: number | null;
+      updated_at: string | null;
+    }>).map((team) => ({
+      id: `${team.club_name}-${team.updated_at || 'na'}`,
+      club_name: team.club_name,
+      club_name_key: normalizeClubNameKey(team.club_name),
+      matches_played: Number(team.matches_played || 0),
+      wins: Number(team.wins || 0),
+      losses: Number(team.losses || 0),
+      last_match_date: null
+    })) as ClubStatsRow[];
     if (!base.length) return [];
 
     const { data: photos, error: photosError } = await supabase
@@ -308,18 +322,38 @@ export async function getRecentResults(limit = 10): Promise<MatchResultRow[]> {
   try {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
-      .from('match_results')
+      .from('match_photos')
       .select('*')
       .order('match_date', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(limit)
-      .returns<MatchResultRow[]>();
+      .returns<MatchPhotoRow[]>();
 
     if (error) {
-      console.error('getRecentResults failed', error);
+      console.error('getRecentResults fallback failed', error);
       return [];
     }
 
-    return data || [];
+    return (data || []).map((item) => ({
+      id: item.id,
+      club_id: item.club_name_key || item.id,
+      opponent_club_id: null,
+      opponent_name: item.opponent_name,
+      match_date: item.match_date,
+      branch: 'mixta',
+      match_type: 'amistoso',
+      sets_won: 0,
+      sets_lost: 0,
+      set_scores: item.result,
+      location: item.comuna,
+      notes: item.comment,
+      created_at: item.created_at,
+      winner_club_id: null,
+      proof_photo_url: item.image_url,
+      elo_before: 0,
+      elo_after: 0,
+      elo_delta: 0
+    })) as MatchResultRow[];
   } catch (error) {
     console.error('getRecentResults crashed', error);
     return [];
@@ -342,17 +376,7 @@ export async function getTeamProfile(teamId: string): Promise<TeamProfile | null
 
     if (!team) return null;
 
-    const { data: results, error: resultsError } = await supabase
-      .from('match_results')
-      .select('*')
-      .eq('club_id', teamId)
-      .order('match_date', { ascending: false })
-      .limit(12)
-      .returns<MatchResultRow[]>();
-
-    if (resultsError) {
-      console.error('getTeamProfile results failed', resultsError);
-    }
+    const results: MatchResultRow[] = [];
 
     const winRate = team.matches_played > 0 ? Math.round((team.wins / team.matches_played) * 100) : 0;
 

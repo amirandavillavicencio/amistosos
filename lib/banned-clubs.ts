@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+const BANNED_CLUBS_ENABLED = false;
+
 function stripAccents(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
@@ -11,50 +13,21 @@ export function normalizeClubNameKey(value: string | null | undefined): string {
     .replace(/\s+/g, ' ');
 }
 
-export async function getActiveBannedClubNameKeys(client: SupabaseClient): Promise<Set<string>> {
-  try {
-    const { data, error } = await client
-      .from('banned_clubs')
-      .select('club_name_key')
-      .eq('is_active', true);
-
-    if (error) {
-      console.error('getActiveBannedClubNameKeys failed', error);
-      return new Set<string>();
-    }
-
-    const keys = (data || [])
-      .map((row) => normalizeClubNameKey((row as { club_name_key?: string | null }).club_name_key || ''))
-      .filter(Boolean);
-
-    return new Set(keys);
-  } catch (error) {
-    console.error('getActiveBannedClubNameKeys crashed', error);
+export async function getActiveBannedClubNameKeys(_client: SupabaseClient): Promise<Set<string>> {
+  if (!BANNED_CLUBS_ENABLED) {
     return new Set<string>();
   }
+
+  return new Set<string>();
 }
 
-export async function isClubBannedByName(client: SupabaseClient, clubName: string): Promise<boolean> {
+export async function isClubBannedByName(_client: SupabaseClient, clubName: string): Promise<boolean> {
   const clubNameKey = normalizeClubNameKey(clubName);
   if (!clubNameKey) return false;
 
-  try {
-    const { data, error } = await client
-      .from('banned_clubs')
-      .select('id')
-      .eq('club_name_key', clubNameKey)
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.error('isClubBannedByName failed', error);
-      return false;
-    }
-
-    return Boolean(data?.id);
-  } catch (error) {
-    console.error('isClubBannedByName crashed', error);
+  if (!BANNED_CLUBS_ENABLED) {
     return false;
   }
+
+  return false;
 }

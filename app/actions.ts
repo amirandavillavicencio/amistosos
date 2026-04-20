@@ -14,6 +14,8 @@ const validWeekdays = new Set(['lunes', 'martes', 'miércoles', 'jueves', 'viern
 const requestStore = new Map<string, number[]>();
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const MIN_GAME_TIME_MINUTES = 8 * 60;
+const MAX_GAME_TIME_MINUTES = 23 * 60;
 
 function parseTime(value: string) {
   const [h, m] = value.split(':').map(Number);
@@ -425,12 +427,7 @@ export async function rebuildSuggestedMatches() {
       console.warn('rebuildSuggestedMatches suggested_matches count failed', suggestedMatchesCountError);
     }
 
-    let bannedClubsTableAvailable = true;
-    const { error: bannedClubsReadError } = await supabase.from('banned_clubs').select('id').limit(1);
-    if (bannedClubsReadError) {
-      bannedClubsTableAvailable = false;
-      console.warn('rebuildSuggestedMatches banned_clubs unavailable, fallback to no banned clubs filtering', bannedClubsReadError);
-    }
+    const bannedClubsTableAvailable = false;
 
     let mainCause = 'matches_generated_normally';
     if (sourcePosts.length < 2) {
@@ -497,8 +494,19 @@ function validateAvailabilityPayload(input: {
     throw new Error('La hora debe tener formato HH:mm.');
   }
 
-  if (parseTime(input.start_time) >= parseTime(input.end_time)) {
-    throw new Error('La hora de inicio debe ser menor a la hora de término.');
+  const startMinutes = parseTime(input.start_time);
+  const endMinutes = parseTime(input.end_time);
+
+  if (startMinutes < MIN_GAME_TIME_MINUTES || startMinutes > MAX_GAME_TIME_MINUTES) {
+    throw new Error('La hora de inicio debe estar entre 08:00 y 23:00.');
+  }
+
+  if (endMinutes < MIN_GAME_TIME_MINUTES || endMinutes > MAX_GAME_TIME_MINUTES) {
+    throw new Error('La hora de término debe estar entre 08:00 y 23:00.');
+  }
+
+  if (startMinutes >= endMinutes) {
+    throw new Error('La hora de término debe ser mayor a la hora de inicio.');
   }
 
   if (!validBranches.has(input.branch) || !validAgeCategories.has(input.age_category)) {
@@ -766,28 +774,6 @@ export async function registerMatchResult(formData: FormData) {
     confidenceMultiplier: ownConfidence * rivalConfidence
   });
 
-  const { error: insertResultError } = await supabase.from('match_results').insert({
-    club_id: club.id,
-    opponent_club_id: opponent.id,
-    opponent_name: opponent.club_name,
-    match_date: matchDate,
-    branch,
-    match_type: matchType,
-    sets_won: setsWon,
-    sets_lost: setsLost,
-    set_scores: setScores,
-    location,
-    notes,
-    winner_club_id: winnerClubId,
-    proof_photo_url: proofPhotoUrl,
-    elo_before: club.current_elo,
-    elo_after: ownUpdate.newRating,
-    elo_delta: ownUpdate.delta
-  });
-
-  if (insertResultError) {
-    throw new Error('No pudimos guardar el resultado.');
-  }
 
   await supabase
     .from('teams')
@@ -811,24 +797,6 @@ export async function registerMatchResult(formData: FormData) {
     confidenceMultiplier: ownConfidence * rivalConfidence
   });
 
-  await supabase.from('match_results').insert({
-    club_id: opponent.id,
-    opponent_club_id: club.id,
-    opponent_name: club.club_name,
-    match_date: matchDate,
-    branch,
-    match_type: matchType,
-    sets_won: setsLost,
-    sets_lost: setsWon,
-    set_scores: setScores,
-    location,
-    notes,
-    winner_club_id: winnerClubId,
-    proof_photo_url: proofPhotoUrl,
-    elo_before: opponent.current_elo,
-    elo_after: opponentUpdate.newRating,
-    elo_delta: opponentUpdate.delta
-  });
 
   await supabase
     .from('teams')
@@ -865,51 +833,6 @@ function parseResultScore(value: string): { ownSets: number; rivalSets: number; 
   if (!validOwnWinner && !validRivalWinner) return null;
 
   return { ownSets, rivalSets, ownWon: ownSets > rivalSets };
-}
-
-async function upsertClubStats(input: {
-  clubName: string;
-  clubNameKey: string;
-  matchDate: string;
-  ownWon: boolean;
-}) {
-  const supabase = getSupabaseAdmin();
-
-  const { data: existing } = await supabase
-    .from('club_stats')
-    .select('*')
-    .eq('club_name_key', input.clubNameKey)
-    .maybeSingle<{
-      id: string;
-      matches_played: number;
-      wins: number;
-      losses: number;
-      last_match_date: string | null;
-    }>();
-
-  if (!existing) {
-    await supabase.from('club_stats').insert({
-      club_name: input.clubName,
-      club_name_key: input.clubNameKey,
-      matches_played: 1,
-      wins: input.ownWon ? 1 : 0,
-      losses: input.ownWon ? 0 : 1,
-      last_match_date: input.matchDate
-    });
-    return;
-  }
-
-  await supabase
-    .from('club_stats')
-    .update({
-      club_name: input.clubName,
-      matches_played: existing.matches_played + 1,
-      wins: existing.wins + (input.ownWon ? 1 : 0),
-      losses: existing.losses + (input.ownWon ? 0 : 1),
-      last_match_date: input.matchDate,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', existing.id);
 }
 
 
@@ -1012,14 +935,6 @@ export async function uploadMatchPhoto(formData: FormData) {
     throw new Error('La imagen se subió, pero no pudimos guardar el partido.');
   }
 
-  if (parsed) {
-    await upsertClubStats({
-      clubName,
-      clubNameKey,
-      matchDate,
-      ownWon: parsed.ownWon
-    });
-  }
 
   revalidatePath('/');
   revalidatePath('/ranking');
