@@ -38,6 +38,12 @@ export default function EditAvailabilityForm({
           setError(result.message || 'No se pudo actualizar la publicación.');
           return;
         }
+
+        if (result.action === 'deactivated') {
+          setMessage('Publicación desactivada correctamente.');
+          return;
+        }
+
         setMessage('Disponibilidad actualizada correctamente.');
       }}
       className="app-card mt-5 grid gap-4 p-4 sm:p-6"
@@ -137,7 +143,12 @@ export default function EditAvailabilityForm({
 
       <textarea name="notes" defaultValue={post.notes || ''} placeholder="Observaciones" className="field min-h-24" />
 
-      <button type="submit" className="btn-accent w-full justify-center md:w-auto">Guardar cambios</button>
+      <div className="flex flex-wrap gap-2">
+        <button type="submit" name="intent" value="update" className="btn-accent w-full justify-center md:w-auto">Guardar cambios</button>
+        <button type="submit" name="intent" value="deactivate" className="btn-secondary w-full justify-center md:w-auto">
+          Desactivar publicación
+        </button>
+      </div>
 
       {error && <p className="text-sm text-rose-300">{error}</p>}
       {message && <p className="text-sm text-emerald-300">{message}</p>}
