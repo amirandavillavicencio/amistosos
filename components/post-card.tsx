@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { AvailabilityWithTeam } from '@/lib/types';
+import TeamContact from '@/components/team-contact';
 import { StatusBadge } from '@/components/ui-shell';
 
 interface PostCardProps {
@@ -16,20 +17,11 @@ const categoryLabel: Record<AvailabilityWithTeam['age_category'], string> = {
   tc: 'Todo Competidor (TC)'
 };
 
-function phoneHref(phone: string | null) {
-  if (!phone) return null;
-  const keepPlus = phone.trim().startsWith('+');
-  const digits = phone.replace(/[\s()\-]/g, '');
-  return keepPlus ? `+${digits.replace(/^\+/, '')}` : digits;
-}
-
 export default function PostCard({ post, compact = false }: PostCardProps) {
   const startTime = post.start_time?.slice(0, 5) || '--:--';
   const endTime = post.end_time?.slice(0, 5) || '--:--';
   const weekdays = Array.isArray(post?.weekdays) ? post.weekdays : post?.weekday ? [post.weekday] : [];
   const days = weekdays.filter(Boolean).join(', ');
-  const tel = phoneHref(post.phone);
-
   return (
     <article className={`group app-card transition hover:-translate-y-0.5 hover:border-fuchsia-300/40 ${compact ? 'p-3.5 sm:p-4' : 'p-4 sm:p-5'}`}>
       <div className="mb-3 flex items-start justify-between gap-3">
@@ -57,13 +49,13 @@ export default function PostCard({ post, compact = false }: PostCardProps) {
         <li><strong className="text-slate-100">Horario:</strong> {startTime} - {endTime}</li>
         <li><strong className="text-slate-100">Días:</strong> {days || 'Sin días informados'}</li>
         <li><strong className="text-slate-100">Cancha:</strong> {post.has_court ? 'Sí pone cancha' : 'No pone cancha'}</li>
-        {post.phone && tel && (
-          <li>
-            <strong className="text-slate-100">Tel:</strong>{' '}
-            <a href={`tel:${tel}`} className="font-medium text-orange-300 hover:underline">{post.phone}</a>
-          </li>
-        )}
       </ul>
+      <TeamContact
+        instagram={post.instagram}
+        phone={post.phone}
+        className={`mt-2 space-y-1 ${compact ? 'text-xs' : 'text-sm'} text-slate-200`}
+        labelClassName="font-semibold text-slate-100"
+      />
       {!compact && post.notes && <p className="mt-3 border-t border-slate-700/80 pt-3 text-sm text-slate-300">{post.notes}</p>}
       <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-700/80 pt-3">
         <Link href={`/publicaciones/${post.id}`} className={`font-semibold text-fuchsia-200 hover:text-fuchsia-100 hover:underline ${compact ? 'text-xs' : 'text-sm'}`}>

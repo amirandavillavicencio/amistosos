@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { formatTimeLabel, formatWeekdayList, getMatchReasons, getMatchTier } from '@/lib/matching';
 import type { SuggestedMatchCard } from '@/lib/types';
+import TeamContact from '@/components/team-contact';
 
 const categoryLabel: Record<string, string> = {
   'sub-12': 'Sub-12',
@@ -32,7 +33,9 @@ function buildTeamViewModel(match: SuggestedMatchCard, side: 'a' | 'b', index: n
     comuna: safeText(team?.comuna, 'Comuna no informada'),
     schedule: `${formatTimeLabel(team?.start_time)} - ${formatTimeLabel(team?.end_time)}`,
     courtLabel: team?.has_court ? 'Pone cancha' : 'Cancha no confirmada',
-    logoUrl: safeText(team?.logo_url, '')
+    logoUrl: safeText(team?.logo_url, ''),
+    instagram: team?.instagram || null,
+    phone: team?.phone || null
   };
 }
 
@@ -92,6 +95,13 @@ export default function SuggestedMatchCardView({
             <p>{team.comuna}</p>
             <p>{team.schedule}</p>
             <p>{team.courtLabel}</p>
+            <TeamContact
+              instagram={team.instagram}
+              phone={team.phone}
+              className="mt-1 space-y-1 text-xs text-muted"
+              labelClassName="font-medium text-ink"
+              valueClassName="text-accent hover:underline"
+            />
           </div>
         ))}
       </div>
