@@ -118,12 +118,14 @@ export default function SuggestedMatchCardView({
             Ver detalle
           </Link>
         ) : null}
-        <Link
-          href={`/resultados?club_name=${encodeURIComponent(teamA.clubName)}&opponent_name=${encodeURIComponent(teamB.clubName)}`}
-          className="btn-accent text-xs"
-        >
-          Cargar resultado
-        </Link>
+        {teamA.postId && teamB.postId ? (
+          <Link
+            href={`/matches/aceptar?postA=${encodeURIComponent(teamA.postId)}&postB=${encodeURIComponent(teamB.postId)}`}
+            className="btn-accent text-xs"
+          >
+            Aceptar match
+          </Link>
+        ) : null}
       </div>
     </article>
   );

@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
 import { getActiveBannedClubNameKeys, isClubBannedByName, normalizeClubNameKey } from '@/lib/banned-clubs';
 import { USABLE_AVAILABILITY_STATUSES } from '@/lib/matching';
@@ -748,6 +749,61 @@ export async function updateAvailability(formData: FormData) {
   return { ok: true, id };
 }
 
+
+
+function normalizeEmail(value: FormDataEntryValue | null): string | null {
+  const email = String(value || '').trim().toLowerCase();
+  if (!email) return null;
+  return email;
+}
+
+function isValidEmail(value: string | null): value is string {
+  if (!value) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+export async function acceptSuggestedMatch(formData: FormData) {
+  assertHoneypot(formData);
+
+  const postAId = String(formData.get('post_a_id') || '').trim();
+  const postBId = String(formData.get('post_b_id') || '').trim();
+  const clubAEmailInput = normalizeEmail(formData.get('club_a_email'));
+  const clubBEmailInput = normalizeEmail(formData.get('club_b_email'));
+
+  if (!isUuid(postAId) || !isUuid(postBId) || postAId === postBId) {
+    throw new Error('El match seleccionado no es válido.');
+  }
+
+  if (!isValidEmail(clubAEmailInput) || !isValidEmail(clubBEmailInput)) {
+    throw new Error('Debes completar correos de contacto válidos para ambos equipos.');
+  }
+
+  const [stableAId, stableBId] = postAId < postBId ? [postAId, postBId] : [postBId, postAId];
+  const [stableAEmail, stableBEmail] = postAId < postBId
+    ? [clubAEmailInput, clubBEmailInput]
+    : [clubBEmailInput, clubAEmailInput];
+
+  const supabase = getSupabaseAdmin();
+
+  const { error } = await supabase
+    .from('confirmed_matches')
+    .upsert({
+      post_a_id: stableAId,
+      post_b_id: stableBId,
+      club_a_email: stableAEmail,
+      club_b_email: stableBEmail,
+      status: 'accepted'
+    }, { onConflict: 'post_a_id,post_b_id' });
+
+  if (error) {
+    console.error('acceptSuggestedMatch failed', error);
+    throw new Error('No pudimos aceptar este match. Intenta nuevamente.');
+  }
+
+  revalidatePath('/');
+  revalidatePath('/matches/aceptar');
+  redirect('/?match_accepted=1');
+}
 export async function registerMatchResult(formData: FormData) {
   assertHoneypot(formData);
   await assertRateLimit('results');
