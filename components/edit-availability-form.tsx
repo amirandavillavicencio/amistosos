@@ -6,7 +6,13 @@ import type { AvailabilityWithTeam } from '@/lib/types';
 
 const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
-export default function EditAvailabilityForm({ post }: { post: AvailabilityWithTeam }) {
+export default function EditAvailabilityForm({
+  post,
+  verifiedEmail
+}: {
+  post: AvailabilityWithTeam;
+  verifiedEmail?: string;
+}) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,20 +45,46 @@ export default function EditAvailabilityForm({ post }: { post: AvailabilityWithT
       <input type="hidden" name="id" value={post.id} />
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
 
-      <div>
-        <label className="mb-1 block text-sm text-slate-300">Correo de contacto (verificación obligatoria)</label>
-        <input name="contact_email" type="email" required className="field" placeholder="correo usado al publicar" />
-      </div>
+      {verifiedEmail ? (
+        <>
+          <input type="hidden" name="contact_email" value={verifiedEmail} />
+          <p className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+            Correo verificado, puedes editar esta disponibilidad.
+          </p>
+        </>
+      ) : (
+        <div>
+          <label className="mb-1 block text-sm text-slate-300">Correo de contacto (verificación obligatoria)</label>
+          <input name="contact_email" type="email" required className="field" placeholder="correo usado al publicar" />
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm text-slate-300">Comuna</label>
           <input name="comuna" defaultValue={post.comuna} required className="field" />
         </div>
         <div>
+          <label className="mb-1 block text-sm text-slate-300">Ciudad</label>
+          <input name="city" defaultValue={post.city || ''} required className="field" />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
           <label className="mb-1 block text-sm text-slate-300">Cancha</label>
           <select name="has_court" defaultValue={post.has_court ? 'true' : 'false'} className="field">
             <option value="false">No tenemos cancha</option>
             <option value="true">Sí, ponemos cancha</option>
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm text-slate-300">Nivel</label>
+          <select name="level" defaultValue={post.level || 'intermedio'} className="field">
+            <option value="principiante">Principiante</option>
+            <option value="novato">Novato</option>
+            <option value="intermedio">Intermedio</option>
+            <option value="avanzado">Avanzado</option>
+            <option value="competitivo">Competitivo</option>
           </select>
         </div>
       </div>
