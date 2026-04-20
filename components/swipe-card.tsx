@@ -1,5 +1,6 @@
 import type { AvailabilityRow } from '@/lib/types';
 import { formatWeekdayLabel, formatTimeLabel, resolveWeekdays } from '@/lib/matching';
+import TeamContact from '@/components/team-contact';
 
 interface SwipeCardProps {
   post: AvailabilityRow | null;
@@ -49,6 +50,14 @@ export default function SwipeCard({ post }: SwipeCardProps) {
           <p className="text-lg font-semibold">{post.has_court ? 'Tiene cancha' : 'Busca cancha'}</p>
         </div>
       </div>
+
+      <TeamContact
+        instagram={post.instagram}
+        phone={post.phone}
+        className="mt-4 space-y-1 text-sm text-slate-700"
+        labelClassName="font-semibold text-slate-900"
+        valueClassName="text-indigo-700 hover:underline"
+      />
     </article>
   );
 }

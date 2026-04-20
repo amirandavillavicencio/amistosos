@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import TeamContact from '@/components/team-contact';
 import { EmptyState, SectionShell, StatusBadge } from '@/components/ui-shell';
 import { getAvailabilityById } from '@/lib/data';
 
@@ -26,8 +27,13 @@ export default async function PublicacionDetallePage({ params }: { params: { id:
 
         {post.logo_url ? <img src={post.logo_url} alt={`Logo ${post.club_name}`} className="mt-3 h-20 w-20 rounded-full border border-slate-600 object-cover" /> : null}
         <div className="mt-3 space-y-1 text-sm text-slate-300">
-          {post.phone ? <p>Teléfono: <a href={`tel:${post.phone.replace(/[\s()\-]/g, '')}`} className="text-fuchsia-200 hover:underline">{post.phone}</a></p> : null}
-          {post.instagram ? <p>Instagram: <a href={`https://instagram.com/${post.instagram}`} target="_blank" rel="noreferrer" className="text-fuchsia-200 hover:underline">@{post.instagram}</a></p> : null}
+          <TeamContact
+            instagram={post.instagram}
+            phone={post.phone}
+            className="space-y-1 text-sm text-slate-300"
+            labelClassName="font-medium text-slate-100"
+            valueClassName="text-fuchsia-200 hover:underline"
+          />
           <p>Cancha: {post.has_court ? 'Sí pone cancha' : 'No pone cancha'}</p>
           <p>Ciudad: {post.city || 'No informada'}</p>
         </div>
