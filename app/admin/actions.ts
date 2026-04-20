@@ -275,31 +275,11 @@ export async function adminBanClub(formData: FormData) {
     redirectWithNotice('/admin', { section: 'bans', error: 'Nombre de club invalido.' });
   }
 
-  const supabase = getSupabaseAdmin();
-  const { error } = await supabase
-    .from('banned_clubs')
-    .upsert(
-      {
-        club_name: clubName,
-        club_name_key: clubNameKey,
-        reason,
-        is_active: true,
-        updated_at: new Date().toISOString()
-      },
-      { onConflict: 'club_name_key' }
-    );
-
-  if (error) {
-    console.error('adminBanClub failed', error);
-    redirectWithNotice('/admin', { section: 'bans', error: 'No se pudo banear el club.' });
-  }
-
-  revalidatePath('/admin');
-  revalidatePath('/');
-  revalidatePath('/explorar');
-  revalidatePath('/publicar');
-
-  redirectWithNotice('/admin', { section: 'bans', notice: 'Club baneado.' });
+  void reason;
+  redirectWithNotice('/admin', {
+    section: 'bans',
+    error: 'La gestión de baneos no está disponible en este entorno.'
+  });
 }
 
 export async function adminUnbanClub(formData: FormData) {
@@ -310,21 +290,9 @@ export async function adminUnbanClub(formData: FormData) {
     redirectWithNotice('/admin', { section: 'bans', error: 'Registro de baneo invalido.' });
   }
 
-  const supabase = getSupabaseAdmin();
-  const { error } = await supabase
-    .from('banned_clubs')
-    .update({ is_active: false, updated_at: new Date().toISOString() })
-    .eq('id', bannedId);
-
-  if (error) {
-    console.error('adminUnbanClub failed', error);
-    redirectWithNotice('/admin', { section: 'bans', error: 'No se pudo quitar el baneo.' });
-  }
-
-  revalidatePath('/admin');
-  revalidatePath('/');
-  revalidatePath('/explorar');
-  revalidatePath('/publicar');
-
-  redirectWithNotice('/admin', { section: 'bans', notice: 'Baneo removido.' });
+  void bannedId;
+  redirectWithNotice('/admin', {
+    section: 'bans',
+    error: 'La gestión de baneos no está disponible en este entorno.'
+  });
 }

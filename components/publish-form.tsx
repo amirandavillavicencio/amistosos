@@ -140,9 +140,16 @@ export default function PublishForm() {
           {fieldErrors.weekdays && <p className="text-xs text-rose-300">{fieldErrors.weekdays}</p>}
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          <input name="start_time" required type="time" className={fieldClass(Boolean(fieldErrors.start_time))} />
-          <input name="end_time" required type="time" className={fieldClass(Boolean(fieldErrors.end_time))} />
+          <div className="grid gap-1.5">
+            <label className="text-xs text-slate-300">Hora inicio *</label>
+            <input name="start_time" required type="time" min="08:00" max="23:00" step={1800} className={fieldClass(Boolean(fieldErrors.start_time))} />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs text-slate-300">Hora término *</label>
+            <input name="end_time" required type="time" min="08:00" max="23:00" step={1800} className={fieldClass(Boolean(fieldErrors.end_time))} />
+          </div>
         </div>
+        <p className="text-xs text-slate-400">Horario permitido: entre 08:00 y 23:00. La hora de término debe ser mayor a la de inicio.</p>
       </section>
 
       <section className="grid gap-3">
