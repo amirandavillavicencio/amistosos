@@ -139,6 +139,7 @@ export interface MatchResultRow {
   id: string;
   club_id: string;
   opponent_club_id: string | null;
+  winner_club_id: string | null;
   opponent_name: string | null;
   match_date: string;
   branch: Branch;
@@ -148,6 +149,7 @@ export interface MatchResultRow {
   set_scores: string | null;
   location: string | null;
   notes: string | null;
+  proof_photo_url: string | null;
   elo_before: number;
   elo_after: number;
   elo_delta: number;

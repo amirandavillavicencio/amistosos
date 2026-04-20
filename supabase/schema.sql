@@ -59,6 +59,7 @@ create table if not exists match_results (
   id uuid primary key default gen_random_uuid(),
   club_id uuid not null references teams(id) on delete cascade,
   opponent_club_id uuid references teams(id) on delete set null,
+  winner_club_id uuid references teams(id) on delete set null,
   opponent_name text,
   match_date date not null,
   branch text not null check (branch in ('femenina', 'masculina', 'mixta')),
@@ -68,6 +69,7 @@ create table if not exists match_results (
   set_scores text,
   location text,
   notes text,
+  proof_photo_url text,
   elo_before integer not null,
   elo_after integer not null,
   elo_delta integer not null,
@@ -77,6 +79,7 @@ create table if not exists match_results (
 
 create index if not exists idx_match_results_club_date on match_results(club_id, match_date desc);
 create index if not exists idx_match_results_opponent on match_results(opponent_club_id);
+create index if not exists idx_match_results_winner_club on match_results(winner_club_id);
 
 create table if not exists elo_history (
   id uuid primary key default gen_random_uuid(),
