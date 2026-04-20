@@ -97,19 +97,32 @@ export async function adminLogin(formData: FormData) {
 
   const username = sanitizeText(formData.get('username'), 80).toLowerCase();
   const password = String(formData.get('password') || '');
+  console.log('ADMIN_LOGIN_ATTEMPT', {
+    username,
+    requesterIp,
+  });
 
+  let credentialsOk = false;
   try {
-    const ok = verifyAdminCredentials({ username, password });
-    if (!ok) {
-      redirectWithNotice('/admin/login', { error: 'Usuario o clave incorrectos.' });
-    }
+    credentialsOk = verifyAdminCredentials({ username, password });
   } catch (error) {
     console.error('adminLogin config error', error);
     redirectWithNotice('/admin/login', { error: 'Configuracion admin incompleta en servidor.' });
   }
 
+  if (!credentialsOk) {
+    redirectWithNotice('/admin/login', { error: 'Usuario o clave incorrectos.' });
+  }
+
   loginAttemptStore.delete(`admin-login:${requesterIp}`);
   await createAdminSession(getAdminUsername());
+  console.log('ADMIN_LOGIN_SUCCESS', {
+    username,
+    requesterIp,
+  });
+  console.log('ADMIN_LOGIN_REDIRECT_TARGET', {
+    target: '/admin',
+  });
   redirect('/admin');
 }
 

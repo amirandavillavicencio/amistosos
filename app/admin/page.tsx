@@ -35,8 +35,17 @@ function formatTime(value: string | null | undefined): string {
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const session = await getAdminSession();
   if (!session) {
-    redirect('/admin/login');
+    console.warn('ADMIN_SESSION_MISSING', {
+      route: '/admin',
+    });
+    redirect('/admin/login?error=Sesion+expirada.+Inicia+sesion+nuevamente.');
   }
+
+  console.log('ADMIN_SESSION_FOUND', {
+    route: '/admin',
+    username: session.username,
+    expiresAt: session.expiresAt,
+  });
 
   const supabase = getSupabaseAdmin();
 

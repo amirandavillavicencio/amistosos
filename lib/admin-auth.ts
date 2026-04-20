@@ -144,15 +144,45 @@ export async function clearAdminSession(): Promise<void> {
 export async function getAdminSession(): Promise<AdminSession | null> {
   const cookieStore = await cookies();
   const raw = cookieStore.get(ADMIN_SESSION_COOKIE)?.value || '';
+
+  if (!raw) {
+    console.warn('ADMIN_SESSION_MISSING', {
+      reason: 'cookie_not_present',
+      cookieName: ADMIN_SESSION_COOKIE
+    });
+    return null;
+  }
+
   const parsed = parseToken(raw);
-  if (!parsed) return null;
+  if (!parsed) {
+    console.warn('ADMIN_SESSION_MISSING', {
+      reason: 'invalid_cookie_signature_or_payload',
+      cookieName: ADMIN_SESSION_COOKIE
+    });
+    return null;
+  }
 
   const now = Math.floor(Date.now() / 1000);
-  if (parsed.exp <= now) return null;
+  if (parsed.exp <= now) {
+    console.warn('ADMIN_SESSION_MISSING', {
+      reason: 'expired_cookie',
+      expiresAt: parsed.exp,
+      now
+    });
+    return null;
+  }
 
-  return {
+  const session = {
     username: parsed.u,
     issuedAt: parsed.iat,
     expiresAt: parsed.exp
   };
+
+  console.log('ADMIN_SESSION_FOUND', {
+    username: session.username,
+    issuedAt: session.issuedAt,
+    expiresAt: session.expiresAt
+  });
+
+  return session;
 }
