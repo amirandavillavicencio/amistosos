@@ -4,6 +4,7 @@ import {
   adminBanClub,
   adminCloseAvailability,
   adminCreateManualMatch,
+  adminDeleteAvailability,
   adminLogout,
   adminUnbanClub,
   adminUpdateTeamRanking
@@ -189,32 +190,54 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       </section>
 
       <section id="posts" className={`card-panel p-5 ${section === 'posts' ? 'ring-2 ring-accent/30' : ''}`}>
-        <h2 className="display-serif text-2xl text-ink">Publicaciones (cerrar)</h2>
-        <p className="mt-1 text-sm text-muted">Cierra publicaciones desde servidor con confirmacion explicita.</p>
-        <div className="mt-4 space-y-2">
+        <h2 className="display-serif text-2xl text-ink">Publicaciones (moderación)</h2>
+        <p className="mt-1 text-sm text-muted">Desactiva o elimina publicaciones. Esta acción reconstruirá los matches relacionados.</p>
+        <div className="mt-4 space-y-3">
           {posts.length === 0 ? (
             <p className="text-sm text-muted">No hay publicaciones registradas.</p>
           ) : (
             posts.map((post) => (
-              <div key={post.id} className="rounded-lg border border-line/70 p-3">
-                <p className="font-semibold text-ink">{post.club_name}</p>
-                <p className="text-sm text-muted">
-                  {post.branch} | {post.age_category} | {formatTime(post.start_time)}-{formatTime(post.end_time)} | estado:{' '}
-                  {post.status}
-                </p>
-                <form action={adminCloseAvailability} className="mt-2 flex flex-wrap items-center gap-2">
-                  <input type="hidden" name="availability_id" value={post.id} />
-                  <input
-                    name="confirm_word"
-                    className="field w-40"
-                    placeholder="Escribe CERRAR"
-                    aria-label={`Confirmar cierre ${post.club_name}`}
-                  />
-                  <button type="submit" className="btn-secondary">
-                    Cerrar publicacion
-                  </button>
-                </form>
-              </div>
+              <article key={post.id} className="rounded-lg border border-line/70 p-3">
+                <div className="grid gap-2 text-sm text-muted md:grid-cols-2 lg:grid-cols-3">
+                  <p><span className="font-semibold text-ink">Club:</span> {post.club_name}</p>
+                  <p><span className="font-semibold text-ink">Comuna / Ciudad:</span> {post.comuna} / {post.city}</p>
+                  <p><span className="font-semibold text-ink">Días:</span> {Array.isArray(post.weekdays) && post.weekdays.length > 0 ? post.weekdays.join(', ') : (post.weekday || '-')}</p>
+                  <p><span className="font-semibold text-ink">Horario:</span> {formatTime(post.start_time)} - {formatTime(post.end_time)}</p>
+                  <p><span className="font-semibold text-ink">Tiene cancha:</span> {post.has_court ? 'Sí' : 'No'}</p>
+                  <p><span className="font-semibold text-ink">Email:</span> {post.contact_email || '-'}</p>
+                  <p><span className="font-semibold text-ink">Estado:</span> {post.status}</p>
+                  <p><span className="font-semibold text-ink">Creada:</span> {post.created_at?.slice(0, 10) || '-'}</p>
+                  <p><span className="font-semibold text-ink">ID:</span> {post.id}</p>
+                </div>
+
+                <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                  <form action={adminCloseAvailability} className="flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="availability_id" value={post.id} />
+                    <input
+                      name="confirm_word"
+                      className="field w-44"
+                      placeholder="Escribe CERRAR"
+                      aria-label={`Confirmar desactivación ${post.club_name}`}
+                    />
+                    <button type="submit" className="btn-secondary">
+                      Desactivar publicación
+                    </button>
+                  </form>
+
+                  <form action={adminDeleteAvailability} className="flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="availability_id" value={post.id} />
+                    <input
+                      name="confirm_word"
+                      className="field w-44"
+                      placeholder="Escribe ELIMINAR"
+                      aria-label={`Confirmar eliminación ${post.club_name}`}
+                    />
+                    <button type="submit" className="btn-secondary border-red-300 text-red-700 hover:bg-red-50">
+                      Eliminar publicación
+                    </button>
+                  </form>
+                </div>
+              </article>
             ))
           )}
         </div>
