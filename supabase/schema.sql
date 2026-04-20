@@ -141,6 +141,34 @@ create unique index if not exists uq_confirmed_matches_pair
 create index if not exists idx_confirmed_matches_status_created
   on confirmed_matches(status, created_at desc);
 
+create table if not exists match_conversations (
+  id uuid primary key default gen_random_uuid(),
+  match_id uuid not null references confirmed_matches(id) on delete cascade,
+  club_a_email text not null,
+  club_b_email text not null,
+  status text not null default 'active' check (status in ('active', 'closed')),
+  created_at timestamptz not null default now(),
+  unique (match_id),
+  check (club_a_email <> club_b_email)
+);
+
+create index if not exists idx_match_conversations_match
+  on match_conversations(match_id);
+create index if not exists idx_match_conversations_status_created
+  on match_conversations(status, created_at desc);
+
+create table if not exists match_messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references match_conversations(id) on delete cascade,
+  sender_email text not null,
+  message_text text not null,
+  created_at timestamptz not null default now(),
+  check (length(trim(message_text)) > 0)
+);
+
+create index if not exists idx_match_messages_conversation_created
+  on match_messages(conversation_id, created_at asc);
+
 -- Backfill migration for legacy MVP (table posts)
 do $$
 begin

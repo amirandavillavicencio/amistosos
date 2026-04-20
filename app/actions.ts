@@ -7,7 +7,15 @@ import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo
 import { getActiveBannedClubNameKeys, isClubBannedByName, normalizeClubNameKey } from '@/lib/banned-clubs';
 import { USABLE_AVAILABILITY_STATUSES } from '@/lib/matching';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import type { AgeCategory, Branch, MatchType, TeamRow } from '@/lib/types';
+import type {
+  AgeCategory,
+  Branch,
+  ConfirmedMatchRow,
+  MatchConversationRow,
+  MatchMessageRow,
+  MatchType,
+  TeamRow
+} from '@/lib/types';
 
 const validBranches = new Set<Branch>(['femenina', 'masculina', 'mixta']);
 const validAgeCategories = new Set<AgeCategory>(['sub-12', 'sub-14', 'sub-16', 'sub-18', 'sub-20', 'tc']);
@@ -762,6 +770,154 @@ function isValidEmail(value: string | null): value is string {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function canAccessConversation(conversation: MatchConversationRow, email: string): boolean {
+  return conversation.club_a_email === email || conversation.club_b_email === email;
+}
+
+export async function createConversationIfNotExists(matchId: string) {
+  const normalizedMatchId = String(matchId || '').trim();
+  if (!isUuid(normalizedMatchId)) {
+    throw new Error('Match inválido para crear conversación.');
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: match, error: matchError } = await supabase
+    .from('confirmed_matches')
+    .select('*')
+    .eq('id', normalizedMatchId)
+    .maybeSingle<ConfirmedMatchRow>();
+
+  if (matchError || !match) {
+    throw new Error('No encontramos el match solicitado.');
+  }
+
+  if (match.status !== 'accepted' && match.status !== 'confirmed') {
+    throw new Error('El chat solo está disponible para matches aceptados o confirmados.');
+  }
+
+  if (!isValidEmail(match.club_a_email) || !isValidEmail(match.club_b_email)) {
+    throw new Error('El match no tiene correos de contacto válidos.');
+  }
+
+  const { data, error } = await supabase
+    .from('match_conversations')
+    .upsert({
+      match_id: match.id,
+      club_a_email: match.club_a_email,
+      club_b_email: match.club_b_email,
+      status: 'active'
+    }, { onConflict: 'match_id' })
+    .select('*')
+    .single<MatchConversationRow>();
+
+  if (error || !data) {
+    throw new Error('No pudimos iniciar el chat de coordinación.');
+  }
+
+  const { count, error: messageCountError } = await supabase
+    .from('match_messages')
+    .select('id', { head: true, count: 'exact' })
+    .eq('conversation_id', data.id);
+
+  if (!messageCountError && (count || 0) === 0) {
+    const { data: posts } = await supabase
+      .from('availabilities')
+      .select('id, club_name')
+      .in('id', [match.post_a_id, match.post_b_id]);
+    const postById = new Map((posts || []).map((item) => [item.id, String(item.club_name || '').trim()]));
+    const clubAName = postById.get(match.post_a_id) || 'Club A';
+    const clubBName = postById.get(match.post_b_id) || 'Club B';
+    const starterText = `Match confirmado entre ${clubAName} y ${clubBName}. Coordinen aquí los detalles del partido.`;
+    await supabase
+      .from('match_messages')
+      .insert({
+        conversation_id: data.id,
+        sender_email: data.club_a_email,
+        message_text: starterText
+      });
+  }
+
+  return data;
+}
+
+export async function getConversation(matchId: string, email: string) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!isValidEmail(normalizedEmail)) {
+    throw new Error('Correo inválido para acceder al chat.');
+  }
+
+  const conversation = await createConversationIfNotExists(matchId);
+  if (!canAccessConversation(conversation, normalizedEmail)) {
+    throw new Error('No tienes acceso a este chat.');
+  }
+
+  return conversation;
+}
+
+export async function getMessages(conversationId: string) {
+  const normalizedConversationId = String(conversationId || '').trim();
+  if (!isUuid(normalizedConversationId)) {
+    throw new Error('Conversación inválida.');
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('match_messages')
+    .select('*')
+    .eq('conversation_id', normalizedConversationId)
+    .order('created_at', { ascending: true })
+    .returns<MatchMessageRow[]>();
+
+  if (error) {
+    throw new Error('No pudimos cargar los mensajes.');
+  }
+
+  return data || [];
+}
+
+export async function sendMessage(conversationId: string, senderEmail: string, messageText: string) {
+  const normalizedConversationId = String(conversationId || '').trim();
+  const normalizedSenderEmail = String(senderEmail || '').trim().toLowerCase();
+  const normalizedMessageText = String(messageText || '').trim();
+
+  if (!isUuid(normalizedConversationId)) {
+    throw new Error('Conversación inválida.');
+  }
+  if (!isValidEmail(normalizedSenderEmail)) {
+    throw new Error('Debes enviar un correo válido.');
+  }
+  if (!normalizedMessageText) {
+    throw new Error('El mensaje no puede estar vacío.');
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: conversation, error: conversationError } = await supabase
+    .from('match_conversations')
+    .select('*')
+    .eq('id', normalizedConversationId)
+    .maybeSingle<MatchConversationRow>();
+
+  if (conversationError || !conversation) {
+    throw new Error('No encontramos la conversación.');
+  }
+
+  if (!canAccessConversation(conversation, normalizedSenderEmail)) {
+    throw new Error('No tienes permiso para enviar mensajes en este chat.');
+  }
+
+  const { error } = await supabase
+    .from('match_messages')
+    .insert({
+      conversation_id: normalizedConversationId,
+      sender_email: normalizedSenderEmail,
+      message_text: normalizedMessageText
+    });
+
+  if (error) {
+    throw new Error('No pudimos enviar tu mensaje.');
+  }
+}
+
 export async function acceptSuggestedMatch(formData: FormData) {
   assertHoneypot(formData);
 
@@ -785,7 +941,7 @@ export async function acceptSuggestedMatch(formData: FormData) {
 
   const supabase = getSupabaseAdmin();
 
-  const { error } = await supabase
+  const { data: confirmedMatch, error } = await supabase
     .from('confirmed_matches')
     .upsert({
       post_a_id: stableAId,
@@ -793,16 +949,20 @@ export async function acceptSuggestedMatch(formData: FormData) {
       club_a_email: stableAEmail,
       club_b_email: stableBEmail,
       status: 'accepted'
-    }, { onConflict: 'post_a_id,post_b_id' });
+    }, { onConflict: 'post_a_id,post_b_id' })
+    .select('id')
+    .single<{ id: string }>();
 
-  if (error) {
+  if (error || !confirmedMatch?.id) {
     console.error('acceptSuggestedMatch failed', error);
     throw new Error('No pudimos aceptar este match. Intenta nuevamente.');
   }
 
+  await createConversationIfNotExists(confirmedMatch.id);
+
   revalidatePath('/');
   revalidatePath('/matches/aceptar');
-  redirect('/?match_accepted=1');
+  redirect(`/matches/${confirmedMatch.id}/chat?email=${encodeURIComponent(stableAEmail)}`);
 }
 export async function registerMatchResult(formData: FormData) {
   assertHoneypot(formData);
