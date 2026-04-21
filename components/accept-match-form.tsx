@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { getMatchContact } from '@/app/actions';
 
@@ -149,7 +150,8 @@ export default function AcceptMatchForm({ matchId, initialMatchStatus }: AcceptM
       )}
 
       {contact && (
-        <article className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
+        <div className="space-y-3">
+          <article className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{matchDone ? 'Match hecho' : 'Contacto desbloqueado'}</p>
           <h3 className="mt-1 text-lg font-semibold text-ink">{contact.clubName}</h3>
           <ul className="mt-2 space-y-1 text-sm text-ink">
@@ -158,7 +160,14 @@ export default function AcceptMatchForm({ matchId, initialMatchStatus }: AcceptM
             <li><span className="font-medium">Correo:</span> {contact.contactEmail}</li>
             <li><span className="font-medium">Notas:</span> {contact.notes || 'Sin notas'}</li>
           </ul>
-        </article>
+          </article>
+
+          {matchDone && (
+            <Link href="/" className="btn-accent inline-flex items-center gap-2">
+              Volver al inicio
+            </Link>
+          )}
+        </div>
       )}
     </form>
   );
