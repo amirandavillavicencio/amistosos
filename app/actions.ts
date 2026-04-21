@@ -405,28 +405,155 @@ export async function rebuildSuggestedMatches() {
     });
     invalidRowsSkipped += rows.length - safeRows.length;
 
-    const { error: deleteError } = await supabase
+    const { data: existingMatches, error: existingMatchesError } = await supabase
       .from('suggested_matches')
-      .delete()
-      .not('id', 'is', null);
-    if (deleteError) {
-      console.error('rebuildSuggestedMatches truncate failed', deleteError);
+      .select('id,post_a_id,post_b_id,status,updated_at,created_at');
+
+    if (existingMatchesError) {
+      console.error('rebuildSuggestedMatches existing matches read failed', existingMatchesError);
       return { ok: false, error: 'match_rebuild_failed' as const };
     }
 
-    let insertedMatches = 0;
-    if (safeRows.length > 0) {
-      const { data: inserted, error: insertError } = await supabase
-        .from('suggested_matches')
-        .insert(safeRows)
-        .select('id');
+    const existingByPair = new Map<string, Array<{
+      id: string;
+      post_a_id: string;
+      post_b_id: string;
+      status: string;
+      updated_at: string | null;
+      created_at: string | null;
+    }>>();
+    for (const row of existingMatches || []) {
+      const postAId = safeString((row as { post_a_id?: unknown }).post_a_id);
+      const postBId = safeString((row as { post_b_id?: unknown }).post_b_id);
+      if (!isUuid(postAId) || !isUuid(postBId)) continue;
+      const [stableA, stableB] = postAId < postBId ? [postAId, postBId] : [postBId, postAId];
+      const pairKey = `${stableA}::${stableB}`;
+      const list = existingByPair.get(pairKey) || [];
+      list.push({
+        id: safeString((row as { id?: unknown }).id),
+        post_a_id: stableA,
+        post_b_id: stableB,
+        status: safeString((row as { status?: unknown }).status),
+        updated_at: safeString((row as { updated_at?: unknown }).updated_at) || null,
+        created_at: safeString((row as { created_at?: unknown }).created_at) || null
+      });
+      existingByPair.set(pairKey, list);
+    }
 
-      if (insertError) {
-        console.error('rebuildSuggestedMatches insert failed', insertError);
+    const rowByPair = new Map<string, (typeof safeRows)[number]>();
+    for (const row of safeRows) {
+      rowByPair.set(`${row.post_a_id}::${row.post_b_id}`, row);
+    }
+
+    let insertedMatches = 0;
+    let updatedMatches = 0;
+    let archivedMatches = 0;
+    let duplicateRowsDeleted = 0;
+    const duplicateIdsToDelete = new Set<string>();
+
+    const pickPrimaryMatch = (rowsForPair: Array<{
+      id: string;
+      post_a_id: string;
+      post_b_id: string;
+      status: string;
+      updated_at: string | null;
+      created_at: string | null;
+    }>) => {
+      return [...rowsForPair].sort((a, b) => {
+        const score = (value: { status: string; updated_at: string | null; created_at: string | null }) => {
+          const normalizedStatus = safeString(value.status).toLowerCase();
+          const activeBonus = normalizedStatus === 'active' ? 1 : 0;
+          const ts = Date.parse(value.updated_at || value.created_at || '1970-01-01T00:00:00.000Z') || 0;
+          return activeBonus * 10_000_000_000_000 + ts;
+        };
+        return score(b) - score(a);
+      })[0];
+    };
+
+    for (const [pairKey, row] of rowByPair.entries()) {
+      const existingForPair = existingByPair.get(pairKey) || [];
+      const primary = existingForPair.length ? pickPrimaryMatch(existingForPair) : null;
+      const updatePayload = {
+        post_a_id: row.post_a_id,
+        post_b_id: row.post_b_id,
+        compatibility_score: row.compatibility_score,
+        schedule_score: row.schedule_score,
+        location_score: row.location_score,
+        level_score: row.level_score,
+        elo_score: row.elo_score,
+        status: 'active' as const,
+        updated_at: new Date().toISOString()
+      };
+
+      if (primary) {
+        const { error: updateError } = await supabase
+          .from('suggested_matches')
+          .update(updatePayload)
+          .eq('id', primary.id);
+
+        if (updateError) {
+          console.error('rebuildSuggestedMatches update existing failed', { pairKey, primaryId: primary.id, updateError });
+          return { ok: false, error: 'match_rebuild_failed' as const };
+        }
+
+        updatedMatches += 1;
+
+        for (const duplicate of existingForPair) {
+          if (duplicate.id !== primary.id) {
+            duplicateIdsToDelete.add(duplicate.id);
+          }
+        }
+      } else {
+        const { data: inserted, error: insertError } = await supabase
+          .from('suggested_matches')
+          .insert(row)
+          .select('id');
+
+        if (insertError) {
+          console.error('rebuildSuggestedMatches insert failed', { pairKey, insertError });
+          return { ok: false, error: 'match_rebuild_failed' as const };
+        }
+
+        insertedMatches += Array.isArray(inserted) ? inserted.length : 1;
+      }
+    }
+
+    for (const [pairKey, rowsForPair] of existingByPair.entries()) {
+      const computedRow = rowByPair.get(pairKey);
+      if (!computedRow) {
+        const activeIds = rowsForPair
+          .filter((row) => safeString(row.status).toLowerCase() === 'active')
+          .map((row) => row.id);
+
+        if (activeIds.length > 0) {
+          const { error: archiveError } = await supabase
+            .from('suggested_matches')
+            .update({ status: 'archived', updated_at: new Date().toISOString() })
+            .in('id', activeIds);
+
+          if (archiveError) {
+            console.error('rebuildSuggestedMatches archive stale active rows failed', { pairKey, activeIds, archiveError });
+            return { ok: false, error: 'match_rebuild_failed' as const };
+          }
+
+          archivedMatches += activeIds.length;
+        }
+      }
+    }
+
+    if (duplicateIdsToDelete.size > 0) {
+      const duplicateIds = [...duplicateIdsToDelete];
+      const { error: duplicateDeleteError } = await supabase
+        .from('suggested_matches')
+        .delete()
+        .in('id', duplicateIds);
+
+      if (duplicateDeleteError) {
+        console.error('rebuildSuggestedMatches duplicate cleanup failed', { duplicateIds, duplicateDeleteError });
         return { ok: false, error: 'match_rebuild_failed' as const };
       }
 
-      insertedMatches = Array.isArray(inserted) ? inserted.length : safeRows.length;
+      duplicateRowsDeleted = duplicateIds.length;
     }
 
     const { count: suggestedMatchesFinalCount, error: suggestedMatchesCountError } = await supabase
@@ -456,6 +583,9 @@ export async function rebuildSuggestedMatches() {
       pairsEvaluated,
       generatedMatches: rows.length,
       insertedMatches,
+      updatedMatches,
+      archivedMatches,
+      duplicateRowsDeleted,
       invalidRowsSkipped,
       pairsWithSharedDays,
       pairsWithTimeOverlap,
@@ -961,6 +1091,12 @@ export async function getMatchContact(formData: FormData): Promise<
     }
 
     const normalizedMatchStatus = safeString(match.status).toLowerCase();
+    console.log('[getMatchContact] match leído:', {
+      id: match.id,
+      post_a_id: match.post_a_id,
+      post_b_id: match.post_b_id,
+      status: match.status
+    });
     console.log('[getMatchContact] current status:', normalizedMatchStatus || '(empty)');
 
     if (normalizedMatchStatus !== 'active' && normalizedMatchStatus !== 'archived') {
@@ -1001,17 +1137,22 @@ export async function getMatchContact(formData: FormData): Promise<
     let persisted = normalizedMatchStatus === 'archived';
 
     if (normalizedMatchStatus === 'active') {
+      const updatePayload = { status: 'archived' as const };
       console.log('[getMatchContact] intentando update status active -> archived');
+      console.log('[getMatchContact] update payload:', updatePayload);
       const { data: updateResult, error: updateError } = await supabase
         .from('suggested_matches')
-        .update({ status: 'archived' })
-        .eq('id', match.id)
+        .update(updatePayload)
+        .eq('id', matchId)
         .select('id,status');
 
       console.log('[getMatchContact] update result:', updateResult);
-      console.error('[getMatchContact] update error:', updateError);
+      if (updateError) {
+        console.error('[getMatchContact] update error:', updateError);
+      }
 
       const updateAffectedRows = Array.isArray(updateResult) ? updateResult.length : 0;
+      console.log('[getMatchContact] update affected rows:', updateAffectedRows);
 
       if (updateError || updateAffectedRows === 0) {
         console.error('[getMatchContact] failed to archive suggested match after successful validation', {
@@ -1019,14 +1160,17 @@ export async function getMatchContact(formData: FormData): Promise<
           updateError,
           updateAffectedRows
         });
+        if (updateAffectedRows === 0) {
+          console.error('[getMatchContact] update afectó 0 filas para matchId', matchId);
+        }
       } else {
         const { data: persistedMatch, error: persistedMatchError } = await supabase
           .from('suggested_matches')
-          .select('id,status')
-          .eq('id', match.id)
-          .maybeSingle<{ id: string; status: string }>();
+          .select('id,post_a_id,post_b_id,status')
+          .eq('id', matchId)
+          .maybeSingle<{ id: string; post_a_id: string; post_b_id: string; status: string }>();
 
-        console.log('[getMatchContact] status real persistido:', persistedMatch?.status ?? null);
+        console.log('[getMatchContact] select posterior al update:', persistedMatch);
 
         if (persistedMatchError) {
           console.error('[getMatchContact] error verificando persistencia tras update:', persistedMatchError);
