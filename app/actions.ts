@@ -923,7 +923,13 @@ export async function sendMessage(conversationId: string, senderEmail: string, m
 }
 
 export async function getMatchContact(formData: FormData): Promise<
-  | { ok: true; contact: { clubName: string; comuna: string; hasCourt: boolean; contactEmail: string; notes: string | null } }
+  | {
+    ok: true;
+    contact: { clubName: string; comuna: string; hasCourt: boolean; contactEmail: string; notes: string | null };
+    matchDone: boolean;
+    persisted: boolean;
+    successMessage: string;
+  }
   | { ok: false; message: string }
 > {
   try {
@@ -951,7 +957,8 @@ export async function getMatchContact(formData: FormData): Promise<
       return { ok: false, message: 'No encontramos este match.' };
     }
 
-    if (match.status !== 'active') {
+    const normalizedMatchStatus = safeString(match.status).toLowerCase();
+    if (normalizedMatchStatus !== 'active' && normalizedMatchStatus !== 'archived') {
       return { ok: false, message: 'Este match ya no está disponible.' };
     }
 
@@ -986,8 +993,30 @@ export async function getMatchContact(formData: FormData): Promise<
       return { ok: false, message: 'El equipo rival no tiene correo de contacto disponible.' };
     }
 
+    let persisted = normalizedMatchStatus === 'archived';
+    if (normalizedMatchStatus === 'active') {
+      const { error: updateError } = await supabase
+        .from('suggested_matches')
+        .update({ status: 'archived' })
+        .eq('id', match.id);
+
+      if (updateError) {
+        console.error('[getMatchContact] failed to archive suggested match after successful validation', {
+          matchId: match.id,
+          updateError
+        });
+      } else {
+        persisted = true;
+      }
+    }
+
     return {
       ok: true,
+      matchDone: true,
+      persisted,
+      successMessage: persisted
+        ? 'Match hecho. Ya tienes el contacto del rival.'
+        : 'Contacto desbloqueado. Ya tienes el contacto del rival.',
       contact: {
         clubName: safeString(rival.club_name) || 'Club rival',
         comuna: safeString(rival.comuna) || 'Comuna no informada',

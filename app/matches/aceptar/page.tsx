@@ -72,7 +72,7 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
     );
   }
 
-  if (suggestedMatch.status !== 'active') {
+  if (suggestedMatch.status !== 'active' && suggestedMatch.status !== 'archived') {
     return (
       <MatchErrorState
         title="Match no disponible"
@@ -127,7 +127,10 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
           </div>
         </div>
 
-        <AcceptMatchForm matchId={suggestedMatch.id} />
+        <AcceptMatchForm
+          matchId={suggestedMatch.id}
+          initialMatchStatus={suggestedMatch.status === 'archived' ? 'archived' : 'active'}
+        />
 
         <div className="pt-2">
           <Link href="/" className="btn-secondary">Cancelar</Link>

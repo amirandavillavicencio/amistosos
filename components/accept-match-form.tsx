@@ -13,13 +13,19 @@ interface RivalContact {
 
 interface AcceptMatchFormProps {
   matchId: string;
+  initialMatchStatus: 'active' | 'archived';
 }
 
-export default function AcceptMatchForm({ matchId }: AcceptMatchFormProps) {
+export default function AcceptMatchForm({ matchId, initialMatchStatus }: AcceptMatchFormProps) {
   const [isPending, startTransition] = useTransition();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(initialMatchStatus === 'active');
   const [error, setError] = useState<string | null>(null);
   const [contact, setContact] = useState<RivalContact | null>(null);
+  const [matchDone, setMatchDone] = useState(initialMatchStatus === 'archived');
+  const [successMessage, setSuccessMessage] = useState<string | null>(
+    initialMatchStatus === 'archived' ? 'Match hecho. Ya tienes el contacto del rival.' : null
+  );
+  const [persistWarning, setPersistWarning] = useState<string | null>(null);
 
   const mapErrorMessage = (message?: string) => {
     if (!message) {
@@ -33,7 +39,7 @@ export default function AcceptMatchForm({ matchId }: AcceptMatchFormProps) {
     return message;
   };
 
-  if (!isExpanded) {
+  if (!isExpanded && !matchDone) {
     return (
       <div className="mt-6">
         <button
@@ -42,6 +48,8 @@ export default function AcceptMatchForm({ matchId }: AcceptMatchFormProps) {
           onClick={() => {
             setError(null);
             setContact(null);
+            setSuccessMessage(null);
+            setPersistWarning(null);
             setIsExpanded(true);
           }}
         >
@@ -57,6 +65,8 @@ export default function AcceptMatchForm({ matchId }: AcceptMatchFormProps) {
         startTransition(async () => {
           setError(null);
           setContact(null);
+          setSuccessMessage(null);
+          setPersistWarning(null);
 
           const result = await getMatchContact(formData);
 
@@ -66,38 +76,47 @@ export default function AcceptMatchForm({ matchId }: AcceptMatchFormProps) {
           }
 
           setContact(result.contact);
+          setMatchDone(result.matchDone);
+          setSuccessMessage(result.successMessage);
+          if (!result.persisted) {
+            setPersistWarning('Mostramos el contacto, pero no pudimos guardar el estado final del match. Intenta de nuevo más tarde.');
+          }
         });
       }}
       className="mt-6 space-y-4"
       aria-busy={isPending}
     >
-      <p className="text-sm text-ink">Pon un correo de uno de los equipos para ver el contacto del rival</p>
+      {!matchDone && <p className="text-sm text-ink">Pon un correo de uno de los equipos para ver el contacto del rival</p>}
 
-      <fieldset disabled={isPending} className="space-y-4 disabled:opacity-80">
-        <input type="hidden" name="website" value="" />
-        <input type="hidden" name="match_id" value={matchId} />
+      <input type="hidden" name="website" value="" />
+      <input type="hidden" name="match_id" value={matchId} />
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-ink">
-            Correo de un equipo del match
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            placeholder="tuclub@correo.cl"
-            className="mt-1 w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
-          />
+      {!matchDone && (
+        <fieldset disabled={isPending} className="space-y-4 disabled:opacity-80">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-ink">
+              Correo de un equipo del match
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="tuclub@correo.cl"
+              className="mt-1 w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+            />
+          </div>
+        </fieldset>
+      )}
+
+      {!matchDone && (
+        <div className="flex flex-wrap gap-2 pt-2">
+          <button type="submit" disabled={isPending} className="btn-accent inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-70">
+            {isPending && <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />}
+            {isPending ? 'Validando...' : 'Ver contacto'}
+          </button>
         </div>
-      </fieldset>
-
-      <div className="flex flex-wrap gap-2 pt-2">
-        <button type="submit" disabled={isPending} className="btn-accent inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-70">
-          {isPending && <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />}
-          {isPending ? 'Validando...' : 'Ver contacto'}
-        </button>
-      </div>
+      )}
 
       {isPending && (
         <p className="text-sm text-muted" role="status" aria-live="polite">
@@ -111,9 +130,27 @@ export default function AcceptMatchForm({ matchId }: AcceptMatchFormProps) {
         </p>
       )}
 
+      {successMessage && (
+        <p className="rounded-lg border border-emerald-300 bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-900" role="status">
+          {successMessage}
+        </p>
+      )}
+
+      {matchDone && (
+        <div className="inline-flex rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+          Match realizado
+        </div>
+      )}
+
+      {persistWarning && (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status">
+          {persistWarning}
+        </p>
+      )}
+
       {contact && (
         <article className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Contacto desbloqueado</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{matchDone ? 'Match hecho' : 'Contacto desbloqueado'}</p>
           <h3 className="mt-1 text-lg font-semibold text-ink">{contact.clubName}</h3>
           <ul className="mt-2 space-y-1 text-sm text-ink">
             <li><span className="font-medium">Comuna:</span> {contact.comuna}</li>
