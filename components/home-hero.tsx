@@ -45,7 +45,7 @@ export default function HomeHero({
           <div className="rounded-2xl border border-violet-300/35 bg-violet-500/10 p-3 backdrop-blur">
             <p className="text-[11px] uppercase tracking-wider text-violet-100/90">Matches hoy</p>
             <p className="mt-1 text-2xl font-black text-white">{suggestedCount}</p>
-            <p className="text-xs text-slate-200">Cruces listos para confirmar</p>
+            <p className="text-xs text-slate-200">Cruces listos para ver contacto</p>
           </div>
           <div className="rounded-2xl border border-emerald-300/35 bg-emerald-500/10 p-3 backdrop-blur">
             <p className="text-[11px] uppercase tracking-wider text-emerald-100/90">Publicaciones</p>

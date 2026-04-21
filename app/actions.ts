@@ -922,242 +922,86 @@ export async function sendMessage(conversationId: string, senderEmail: string, m
   }
 }
 
-export async function acceptSuggestedMatch(formData: FormData): Promise<{ ok: true } | { ok: false; message: string }> {
+export async function getMatchContact(formData: FormData): Promise<
+  | { ok: true; contact: { clubName: string; comuna: string; hasCourt: boolean; contactEmail: string; notes: string | null } }
+  | { ok: false; message: string }
+> {
   try {
     assertHoneypot(formData);
 
-    const payload = Object.fromEntries(formData.entries());
-    const postAId = String(formData.get('post_a_id') || '').trim();
-    const postBId = String(formData.get('post_b_id') || '').trim();
-    const suggestedMatchId = String(formData.get('suggested_match_id') || '').trim();
-    const clubAEmailInput = normalizeEmail(formData.get('club_a_email'));
-    const clubBEmailInput = normalizeEmail(formData.get('club_b_email'));
-    console.log('[acceptSuggestedMatch] incoming payload:', payload);
-    console.log('[acceptSuggestedMatch] validating matchId:', suggestedMatchId || null);
-    console.log('[acceptSuggestedMatch] input', {
-      postAId,
-      postBId,
-      suggestedMatchId,
-      clubAEmailInput,
-      clubBEmailInput
-    });
+    const matchId = String(formData.get('match_id') || '').trim();
+    const emailInput = normalizeEmail(formData.get('email'));
 
-    if (!isUuid(postAId) || !isUuid(postBId) || postAId === postBId) {
-      console.warn('[acceptSuggestedMatch] invalid match ids', { postAId, postBId });
+    if (!isUuid(matchId)) {
       return { ok: false, message: 'El match seleccionado no es válido.' };
     }
 
-    if (!isValidEmail(clubAEmailInput) || !isValidEmail(clubBEmailInput)) {
-      console.warn('[acceptSuggestedMatch] invalid emails', { clubAEmailInput, clubBEmailInput });
-      return { ok: false, message: 'Debes completar correos de contacto válidos para ambos equipos.' };
+    if (!isValidEmail(emailInput)) {
+      return { ok: false, message: 'Ingresa un correo válido.' };
     }
-
-    const [stableAId, stableBId] = postAId < postBId ? [postAId, postBId] : [postBId, postAId];
-    const [stableAEmail, stableBEmail] = postAId < postBId
-      ? [clubAEmailInput, clubBEmailInput]
-      : [clubBEmailInput, clubAEmailInput];
-    console.log('[acceptSuggestedMatch] normalized pair and emails', {
-      stableAId,
-      stableBId,
-      stableAEmail,
-      stableBEmail
-    });
 
     const supabase = getSupabaseAdmin();
-
-    const { data: posts, error: postsError } = await supabase
-      .from('availabilities')
-      .select('id')
-      .in('id', [stableAId, stableBId]);
-    console.log('[acceptSuggestedMatch] availabilities lookup result', {
-      foundPosts: posts?.length || 0,
-      posts
-    });
-
-    if (postsError || !posts || posts.length !== 2) {
-      console.error('[acceptSuggestedMatch] availabilities check failed', postsError);
-      return { ok: false, message: 'No encontramos ambas disponibilidades para confirmar este match.' };
-    }
-
-    let suggestion: { id: string; status: string; post_a_id: string; post_b_id: string } | null = null;
-    let suggestionError: unknown = null;
-
-    if (isUuid(suggestedMatchId)) {
-      const result = await supabase
-        .from('suggested_matches')
-        .select('id,status,post_a_id,post_b_id')
-        .eq('id', suggestedMatchId)
-        .maybeSingle<{ id: string; status: string; post_a_id: string; post_b_id: string }>();
-      suggestion = result.data;
-      suggestionError = result.error;
-    } else {
-      const result = await supabase
-        .from('suggested_matches')
-        .select('id,status,post_a_id,post_b_id')
-        .or(`and(post_a_id.eq.${stableAId},post_b_id.eq.${stableBId}),and(post_a_id.eq.${stableBId},post_b_id.eq.${stableAId})`)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle<{ id: string; status: string; post_a_id: string; post_b_id: string }>();
-      suggestion = result.data;
-      suggestionError = result.error;
-    }
-    console.log('[acceptSuggestedMatch] suggested match lookup result', {
-      suggestion,
-      suggestionError
-    });
-
-    if (suggestionError) {
-      console.error('[acceptSuggestedMatch] suggestion lookup failed', suggestionError);
-      return { ok: false, message: 'No pudimos validar la sugerencia del match. Intenta nuevamente.' };
-    }
-
-    if (!suggestion) {
-      console.warn('[acceptSuggestedMatch] no suggestion found for pair', { stableAId, stableBId });
-      return { ok: false, message: 'Este match ya no está disponible para confirmar.' };
-    }
-
-    const samePair = (
-      (suggestion.post_a_id === stableAId && suggestion.post_b_id === stableBId) ||
-      (suggestion.post_a_id === stableBId && suggestion.post_b_id === stableAId)
-    );
-    if (!samePair) {
-      console.warn('[acceptSuggestedMatch] suggestion id does not match current pair', {
-        suggestedMatchId,
-        suggestionPostAId: suggestion.post_a_id,
-        suggestionPostBId: suggestion.post_b_id,
-        stableAId,
-        stableBId
-      });
-      return { ok: false, message: 'El match seleccionado no coincide con los equipos actuales.' };
-    }
-
-    const { data: confirmedMatches, error: existingConfirmedMatchError } = await supabase
-      .from('confirmed_matches')
-      .select('id,post_a_id,post_b_id,status')
-      .eq('post_a_id', stableAId)
-      .eq('post_b_id', stableBId)
-      .order('created_at', { ascending: false })
-      .limit(2);
-    const existingConfirmedMatch = confirmedMatches?.[0] || null;
-    console.log('[acceptSuggestedMatch] confirmed match pre-check', {
-      suggestedMatchId: suggestion.id,
-      confirmedMatchesFound: confirmedMatches?.length || 0,
-      existingConfirmedMatch,
-      existingConfirmedMatchError
-    });
-
-    if (existingConfirmedMatchError) {
-      console.error('[acceptSuggestedMatch] confirmed match pre-check failed', existingConfirmedMatchError);
-      return { ok: false, message: 'No pudimos validar el estado actual del match. Intenta nuevamente.' };
-    }
-    if (confirmedMatches && confirmedMatches.length > 1) {
-      console.warn('[acceptSuggestedMatch] duplicate confirmed matches detected for pair; using latest row', {
-        stableAId,
-        stableBId,
-        confirmedMatchIds: confirmedMatches.map((match) => match.id)
-      });
-    }
-    if (existingConfirmedMatch?.status === 'played') {
-      return { ok: false, message: 'Este match ya fue marcado como jugado y no puede volver a aceptarse.' };
-    }
-
-    let confirmedMatchId = existingConfirmedMatch?.id || null;
-
-    if (existingConfirmedMatch?.id) {
-      const nextStatus = existingConfirmedMatch.status === 'confirmed' ? 'confirmed' : 'accepted';
-      const { data: updatedMatch, error: updateConfirmedMatchError } = await supabase
-        .from('confirmed_matches')
-        .update({
-          club_a_email: stableAEmail,
-          club_b_email: stableBEmail,
-          status: nextStatus
-        })
-        .eq('id', existingConfirmedMatch.id)
-        .select('id')
-        .single<{ id: string }>();
-      console.log('[acceptSuggestedMatch] confirmed match update result', {
-        updatedMatch,
-        updateConfirmedMatchError
-      });
-
-      if (updateConfirmedMatchError || !updatedMatch?.id) {
-        console.error('[acceptSuggestedMatch] confirmed match update failed', updateConfirmedMatchError);
-        return { ok: false, message: 'No pudimos aceptar este match. Intenta nuevamente.' };
-      }
-
-      confirmedMatchId = updatedMatch.id;
-    } else {
-      const { data: insertedMatch, error: insertConfirmedMatchError } = await supabase
-        .from('confirmed_matches')
-        .insert({
-          post_a_id: stableAId,
-          post_b_id: stableBId,
-          club_a_email: stableAEmail,
-          club_b_email: stableBEmail,
-          status: 'accepted'
-        })
-        .select('id')
-        .single<{ id: string }>();
-      console.log('[acceptSuggestedMatch] confirmed match insert result', {
-        insertedMatch,
-        insertConfirmedMatchError
-      });
-
-      if (insertConfirmedMatchError || !insertedMatch?.id) {
-        console.error('[acceptSuggestedMatch] confirmed match insert failed', insertConfirmedMatchError);
-        return { ok: false, message: 'No pudimos aceptar este match. Intenta nuevamente.' };
-      }
-
-      confirmedMatchId = insertedMatch.id;
-    }
-
-    if (!confirmedMatchId) {
-      console.error('[acceptSuggestedMatch] missing confirmed match id after write', {
-        stableAId,
-        stableBId
-      });
-      return { ok: false, message: 'No pudimos aceptar este match. Intenta nuevamente.' };
-    }
-
-    const { error: updateSuggestedError } = await supabase
+    const { data: match, error: matchError } = await supabase
       .from('suggested_matches')
-      .update({ status: 'archived' })
-      .eq('id', suggestion.id);
-    console.log('[acceptSuggestedMatch] suggested match update result', {
-      suggestionId: suggestion.id,
-      updateSuggestedError
-    });
+      .select('id,post_a_id,post_b_id,status')
+      .eq('id', matchId)
+      .maybeSingle<{ id: string; post_a_id: string; post_b_id: string; status: string }>();
 
-    if (updateSuggestedError) {
-      console.error('[acceptSuggestedMatch] suggested_matches update failed', updateSuggestedError);
-      return { ok: false, message: 'Match guardado, pero no pudimos cerrar la sugerencia. Intenta recargar.' };
+    if (matchError || !match) {
+      return { ok: false, message: 'No encontramos este match.' };
     }
 
-    try {
-      const conversation = await createConversationIfNotExists(confirmedMatchId);
-      console.log('[acceptSuggestedMatch] conversation upsert result', {
-        conversationId: conversation?.id || null
-      });
-    } catch (conversationError) {
-      console.error('[acceptSuggestedMatch] conversation creation failed', conversationError);
-      return { ok: false, message: 'Match aceptado, pero no pudimos iniciar el chat. Intenta recargar.' };
+    if (match.status !== 'active') {
+      return { ok: false, message: 'Este match ya no está disponible.' };
     }
 
-    revalidatePath('/');
-    revalidatePath('/matches/aceptar');
-    revalidatePath('/match-confirmado');
+    const { data: teams, error: teamsError } = await supabase
+      .from('availabilities')
+      .select('id,club_name,comuna,has_court,contact_email,notes')
+      .in('id', [match.post_a_id, match.post_b_id]);
 
-    console.log('[acceptSuggestedMatch] success', {
-      confirmedMatchId,
-      suggestionId: suggestion.id
-    });
+    if (teamsError || !teams || teams.length !== 2) {
+      return { ok: false, message: 'No encontramos la información de ambos equipos.' };
+    }
 
-    return { ok: true };
+    const byId = new Map(teams.map((team) => [team.id, team]));
+    const teamA = byId.get(match.post_a_id);
+    const teamB = byId.get(match.post_b_id);
+
+    if (!teamA || !teamB) {
+      return { ok: false, message: 'No encontramos la información de ambos equipos.' };
+    }
+
+    const teamAEmail = normalizeEmail(teamA.contact_email);
+    const teamBEmail = normalizeEmail(teamB.contact_email);
+
+    if (emailInput !== teamAEmail && emailInput !== teamBEmail) {
+      return { ok: false, message: 'Este correo no está asociado a este match.' };
+    }
+
+    const rival = emailInput === teamAEmail ? teamB : teamA;
+    const rivalEmail = normalizeEmail(rival.contact_email);
+
+    if (!rivalEmail) {
+      return { ok: false, message: 'El equipo rival no tiene correo de contacto disponible.' };
+    }
+
+    return {
+      ok: true,
+      contact: {
+        clubName: safeString(rival.club_name) || 'Club rival',
+        comuna: safeString(rival.comuna) || 'Comuna no informada',
+        hasCourt: Boolean(rival.has_court),
+        contactEmail: rivalEmail,
+        notes: normalizeOptional(rival.notes)
+      }
+    };
   } catch (error) {
-    console.error('[acceptSuggestedMatch] unexpected error', error);
-    return { ok: false, message: 'No pudimos confirmar el match en este momento. Intenta nuevamente.' };
+    console.error('[getMatchContact] unexpected error', error);
+    return { ok: false, message: 'No pudimos validar el correo en este momento. Intenta nuevamente.' };
   }
 }
+
 export async function registerMatchResult(formData: FormData) {
   assertHoneypot(formData);
   await assertRateLimit('results');

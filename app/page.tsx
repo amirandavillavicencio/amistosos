@@ -45,7 +45,7 @@ export default async function HomePage() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-violet-200/80">Matchmaking activo</p>
               <h2 className="text-2xl font-black text-white">Sugerencias reales para coordinar amistosos</h2>
-              <p className="mt-1 text-sm text-slate-300">Revisa compatibilidad, confirma el cruce y abre conversación con ambos clubes en minutos.</p>
+              <p className="mt-1 text-sm text-slate-300">Revisa compatibilidad y desbloquea el contacto del rival en un solo paso.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center rounded-full border border-violet-300/35 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-100">
