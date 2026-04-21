@@ -938,6 +938,8 @@ export async function getMatchContact(formData: FormData): Promise<
     const matchId = String(formData.get('match_id') || '').trim();
     const emailInput = normalizeEmail(formData.get('email'));
 
+    console.log('[getMatchContact] matchId:', matchId);
+
     if (!isUuid(matchId)) {
       return { ok: false, message: 'El match seleccionado no es válido.' };
     }
@@ -958,6 +960,8 @@ export async function getMatchContact(formData: FormData): Promise<
     }
 
     const normalizedMatchStatus = safeString(match.status).toLowerCase();
+    console.log('[getMatchContact] current status:', normalizedMatchStatus || '(empty)');
+
     if (normalizedMatchStatus !== 'active' && normalizedMatchStatus !== 'archived') {
       return { ok: false, message: 'Este match ya no está disponible.' };
     }
@@ -994,19 +998,53 @@ export async function getMatchContact(formData: FormData): Promise<
     }
 
     let persisted = normalizedMatchStatus === 'archived';
+
     if (normalizedMatchStatus === 'active') {
-      const { error: updateError } = await supabase
+      const updatePayload = { status: 'archived' as const };
+      console.log('[getMatchContact] updating match to archived');
+      console.log('[getMatchContact] update payload:', updatePayload);
+
+      const { data: updatedRows, error: updateError } = await supabase
         .from('suggested_matches')
-        .update({ status: 'archived' })
-        .eq('id', match.id);
+        .update(updatePayload)
+        .eq('id', match.id)
+        .eq('status', 'active')
+        .select('id,status');
+
+      const affectedRows = Array.isArray(updatedRows) ? updatedRows.length : 0;
+
+      console.log('[getMatchContact] update result:', updatedRows);
+      console.log('[getMatchContact] affected rows:', affectedRows);
 
       if (updateError) {
-        console.error('[getMatchContact] failed to archive suggested match after successful validation', {
+        console.error('[getMatchContact] update error:', updateError);
+      }
+
+      const { data: persistedMatch, error: persistedMatchError } = await supabase
+        .from('suggested_matches')
+        .select('id,status')
+        .eq('id', match.id)
+        .maybeSingle<{ id: string; status: string }>();
+
+      const persistedStatus = safeString(persistedMatch?.status).toLowerCase();
+
+      console.log('[getMatchContact] persisted match row:', persistedMatch);
+      console.log('[getMatchContact] persisted status:', persistedStatus || '(empty)');
+
+      if (persistedMatchError) {
+        console.error('[getMatchContact] persisted status check error:', persistedMatchError);
+      }
+
+      persisted = !updateError && !persistedMatchError && affectedRows === 1 && persistedStatus === 'archived';
+
+      if (!persisted) {
+        console.error('[getMatchContact] status was not persisted after update', {
           matchId: match.id,
-          updateError
+          affectedRows,
+          persistedStatus,
+          updateError,
+          persistedMatchError
         });
-      } else {
-        persisted = true;
       }
     }
 
