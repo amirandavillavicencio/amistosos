@@ -7,6 +7,7 @@ import { acceptSuggestedMatch } from '@/app/actions';
 interface AcceptMatchFormProps {
   postAId: string;
   postBId: string;
+  suggestedMatchId?: string | null;
   teamAName: string;
   teamBName: string;
   defaultAEmail: string;
@@ -16,6 +17,7 @@ interface AcceptMatchFormProps {
 export default function AcceptMatchForm({
   postAId,
   postBId,
+  suggestedMatchId,
   teamAName,
   teamBName,
   defaultAEmail,
@@ -47,6 +49,7 @@ export default function AcceptMatchForm({
         <input type="hidden" name="website" value="" />
         <input type="hidden" name="post_a_id" value={postAId} />
         <input type="hidden" name="post_b_id" value={postBId} />
+        <input type="hidden" name="suggested_match_id" value={suggestedMatchId || ''} />
 
         <div>
           <label htmlFor="club_a_email" className="block text-sm font-medium text-ink">
