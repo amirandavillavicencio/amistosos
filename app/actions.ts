@@ -930,12 +930,20 @@ export async function acceptSuggestedMatch(formData: FormData): Promise<{ ok: tr
     const postBId = String(formData.get('post_b_id') || '').trim();
     const clubAEmailInput = normalizeEmail(formData.get('club_a_email'));
     const clubBEmailInput = normalizeEmail(formData.get('club_b_email'));
+    console.log('[acceptSuggestedMatch] input', {
+      postAId,
+      postBId,
+      clubAEmailInput,
+      clubBEmailInput
+    });
 
     if (!isUuid(postAId) || !isUuid(postBId) || postAId === postBId) {
+      console.warn('[acceptSuggestedMatch] invalid match ids', { postAId, postBId });
       return { ok: false, message: 'El match seleccionado no es válido.' };
     }
 
     if (!isValidEmail(clubAEmailInput) || !isValidEmail(clubBEmailInput)) {
+      console.warn('[acceptSuggestedMatch] invalid emails', { clubAEmailInput, clubBEmailInput });
       return { ok: false, message: 'Debes completar correos de contacto válidos para ambos equipos.' };
     }
 
@@ -943,6 +951,12 @@ export async function acceptSuggestedMatch(formData: FormData): Promise<{ ok: tr
     const [stableAEmail, stableBEmail] = postAId < postBId
       ? [clubAEmailInput, clubBEmailInput]
       : [clubBEmailInput, clubAEmailInput];
+    console.log('[acceptSuggestedMatch] normalized pair and emails', {
+      stableAId,
+      stableBId,
+      stableAEmail,
+      stableBEmail
+    });
 
     const supabase = getSupabaseAdmin();
 
@@ -950,9 +964,13 @@ export async function acceptSuggestedMatch(formData: FormData): Promise<{ ok: tr
       .from('availabilities')
       .select('id')
       .in('id', [stableAId, stableBId]);
+    console.log('[acceptSuggestedMatch] availabilities lookup result', {
+      foundPosts: posts?.length || 0,
+      posts
+    });
 
     if (postsError || !posts || posts.length !== 2) {
-      console.error('acceptSuggestedMatch availabilities check failed', postsError);
+      console.error('[acceptSuggestedMatch] availabilities check failed', postsError);
       return { ok: false, message: 'No encontramos ambas disponibilidades para confirmar este match.' };
     }
 
@@ -962,30 +980,91 @@ export async function acceptSuggestedMatch(formData: FormData): Promise<{ ok: tr
       .or(`and(post_a_id.eq.${stableAId},post_b_id.eq.${stableBId}),and(post_a_id.eq.${stableBId},post_b_id.eq.${stableAId})`)
       .limit(1)
       .maybeSingle<{ id: string; status: string }>();
+    console.log('[acceptSuggestedMatch] suggested match lookup result', {
+      suggestion,
+      suggestionError
+    });
 
     if (suggestionError) {
-      console.error('acceptSuggestedMatch suggestion lookup failed', suggestionError);
+      console.error('[acceptSuggestedMatch] suggestion lookup failed', suggestionError);
       return { ok: false, message: 'No pudimos validar la sugerencia del match. Intenta nuevamente.' };
     }
 
     if (!suggestion) {
+      console.warn('[acceptSuggestedMatch] no suggestion found for pair', { stableAId, stableBId });
       return { ok: false, message: 'Este match ya no está disponible para confirmar.' };
     }
 
-    const { data: confirmedMatch, error } = await supabase
+    const { data: existingConfirmedMatch, error: existingConfirmedMatchError } = await supabase
       .from('confirmed_matches')
-      .upsert({
-        post_a_id: stableAId,
-        post_b_id: stableBId,
-        club_a_email: stableAEmail,
-        club_b_email: stableBEmail,
-        status: 'accepted'
-      }, { onConflict: 'post_a_id,post_b_id' })
-      .select('id')
-      .single<{ id: string }>();
+      .select('id,post_a_id,post_b_id,status')
+      .eq('post_a_id', stableAId)
+      .eq('post_b_id', stableBId)
+      .maybeSingle<{ id: string; post_a_id: string; post_b_id: string; status: string }>();
+    console.log('[acceptSuggestedMatch] confirmed match pre-check', {
+      existingConfirmedMatch,
+      existingConfirmedMatchError
+    });
 
-    if (error || !confirmedMatch?.id) {
-      console.error('acceptSuggestedMatch confirmed_matches upsert failed', error);
+    if (existingConfirmedMatchError) {
+      console.error('[acceptSuggestedMatch] confirmed match pre-check failed', existingConfirmedMatchError);
+      return { ok: false, message: 'No pudimos validar el estado actual del match. Intenta nuevamente.' };
+    }
+
+    let confirmedMatchId = existingConfirmedMatch?.id || null;
+
+    if (existingConfirmedMatch?.id) {
+      const { data: updatedMatch, error: updateConfirmedMatchError } = await supabase
+        .from('confirmed_matches')
+        .update({
+          club_a_email: stableAEmail,
+          club_b_email: stableBEmail,
+          status: 'accepted'
+        })
+        .eq('id', existingConfirmedMatch.id)
+        .select('id')
+        .single<{ id: string }>();
+      console.log('[acceptSuggestedMatch] confirmed match update result', {
+        updatedMatch,
+        updateConfirmedMatchError
+      });
+
+      if (updateConfirmedMatchError || !updatedMatch?.id) {
+        console.error('[acceptSuggestedMatch] confirmed match update failed', updateConfirmedMatchError);
+        return { ok: false, message: 'No pudimos aceptar este match. Intenta nuevamente.' };
+      }
+
+      confirmedMatchId = updatedMatch.id;
+    } else {
+      const { data: insertedMatch, error: insertConfirmedMatchError } = await supabase
+        .from('confirmed_matches')
+        .insert({
+          post_a_id: stableAId,
+          post_b_id: stableBId,
+          club_a_email: stableAEmail,
+          club_b_email: stableBEmail,
+          status: 'accepted'
+        })
+        .select('id')
+        .single<{ id: string }>();
+      console.log('[acceptSuggestedMatch] confirmed match insert result', {
+        insertedMatch,
+        insertConfirmedMatchError
+      });
+
+      if (insertConfirmedMatchError || !insertedMatch?.id) {
+        console.error('[acceptSuggestedMatch] confirmed match insert failed', insertConfirmedMatchError);
+        return { ok: false, message: 'No pudimos aceptar este match. Intenta nuevamente.' };
+      }
+
+      confirmedMatchId = insertedMatch.id;
+    }
+
+    if (!confirmedMatchId) {
+      console.error('[acceptSuggestedMatch] missing confirmed match id after write', {
+        stableAId,
+        stableBId
+      });
       return { ok: false, message: 'No pudimos aceptar este match. Intenta nuevamente.' };
     }
 
@@ -993,21 +1072,38 @@ export async function acceptSuggestedMatch(formData: FormData): Promise<{ ok: tr
       .from('suggested_matches')
       .update({ status: 'archived' })
       .eq('id', suggestion.id);
+    console.log('[acceptSuggestedMatch] suggested match update result', {
+      suggestionId: suggestion.id,
+      updateSuggestedError
+    });
 
     if (updateSuggestedError) {
-      console.error('acceptSuggestedMatch suggested_matches update failed', updateSuggestedError);
+      console.error('[acceptSuggestedMatch] suggested_matches update failed', updateSuggestedError);
       return { ok: false, message: 'Match guardado, pero no pudimos cerrar la sugerencia. Intenta recargar.' };
     }
 
-    await createConversationIfNotExists(confirmedMatch.id);
+    try {
+      const conversation = await createConversationIfNotExists(confirmedMatchId);
+      console.log('[acceptSuggestedMatch] conversation upsert result', {
+        conversationId: conversation?.id || null
+      });
+    } catch (conversationError) {
+      console.error('[acceptSuggestedMatch] conversation creation failed', conversationError);
+      return { ok: false, message: 'Match aceptado, pero no pudimos iniciar el chat. Intenta recargar.' };
+    }
 
     revalidatePath('/');
     revalidatePath('/matches/aceptar');
     revalidatePath('/match-confirmado');
 
+    console.log('[acceptSuggestedMatch] success', {
+      confirmedMatchId,
+      suggestionId: suggestion.id
+    });
+
     return { ok: true };
   } catch (error) {
-    console.error('acceptSuggestedMatch unexpected error', error);
+    console.error('[acceptSuggestedMatch] unexpected error', error);
     return { ok: false, message: 'No pudimos confirmar el match en este momento. Intenta nuevamente.' };
   }
 }
