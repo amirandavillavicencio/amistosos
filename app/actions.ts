@@ -473,6 +473,8 @@ export async function rebuildSuggestedMatches() {
     for (const [pairKey, row] of rowByPair.entries()) {
       const existingForPair = existingByPair.get(pairKey) || [];
       const primary = existingForPair.length ? pickPrimaryMatch(existingForPair) : null;
+      const primaryStatus = safeString(primary?.status).toLowerCase();
+      const nextStatus: 'active' | 'archived' = primaryStatus === 'archived' ? 'archived' : 'active';
       const updatePayload = {
         post_a_id: row.post_a_id,
         post_b_id: row.post_b_id,
@@ -481,7 +483,7 @@ export async function rebuildSuggestedMatches() {
         location_score: row.location_score,
         level_score: row.level_score,
         elo_score: row.elo_score,
-        status: 'active' as const,
+        status: nextStatus,
         updated_at: new Date().toISOString()
       };
 
@@ -1138,6 +1140,7 @@ export async function getMatchContact(formData: FormData): Promise<
 
     if (normalizedMatchStatus === 'active') {
       const updatePayload = { status: 'archived' as const };
+      console.log('[getMatchContact] status antes del update:', normalizedMatchStatus);
       console.log('[getMatchContact] intentando update status active -> archived');
       console.log('[getMatchContact] update payload:', updatePayload);
       const { data: updateResult, error: updateError } = await supabase
@@ -1146,7 +1149,7 @@ export async function getMatchContact(formData: FormData): Promise<
         .eq('id', matchId)
         .select('id,status');
 
-      console.log('[getMatchContact] update result:', updateResult);
+      console.log('[getMatchContact] resultado del update:', updateResult);
       if (updateError) {
         console.error('[getMatchContact] update error:', updateError);
       }
@@ -1188,6 +1191,11 @@ export async function getMatchContact(formData: FormData): Promise<
     }
 
     const matchDone = normalizedMatchStatus === 'archived' || persisted;
+    if (persisted) {
+      revalidatePath('/');
+      revalidatePath('/matches/aceptar');
+      revalidatePath(`/matches/aceptar?matchId=${matchId}`);
+    }
 
     return {
       ok: true,

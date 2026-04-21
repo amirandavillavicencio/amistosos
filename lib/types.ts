@@ -132,6 +132,7 @@ export interface SuggestedMatchInsertRow {
 export interface SuggestedMatchCard {
   id: string;
   pairKey: string;
+  status: 'active' | 'archived';
   totalScore: number;
   scheduleScore: number;
   locationScore: number;
