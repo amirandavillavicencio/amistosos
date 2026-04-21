@@ -17,8 +17,39 @@ interface AcceptMatchFormProps {
 
 export default function AcceptMatchForm({ matchId }: AcceptMatchFormProps) {
   const [isPending, startTransition] = useTransition();
+  const [isExpanded, setIsExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [contact, setContact] = useState<RivalContact | null>(null);
+
+  const mapErrorMessage = (message?: string) => {
+    if (!message) {
+      return 'No pudimos validar el correo.';
+    }
+
+    if (message === 'Este correo no está asociado a este match.') {
+      return 'Este correo no pertenece a ninguno de los equipos de este match';
+    }
+
+    return message;
+  };
+
+  if (!isExpanded) {
+    return (
+      <div className="mt-6">
+        <button
+          type="button"
+          className="btn-accent inline-flex items-center gap-2"
+          onClick={() => {
+            setError(null);
+            setContact(null);
+            setIsExpanded(true);
+          }}
+        >
+          Hacer match
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form
@@ -30,7 +61,7 @@ export default function AcceptMatchForm({ matchId }: AcceptMatchFormProps) {
           const result = await getMatchContact(formData);
 
           if (!result?.ok) {
-            setError(result?.message || 'No pudimos validar el correo.');
+            setError(mapErrorMessage(result?.message));
             return;
           }
 
@@ -40,13 +71,15 @@ export default function AcceptMatchForm({ matchId }: AcceptMatchFormProps) {
       className="mt-6 space-y-4"
       aria-busy={isPending}
     >
+      <p className="text-sm text-ink">Pon un correo de uno de los equipos para ver el contacto del rival</p>
+
       <fieldset disabled={isPending} className="space-y-4 disabled:opacity-80">
         <input type="hidden" name="website" value="" />
         <input type="hidden" name="match_id" value={matchId} />
 
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-ink">
-            Tu correo del equipo
+            Correo de un equipo del match
           </label>
           <input
             id="email"
