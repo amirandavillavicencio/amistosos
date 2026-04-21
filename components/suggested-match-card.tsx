@@ -133,7 +133,7 @@ export default function SuggestedMatchCardView({
             href={`/matches/aceptar?matchId=${encodeURIComponent(match.id)}`}
             className="btn-accent text-xs"
           >
-            Ver contacto
+            Hacer match
           </Link>
         ) : null}
         {teamA.postId ? (

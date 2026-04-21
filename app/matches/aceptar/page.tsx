@@ -91,9 +91,9 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
     <main className="section py-8 sm:py-10">
       <article className="card-panel mx-auto max-w-3xl p-5 sm:p-6">
         <p className="text-xs font-semibold uppercase tracking-wide text-accent">Contacto de amistoso</p>
-        <h1 className="mt-1 display-serif text-3xl text-ink">Ver contacto del equipo rival</h1>
+        <h1 className="mt-1 display-serif text-3xl text-ink">Hacer match con el equipo rival</h1>
         <p className="mt-2 text-sm text-muted">
-          Ingresa el correo asociado a tu equipo para desbloquear el contacto del rival.
+          Pon un correo de uno de los equipos para ver el contacto del rival.
         </p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
