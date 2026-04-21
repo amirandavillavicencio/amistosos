@@ -936,6 +936,7 @@ export async function getMatchContact(formData: FormData): Promise<
     assertHoneypot(formData);
 
     const matchId = String(formData.get('match_id') || '').trim();
+    console.log('[getMatchContact] matchId recibido:', matchId);
     const emailInput = normalizeEmail(formData.get('email'));
 
     console.log('[getMatchContact] matchId:', matchId);
@@ -1000,61 +1001,57 @@ export async function getMatchContact(formData: FormData): Promise<
     let persisted = normalizedMatchStatus === 'archived';
 
     if (normalizedMatchStatus === 'active') {
-      const updatePayload = { status: 'archived' as const };
-      console.log('[getMatchContact] updating match to archived');
-      console.log('[getMatchContact] update payload:', updatePayload);
-
-      const { data: updatedRows, error: updateError } = await supabase
+      console.log('[getMatchContact] intentando update status active -> archived');
+      const { data: updateResult, error: updateError } = await supabase
         .from('suggested_matches')
-        .update(updatePayload)
+        .update({ status: 'archived' })
         .eq('id', match.id)
-        .eq('status', 'active')
         .select('id,status');
 
-      const affectedRows = Array.isArray(updatedRows) ? updatedRows.length : 0;
+      console.log('[getMatchContact] update result:', updateResult);
+      console.error('[getMatchContact] update error:', updateError);
 
-      console.log('[getMatchContact] update result:', updatedRows);
-      console.log('[getMatchContact] affected rows:', affectedRows);
+      const updateAffectedRows = Array.isArray(updateResult) ? updateResult.length : 0;
 
-      if (updateError) {
-        console.error('[getMatchContact] update error:', updateError);
-      }
-
-      const { data: persistedMatch, error: persistedMatchError } = await supabase
-        .from('suggested_matches')
-        .select('id,status')
-        .eq('id', match.id)
-        .maybeSingle<{ id: string; status: string }>();
-
-      const persistedStatus = safeString(persistedMatch?.status).toLowerCase();
-
-      console.log('[getMatchContact] persisted match row:', persistedMatch);
-      console.log('[getMatchContact] persisted status:', persistedStatus || '(empty)');
-
-      if (persistedMatchError) {
-        console.error('[getMatchContact] persisted status check error:', persistedMatchError);
-      }
-
-      persisted = !updateError && !persistedMatchError && affectedRows === 1 && persistedStatus === 'archived';
-
-      if (!persisted) {
-        console.error('[getMatchContact] status was not persisted after update', {
+      if (updateError || updateAffectedRows === 0) {
+        console.error('[getMatchContact] failed to archive suggested match after successful validation', {
           matchId: match.id,
-          affectedRows,
-          persistedStatus,
           updateError,
-          persistedMatchError
+          updateAffectedRows
         });
+      } else {
+        const { data: persistedMatch, error: persistedMatchError } = await supabase
+          .from('suggested_matches')
+          .select('id,status')
+          .eq('id', match.id)
+          .maybeSingle<{ id: string; status: string }>();
+
+        console.log('[getMatchContact] status real persistido:', persistedMatch?.status ?? null);
+
+        if (persistedMatchError) {
+          console.error('[getMatchContact] error verificando persistencia tras update:', persistedMatchError);
+        }
+
+        persisted = safeString(persistedMatch?.status).toLowerCase() === 'archived';
+
+        if (!persisted) {
+          console.error('[getMatchContact] update ejecutado pero status final no quedó archived', {
+            matchId: match.id,
+            persistedStatus: persistedMatch?.status ?? null
+          });
+        }
       }
     }
 
+    const matchDone = normalizedMatchStatus === 'archived' || persisted;
+
     return {
       ok: true,
-      matchDone: true,
+      matchDone,
       persisted,
       successMessage: persisted
         ? 'Match hecho. Ya tienes el contacto del rival.'
-        : 'Contacto desbloqueado. Ya tienes el contacto del rival.',
+        : 'Contacto desbloqueado, pero no pudimos cerrar el match en el sistema.',
       contact: {
         clubName: safeString(rival.club_name) || 'Club rival',
         comuna: safeString(rival.comuna) || 'Comuna no informada',
