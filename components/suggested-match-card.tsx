@@ -58,6 +58,8 @@ export default function SuggestedMatchCardView({
   const branch = safeText(branchLabel[match?.branch] || match?.a?.branch, 'No informada');
   const weekdays = match.sharedWeekdays.length ? formatWeekdayList(match.sharedWeekdays) : 'Sin cruce exacto';
   const availabilitySummary = `${teamA.schedule} / ${teamB.schedule}`;
+  const suggestedMatchId = String(match?.id || '').trim();
+  const hasSuggestedMatchId = Boolean(suggestedMatchId) && !suggestedMatchId.includes('::');
 
   return (
     <article
@@ -128,9 +130,9 @@ export default function SuggestedMatchCardView({
       </ul>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {teamA.postId && teamB.postId ? (
+        {teamA.postId && teamB.postId && hasSuggestedMatchId ? (
           <Link
-            href={`/matches/aceptar?matchId=${encodeURIComponent(match.id)}`}
+            href={`/matches/aceptar?matchId=${encodeURIComponent(suggestedMatchId)}`}
             className="btn-accent text-xs"
           >
             Hacer match

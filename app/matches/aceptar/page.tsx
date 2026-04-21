@@ -18,48 +18,66 @@ function safeText(value: string | null | undefined, fallback: string): string {
   return clean || fallback;
 }
 
+function MatchErrorState({
+  title,
+  message
+}: {
+  title: string;
+  message: string;
+}) {
+  return (
+    <main className="section py-10">
+      <article className="card-panel p-6 text-center">
+        <h1 className="display-serif text-2xl text-ink">{title}</h1>
+        <p className="mt-2 text-sm text-muted">{message}</p>
+        <Link href="/" className="btn-secondary mt-4 inline-flex">Volver al inicio</Link>
+      </article>
+    </main>
+  );
+}
+
 export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageProps) {
   const resolved = searchParams || {};
   const matchId = String(resolved.matchId || '').trim();
-  const postAId = String(resolved.postA || '').trim();
-  const postBId = String(resolved.postB || '').trim();
+
+  console.log('[matches/aceptar] searchParams:', resolved);
+  console.log('[matches/aceptar] matchId:', matchId || '(missing)');
+
+  if (!matchId) {
+    return (
+      <MatchErrorState
+        title="Falta información del match"
+        message="No se recibió el identificador del match."
+      />
+    );
+  }
 
   const supabase = getSupabaseAdmin();
+  const { data } = await supabase
+    .from('suggested_matches')
+    .select('id,post_a_id,post_b_id,status')
+    .eq('id', matchId)
+    .maybeSingle<{ id: string; post_a_id: string; post_b_id: string; status: string }>();
 
-  let suggestedMatch: { id: string; post_a_id: string; post_b_id: string; status: string } | null = null;
+  const suggestedMatch = data || null;
+  console.log('[matches/aceptar] match found:', suggestedMatch);
+  console.log('[matches/aceptar] match status:', suggestedMatch?.status ?? '(not found)');
 
-  if (matchId) {
-    const { data } = await supabase
-      .from('suggested_matches')
-      .select('id,post_a_id,post_b_id,status')
-      .eq('id', matchId)
-      .maybeSingle<{ id: string; post_a_id: string; post_b_id: string; status: string }>();
-
-    suggestedMatch = data || null;
-  }
-
-  if (!suggestedMatch && postAId && postBId && postAId !== postBId) {
-    const [stableAId, stableBId] = postAId < postBId ? [postAId, postBId] : [postBId, postAId];
-    const { data } = await supabase
-      .from('suggested_matches')
-      .select('id,post_a_id,post_b_id,status')
-      .or(`and(post_a_id.eq.${stableAId},post_b_id.eq.${stableBId}),and(post_a_id.eq.${stableBId},post_b_id.eq.${stableAId})`)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle<{ id: string; post_a_id: string; post_b_id: string; status: string }>();
-
-    suggestedMatch = data || null;
-  }
-
-  if (!suggestedMatch || suggestedMatch.status !== 'active') {
+  if (!suggestedMatch) {
     return (
-      <main className="section py-10">
-        <article className="card-panel p-6 text-center">
-          <h1 className="display-serif text-2xl text-ink">Match no disponible</h1>
-          <p className="mt-2 text-sm text-muted">No encontramos un match activo para ver el contacto.</p>
-          <Link href="/" className="btn-secondary mt-4 inline-flex">Volver al inicio</Link>
-        </article>
-      </main>
+      <MatchErrorState
+        title="Match no encontrado"
+        message="No existe un match con el identificador recibido."
+      />
+    );
+  }
+
+  if (suggestedMatch.status !== 'active') {
+    return (
+      <MatchErrorState
+        title="Match no disponible"
+        message="El match existe, pero ya no está disponible para ver el contacto."
+      />
     );
   }
 
