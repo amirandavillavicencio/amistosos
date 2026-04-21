@@ -939,6 +939,8 @@ export async function getMatchContact(formData: FormData): Promise<
     console.log('[getMatchContact] matchId recibido:', matchId);
     const emailInput = normalizeEmail(formData.get('email'));
 
+    console.log('[getMatchContact] matchId:', matchId);
+
     if (!isUuid(matchId)) {
       return { ok: false, message: 'El match seleccionado no es válido.' };
     }
@@ -959,6 +961,8 @@ export async function getMatchContact(formData: FormData): Promise<
     }
 
     const normalizedMatchStatus = safeString(match.status).toLowerCase();
+    console.log('[getMatchContact] current status:', normalizedMatchStatus || '(empty)');
+
     if (normalizedMatchStatus !== 'active' && normalizedMatchStatus !== 'archived') {
       return { ok: false, message: 'Este match ya no está disponible.' };
     }
@@ -995,6 +999,7 @@ export async function getMatchContact(formData: FormData): Promise<
     }
 
     let persisted = normalizedMatchStatus === 'archived';
+
     if (normalizedMatchStatus === 'active') {
       console.log('[getMatchContact] intentando update status active -> archived');
       const { data: updateResult, error: updateError } = await supabase
