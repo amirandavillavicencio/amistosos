@@ -130,10 +130,10 @@ export default function SuggestedMatchCardView({
       <div className="mt-4 flex flex-wrap gap-2">
         {teamA.postId && teamB.postId ? (
           <Link
-            href={`/matches/aceptar?postA=${encodeURIComponent(teamA.postId)}&postB=${encodeURIComponent(teamB.postId)}`}
+            href={`/matches/aceptar?matchId=${encodeURIComponent(match.id)}`}
             className="btn-accent text-xs"
           >
-            Confirmar match ahora
+            Ver contacto
           </Link>
         ) : null}
         {teamA.postId ? (

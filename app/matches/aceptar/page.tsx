@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 
 interface AcceptMatchPageProps {
   searchParams?: {
+    matchId?: string;
     postA?: string;
     postB?: string;
   };
@@ -19,26 +20,53 @@ function safeText(value: string | null | undefined, fallback: string): string {
 
 export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageProps) {
   const resolved = searchParams || {};
+  const matchId = String(resolved.matchId || '').trim();
   const postAId = String(resolved.postA || '').trim();
   const postBId = String(resolved.postB || '').trim();
 
-  if (!postAId || !postBId || postAId === postBId) {
+  const supabase = getSupabaseAdmin();
+
+  let suggestedMatch: { id: string; post_a_id: string; post_b_id: string; status: string } | null = null;
+
+  if (matchId) {
+    const { data } = await supabase
+      .from('suggested_matches')
+      .select('id,post_a_id,post_b_id,status')
+      .eq('id', matchId)
+      .maybeSingle<{ id: string; post_a_id: string; post_b_id: string; status: string }>();
+
+    suggestedMatch = data || null;
+  }
+
+  if (!suggestedMatch && postAId && postBId && postAId !== postBId) {
+    const [stableAId, stableBId] = postAId < postBId ? [postAId, postBId] : [postBId, postAId];
+    const { data } = await supabase
+      .from('suggested_matches')
+      .select('id,post_a_id,post_b_id,status')
+      .or(`and(post_a_id.eq.${stableAId},post_b_id.eq.${stableBId}),and(post_a_id.eq.${stableBId},post_b_id.eq.${stableAId})`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<{ id: string; post_a_id: string; post_b_id: string; status: string }>();
+
+    suggestedMatch = data || null;
+  }
+
+  if (!suggestedMatch || suggestedMatch.status !== 'active') {
     return (
       <main className="section py-10">
         <article className="card-panel p-6 text-center">
           <h1 className="display-serif text-2xl text-ink">Match no disponible</h1>
-          <p className="mt-2 text-sm text-muted">No encontramos los equipos para confirmar este amistoso.</p>
+          <p className="mt-2 text-sm text-muted">No encontramos un match activo para ver el contacto.</p>
           <Link href="/" className="btn-secondary mt-4 inline-flex">Volver al inicio</Link>
         </article>
       </main>
     );
   }
 
-  const supabase = getSupabaseAdmin();
   const { data: posts, error } = await supabase
     .from('availabilities')
     .select('*')
-    .in('id', [postAId, postBId])
+    .in('id', [suggestedMatch.post_a_id, suggestedMatch.post_b_id])
     .returns<AvailabilityWithTeam[]>();
 
   if (error || !posts || posts.length !== 2) {
@@ -54,26 +82,18 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
   }
 
   const byId = new Map(posts.map((post) => [post.id, post]));
-  const teamA = byId.get(postAId) || posts[0];
-  const teamB = byId.get(postBId) || posts[1];
+  const teamA = byId.get(suggestedMatch.post_a_id) || posts[0];
+  const teamB = byId.get(suggestedMatch.post_b_id) || posts[1];
   const teamAName = safeText(teamA.club_name, 'Equipo A');
   const teamBName = safeText(teamB.club_name, 'Equipo B');
-  const [stableAId, stableBId] = postAId < postBId ? [postAId, postBId] : [postBId, postAId];
-  const { data: suggestedMatch } = await supabase
-    .from('suggested_matches')
-    .select('id')
-    .or(`and(post_a_id.eq.${stableAId},post_b_id.eq.${stableBId}),and(post_a_id.eq.${stableBId},post_b_id.eq.${stableAId})`)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle<{ id: string }>();
 
   return (
     <main className="section py-8 sm:py-10">
       <article className="card-panel mx-auto max-w-3xl p-5 sm:p-6">
-        <p className="text-xs font-semibold uppercase tracking-wide text-accent">Confirmación de amistoso</p>
-        <h1 className="mt-1 display-serif text-3xl text-ink">Aceptar match sugerido</h1>
+        <p className="text-xs font-semibold uppercase tracking-wide text-accent">Contacto de amistoso</p>
+        <h1 className="mt-1 display-serif text-3xl text-ink">Ver contacto del equipo rival</h1>
         <p className="mt-2 text-sm text-muted">
-          Revisa equipos y confirma correos de contacto para registrar este match como <strong>aceptado</strong>.
+          Ingresa el correo asociado a tu equipo para desbloquear el contacto del rival.
         </p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -89,15 +109,7 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
           </div>
         </div>
 
-        <AcceptMatchForm
-          postAId={teamA.id}
-          postBId={teamB.id}
-          suggestedMatchId={suggestedMatch?.id || null}
-          teamAName={teamAName}
-          teamBName={teamBName}
-          defaultAEmail={teamA.contact_email || ''}
-          defaultBEmail={teamB.contact_email || ''}
-        />
+        <AcceptMatchForm matchId={suggestedMatch.id} />
 
         <div className="pt-2">
           <Link href="/" className="btn-secondary">Cancelar</Link>
