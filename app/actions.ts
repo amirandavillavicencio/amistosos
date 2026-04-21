@@ -926,13 +926,18 @@ export async function acceptSuggestedMatch(formData: FormData): Promise<{ ok: tr
   try {
     assertHoneypot(formData);
 
+    const payload = Object.fromEntries(formData.entries());
     const postAId = String(formData.get('post_a_id') || '').trim();
     const postBId = String(formData.get('post_b_id') || '').trim();
+    const suggestedMatchId = String(formData.get('suggested_match_id') || '').trim();
     const clubAEmailInput = normalizeEmail(formData.get('club_a_email'));
     const clubBEmailInput = normalizeEmail(formData.get('club_b_email'));
+    console.log('[acceptSuggestedMatch] incoming payload:', payload);
+    console.log('[acceptSuggestedMatch] validating matchId:', suggestedMatchId || null);
     console.log('[acceptSuggestedMatch] input', {
       postAId,
       postBId,
+      suggestedMatchId,
       clubAEmailInput,
       clubBEmailInput
     });
@@ -974,12 +979,28 @@ export async function acceptSuggestedMatch(formData: FormData): Promise<{ ok: tr
       return { ok: false, message: 'No encontramos ambas disponibilidades para confirmar este match.' };
     }
 
-    const { data: suggestion, error: suggestionError } = await supabase
-      .from('suggested_matches')
-      .select('id,status')
-      .or(`and(post_a_id.eq.${stableAId},post_b_id.eq.${stableBId}),and(post_a_id.eq.${stableBId},post_b_id.eq.${stableAId})`)
-      .limit(1)
-      .maybeSingle<{ id: string; status: string }>();
+    let suggestion: { id: string; status: string; post_a_id: string; post_b_id: string } | null = null;
+    let suggestionError: unknown = null;
+
+    if (isUuid(suggestedMatchId)) {
+      const result = await supabase
+        .from('suggested_matches')
+        .select('id,status,post_a_id,post_b_id')
+        .eq('id', suggestedMatchId)
+        .maybeSingle<{ id: string; status: string; post_a_id: string; post_b_id: string }>();
+      suggestion = result.data;
+      suggestionError = result.error;
+    } else {
+      const result = await supabase
+        .from('suggested_matches')
+        .select('id,status,post_a_id,post_b_id')
+        .or(`and(post_a_id.eq.${stableAId},post_b_id.eq.${stableBId}),and(post_a_id.eq.${stableBId},post_b_id.eq.${stableAId})`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle<{ id: string; status: string; post_a_id: string; post_b_id: string }>();
+      suggestion = result.data;
+      suggestionError = result.error;
+    }
     console.log('[acceptSuggestedMatch] suggested match lookup result', {
       suggestion,
       suggestionError
@@ -995,13 +1016,32 @@ export async function acceptSuggestedMatch(formData: FormData): Promise<{ ok: tr
       return { ok: false, message: 'Este match ya no está disponible para confirmar.' };
     }
 
-    const { data: existingConfirmedMatch, error: existingConfirmedMatchError } = await supabase
+    const samePair = (
+      (suggestion.post_a_id === stableAId && suggestion.post_b_id === stableBId) ||
+      (suggestion.post_a_id === stableBId && suggestion.post_b_id === stableAId)
+    );
+    if (!samePair) {
+      console.warn('[acceptSuggestedMatch] suggestion id does not match current pair', {
+        suggestedMatchId,
+        suggestionPostAId: suggestion.post_a_id,
+        suggestionPostBId: suggestion.post_b_id,
+        stableAId,
+        stableBId
+      });
+      return { ok: false, message: 'El match seleccionado no coincide con los equipos actuales.' };
+    }
+
+    const { data: confirmedMatches, error: existingConfirmedMatchError } = await supabase
       .from('confirmed_matches')
       .select('id,post_a_id,post_b_id,status')
       .eq('post_a_id', stableAId)
       .eq('post_b_id', stableBId)
-      .maybeSingle<{ id: string; post_a_id: string; post_b_id: string; status: string }>();
+      .order('created_at', { ascending: false })
+      .limit(2);
+    const existingConfirmedMatch = confirmedMatches?.[0] || null;
     console.log('[acceptSuggestedMatch] confirmed match pre-check', {
+      suggestedMatchId: suggestion.id,
+      confirmedMatchesFound: confirmedMatches?.length || 0,
       existingConfirmedMatch,
       existingConfirmedMatchError
     });
@@ -1010,16 +1050,27 @@ export async function acceptSuggestedMatch(formData: FormData): Promise<{ ok: tr
       console.error('[acceptSuggestedMatch] confirmed match pre-check failed', existingConfirmedMatchError);
       return { ok: false, message: 'No pudimos validar el estado actual del match. Intenta nuevamente.' };
     }
+    if (confirmedMatches && confirmedMatches.length > 1) {
+      console.warn('[acceptSuggestedMatch] duplicate confirmed matches detected for pair; using latest row', {
+        stableAId,
+        stableBId,
+        confirmedMatchIds: confirmedMatches.map((match) => match.id)
+      });
+    }
+    if (existingConfirmedMatch?.status === 'played') {
+      return { ok: false, message: 'Este match ya fue marcado como jugado y no puede volver a aceptarse.' };
+    }
 
     let confirmedMatchId = existingConfirmedMatch?.id || null;
 
     if (existingConfirmedMatch?.id) {
+      const nextStatus = existingConfirmedMatch.status === 'confirmed' ? 'confirmed' : 'accepted';
       const { data: updatedMatch, error: updateConfirmedMatchError } = await supabase
         .from('confirmed_matches')
         .update({
           club_a_email: stableAEmail,
           club_b_email: stableBEmail,
-          status: 'accepted'
+          status: nextStatus
         })
         .eq('id', existingConfirmedMatch.id)
         .select('id')

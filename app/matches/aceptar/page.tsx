@@ -58,6 +58,14 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
   const teamB = byId.get(postBId) || posts[1];
   const teamAName = safeText(teamA.club_name, 'Equipo A');
   const teamBName = safeText(teamB.club_name, 'Equipo B');
+  const [stableAId, stableBId] = postAId < postBId ? [postAId, postBId] : [postBId, postAId];
+  const { data: suggestedMatch } = await supabase
+    .from('suggested_matches')
+    .select('id')
+    .or(`and(post_a_id.eq.${stableAId},post_b_id.eq.${stableBId}),and(post_a_id.eq.${stableBId},post_b_id.eq.${stableAId})`)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string }>();
 
   return (
     <main className="section py-8 sm:py-10">
@@ -84,6 +92,7 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
         <AcceptMatchForm
           postAId={teamA.id}
           postBId={teamB.id}
+          suggestedMatchId={suggestedMatch?.id || null}
           teamAName={teamAName}
           teamBName={teamBName}
           defaultAEmail={teamA.contact_email || ''}
