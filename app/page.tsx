@@ -68,10 +68,10 @@ export default async function HomePage() {
         <section className="relative overflow-hidden rounded-3xl border border-violet-300/25 bg-slate-950 p-4 shadow-[0_24px_60px_rgba(2,6,23,0.75)] sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-black text-white">Cruces sugeridos</h2>
+              <h2 className="text-2xl font-black text-white">Cruces activos</h2>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full border border-violet-300/35 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-100">
+              <span className="inline-flex items-center whitespace-nowrap rounded-full border border-violet-300/35 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-100">
                 {activeSuggestedMatches.length} cruce{activeSuggestedMatches.length === 1 ? '' : 's'}
               </span>
             </div>
@@ -79,7 +79,7 @@ export default async function HomePage() {
 
           {activeSuggestedMatches.length === 0 ? (
             <article className="rounded-2xl border border-dashed border-slate-700/80 bg-slate-900/50 p-7 text-center sm:p-9">
-              <p className="text-lg font-semibold text-slate-100">Todavía no hay cruces</p>
+              <p className="text-lg font-semibold text-slate-100">Aún no hay cruces activos</p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 <Link href="/publicar" className="btn-accent">
                   Publicar
@@ -99,14 +99,14 @@ export default async function HomePage() {
             <div>
               <h2 className="text-2xl font-black text-white">Cruces coordinados</h2>
             </div>
-            <span className="inline-flex items-center rounded-full border border-sky-300/35 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-100">
-              {matchedSuggestedMatches.length} coordinado{matchedSuggestedMatches.length === 1 ? '' : 's'}
+            <span className="inline-flex items-center whitespace-nowrap rounded-full border border-sky-300/35 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-100">
+              {matchedSuggestedMatches.length} cruce{matchedSuggestedMatches.length === 1 ? '' : 's'}
             </span>
           </div>
 
           {matchedSuggestedMatches.length === 0 ? (
             <article className="rounded-2xl border border-dashed border-slate-700/80 bg-slate-900/50 p-7 text-center sm:p-9">
-              <p className="text-lg font-semibold text-slate-100">Todavía no hay cruces coordinados</p>
+              <p className="text-lg font-semibold text-slate-100">Aún no hay cruces coordinados</p>
             </article>
           ) : (
             <SuggestedMatchList matches={matchedSuggestedMatches} />
@@ -123,7 +123,7 @@ export default async function HomePage() {
 
           {openAvailabilities.length === 0 ? (
             <article className="rounded-2xl border border-dashed border-slate-700/80 bg-slate-900/50 p-8 text-center">
-              <p className="text-lg font-semibold text-slate-100">No hay publicaciones activas</p>
+              <p className="text-lg font-semibold text-slate-100">Aún no hay publicaciones</p>
             </article>
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -141,7 +141,7 @@ export default async function HomePage() {
                 <h2 className="text-2xl font-black text-white">Resultados</h2>
               </div>
               <Link href="/resultados" className="btn-accent">
-                Ver resultados
+                Ir a resultados
               </Link>
             </div>
             <SuggestedMatchList matches={completedSuggestedMatches} />

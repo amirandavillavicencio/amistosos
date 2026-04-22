@@ -15,19 +15,14 @@ export default function HomeHero({
       <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-fuchsia-200">Amistosos Vóley</p>
-          <h1 className="mt-2 text-2xl font-black leading-tight text-white sm:text-3xl">
-            Encuentra rival para
-            <span className="block bg-gradient-to-r from-violet-300 via-fuchsia-300 to-orange-300 bg-clip-text text-transparent">
-              tu próximo amistoso
-            </span>
-          </h1>
+          <h1 className="mt-2 text-2xl font-black leading-tight text-white sm:text-3xl">Salta a la cancha</h1>
 
           <div className="mt-4 flex flex-wrap gap-2.5">
             <Link
               href="/publicar"
               className="inline-flex rounded-full border border-fuchsia-300/60 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-orange-400 px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_30px_rgba(217,70,239,0.45)] transition hover:brightness-110"
             >
-              Publicar disponibilidad
+              Publicar
             </Link>
             <Link
               href="/ranking"
@@ -40,14 +35,12 @@ export default function HomeHero({
 
         <div className="grid grid-cols-2 gap-2 sm:min-w-72">
           <div className="rounded-2xl border border-violet-300/35 bg-violet-500/10 p-3 backdrop-blur">
-            <p className="text-[11px] uppercase tracking-wider text-violet-100/90">Cruces hoy</p>
+            <p className="whitespace-nowrap text-[11px] uppercase tracking-wider text-violet-100/90">Cruces</p>
             <p className="mt-1 text-2xl font-black text-white">{suggestedCount}</p>
-            <p className="text-xs text-slate-200">Listos para coordinar</p>
           </div>
           <div className="rounded-2xl border border-emerald-300/35 bg-emerald-500/10 p-3 backdrop-blur">
-            <p className="text-[11px] uppercase tracking-wider text-emerald-100/90">Publicaciones</p>
+            <p className="whitespace-nowrap text-[11px] uppercase tracking-wider text-emerald-100/90">Publicaciones</p>
             <p className="mt-1 text-2xl font-black text-white">{postCount}</p>
-            <p className="text-xs text-slate-200">Abiertas</p>
           </div>
         </div>
       </div>
