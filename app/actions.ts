@@ -4,9 +4,11 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
 import { getActiveBannedClubNameKeys, isClubBannedByName, normalizeClubNameKey } from '@/lib/banned-clubs';
+import { sendMatchNotificationEmails } from '@/lib/email/send-match-notification';
 import { USABLE_AVAILABILITY_STATUSES } from '@/lib/matching';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type {
+  AvailabilityRow,
   AgeCategory,
   Branch,
   ConfirmedMatchRow,
@@ -457,6 +459,36 @@ export async function rebuildSuggestedMatches() {
       existingByPair.set(pairKey, list);
     }
 
+    const availabilityById = new Map<string, AvailabilityRow>();
+    for (const post of sourcePosts) {
+      const postId = safeString((post as { id?: unknown })?.id);
+      if (isUuid(postId)) {
+        availabilityById.set(postId, post as AvailabilityRow);
+      }
+    }
+
+    const ownerEmailById = new Map<string, string>();
+    const ownerIds = new Set(
+      [...availabilityById.values()].map((post) => safeString(post.owner_id)).filter(Boolean)
+    );
+
+    for (const ownerId of ownerIds) {
+      try {
+        const { data: authData, error: authError } = await supabase.auth.admin.getUserById(ownerId);
+        if (authError) {
+          console.error('rebuildSuggestedMatches owner email lookup failed', { ownerId, authError });
+          continue;
+        }
+
+        const email = safeString(authData?.user?.email).toLowerCase();
+        if (email) {
+          ownerEmailById.set(ownerId, email);
+        }
+      } catch (authLookupError) {
+        console.error('rebuildSuggestedMatches owner email lookup exception', { ownerId, authLookupError });
+      }
+    }
+
     const rowByPair = new Map<string, (typeof safeRows)[number]>();
     for (const row of safeRows) {
       rowByPair.set(`${row.post_a_id}::${row.post_b_id}`, row);
@@ -534,14 +566,46 @@ export async function rebuildSuggestedMatches() {
         const { data: inserted, error: insertError } = await supabase
           .from('suggested_matches')
           .insert(row)
-          .select('id');
+          .select('id')
+          .single();
 
         if (insertError) {
           console.error('rebuildSuggestedMatches insert failed', { pairKey, insertError });
           return { ok: false, error: 'match_rebuild_failed' as const };
         }
 
-        insertedMatches += Array.isArray(inserted) ? inserted.length : 1;
+        insertedMatches += 1;
+
+        const postA = availabilityById.get(row.post_a_id);
+        const postB = availabilityById.get(row.post_b_id);
+        const ownerAId = safeString(postA?.owner_id);
+        const ownerBId = safeString(postB?.owner_id);
+
+        if (postA && postB && ownerAId && ownerBId) {
+          try {
+            await sendMatchNotificationEmails({
+              postA,
+              postB,
+              ownerA: ownerEmailById.has(ownerAId) ? { ownerId: ownerAId, email: ownerEmailById.get(ownerAId)! } : null,
+              ownerB: ownerEmailById.has(ownerBId) ? { ownerId: ownerBId, email: ownerEmailById.get(ownerBId)! } : null,
+              suggestedMatchId: inserted?.id || null
+            });
+          } catch (emailError) {
+            console.error('rebuildSuggestedMatches sendMatchNotificationEmails failed', {
+              pairKey,
+              suggestedMatchId: inserted?.id || null,
+              emailError
+            });
+          }
+        } else {
+          console.warn('rebuildSuggestedMatches skipped match notification due to missing post/owner metadata', {
+            pairKey,
+            postAFound: Boolean(postA),
+            postBFound: Boolean(postB),
+            ownerAId: ownerAId || null,
+            ownerBId: ownerBId || null
+          });
+        }
       }
     }
 

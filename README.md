@@ -47,12 +47,16 @@ Crea `.env.local` con:
 NEXT_PUBLIC_SUPABASE_URL=tu_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
 SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
+RESEND_API_KEY=re_xxxxxxxxx
+RESEND_FROM_EMAIL="Amistosos Vóley <notificaciones@tu-dominio.com>"
+NEXT_PUBLIC_APP_URL=https://tu-dominio.com
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD_HASH=2e54906dde52b5aa8fc7cde6f7b88379378fcb3b4020e84f8e1a790c1d8edcd3
 ADMIN_SESSION_SECRET=cambia_esto_por_un_secreto_largo_y_unico
 ```
 
 > `SUPABASE_SERVICE_ROLE_KEY` se usa en server actions para escribir en DB sin requerir auth de usuario final.
+> `RESEND_API_KEY` habilita el envío de notificaciones de nuevos matches sugeridos.
 > `ADMIN_PASSWORD_HASH` corresponde a la clave inicial `Voley.2011` usando `sha256`.
 
 ## 3) Correr local
