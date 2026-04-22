@@ -48,10 +48,10 @@ export function StatusBadge({ children, tone = 'neutral' }: { children: ReactNod
 
 export function EmptyState({ title, description, action, icon = '🏐' }: { title: string; description: string; action?: ReactNode; icon?: ReactNode }) {
   return (
-    <div className="app-card-muted flex flex-col items-start gap-3 rounded-2xl border border-dashed border-slate-600/80 p-5">
+    <div className="app-card-muted flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-600/80 p-6 text-center">
       <div className="text-4xl" aria-hidden="true">{icon}</div>
       <h3 className="text-base font-semibold text-white">{title}</h3>
-      <p className="text-sm text-slate-300">{description}</p>
+      <p className="max-w-2xl text-sm text-slate-300">{description}</p>
       {action}
     </div>
   );

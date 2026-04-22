@@ -64,15 +64,15 @@ export default function SuggestedMatchCardView({
 
   return (
     <article
-      className={`card-panel p-4 ${featured ? 'border-accent/55 bg-accent/5 shadow-[0_18px_42px_rgba(217,70,239,0.2)]' : ''}`}
+      className={`card-panel p-4 sm:p-5 ${featured ? 'border-accent/55 bg-accent/5 shadow-[0_18px_42px_rgba(217,70,239,0.2)]' : ''}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium text-accent">
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent">
             {featured ? 'Cruce destacado · ' : ''}
             {tier}
           </p>
-          <h3 className="mt-1 display-serif text-xl text-ink">
+          <h3 className="mt-1 display-serif text-xl text-ink sm:text-2xl">
             {teamA.clubName} vs {teamB.clubName}
           </h3>
           <p className="mt-1 text-sm text-muted">
@@ -85,20 +85,20 @@ export default function SuggestedMatchCardView({
         </div>
       </div>
 
-      <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
-        <div className="rounded-lg border border-line/80 bg-panel/40 px-2.5 py-2 text-muted">
+      <div className="mt-4 grid gap-2 text-xs sm:grid-cols-2">
+        <div className="rounded-xl border border-line/80 bg-panel/40 px-3 py-2.5 text-muted">
           <p className="font-semibold text-ink">Días en común</p>
           <p className="mt-0.5">{weekdays}</p>
         </div>
-        <div className="rounded-lg border border-line/80 bg-panel/40 px-2.5 py-2 text-muted">
+        <div className="rounded-xl border border-line/80 bg-panel/40 px-3 py-2.5 text-muted">
           <p className="font-semibold text-ink">Horario cruzado</p>
           <p className="mt-0.5">{availabilitySummary}</p>
         </div>
       </div>
 
-      <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted">
+      <div className="mt-3 grid grid-cols-2 gap-2.5 text-xs text-muted">
         {[teamA, teamB].map((team) => (
-          <div key={team.id} className="rounded-lg border border-line/80 p-2">
+          <div key={team.id} className="rounded-xl border border-line/80 bg-panel/20 p-2.5">
             {team.logoUrl ? (
               <img
                 src={team.logoUrl}
@@ -124,7 +124,7 @@ export default function SuggestedMatchCardView({
         ))}
       </div>
 
-      <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-muted">
+      <ul className="mt-4 list-disc space-y-1 pl-5 text-xs text-muted">
         {reasons.map((reason) => (
           <li key={reason}>{reason}</li>
         ))}

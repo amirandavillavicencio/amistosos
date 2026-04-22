@@ -14,22 +14,25 @@ function rankStyles(index: number): string {
 
 export default function HomeRankingPreview({ teams }: HomeRankingPreviewProps) {
   return (
-    <section className="rounded-3xl border border-slate-700/75 bg-slate-900/85 p-4 shadow-[0_20px_52px_rgba(2,6,23,0.5)] sm:p-5">
+    <section className="app-card p-4 sm:p-5 md:p-6">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold text-white">Ranking</h2>
-        <Link href="/ranking" className="text-sm font-semibold text-violet-200 hover:text-violet-100">
+        <div>
+          <p className="app-eyebrow">Competencia</p>
+          <h2 className="mt-1 text-xl font-black text-white">Ranking</h2>
+        </div>
+        <Link href="/ranking" className="btn-secondary !px-4 !py-2 text-xs sm:text-sm">
           Ver todo
         </Link>
       </div>
 
       {teams.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-600 p-4 text-sm text-slate-300">Sin ranking por ahora.</div>
+        <div className="rounded-2xl border border-dashed border-slate-600/90 bg-slate-900/45 p-5 text-sm text-slate-300">Sin ranking por ahora.</div>
       ) : (
-        <ol className="space-y-2.5">
+        <ol className="space-y-3">
           {teams.map((team, index) => (
             <li
               key={team.id}
-              className={`flex items-center justify-between rounded-xl border px-3 py-2.5 ${rankStyles(index)}`}
+              className={`flex items-center justify-between rounded-2xl border px-3.5 py-3 ${rankStyles(index)}`}
             >
               <div>
                 <p className="text-sm font-bold">
