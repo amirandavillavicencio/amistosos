@@ -10,14 +10,17 @@ import {
   getCompletedSuggestedMatches,
   getMatchedSuggestedMatches,
   getOpenAvailabilities,
+  logHomeProductionDiagnostics,
   getRecentResults,
   getSuggestedMatches
 } from '@/lib/data';
 import type { AvailabilityWithTeam, ClubStatsCard, MatchResultRow, SuggestedMatchCard } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function HomePage() {
+  await logHomeProductionDiagnostics();
   await rebuildSuggestedMatches();
 
   let activeSuggestedMatches: SuggestedMatchCard[] = [];
@@ -46,6 +49,15 @@ export default async function HomePage() {
   } catch (error) {
     console.error('HomePage data load failed', error);
   }
+
+  console.log('[home] data summary', {
+    activeSuggestedMatches: activeSuggestedMatches.length,
+    matchedSuggestedMatches: matchedSuggestedMatches.length,
+    completedSuggestedMatches: completedSuggestedMatches.length,
+    openAvailabilities: openAvailabilities.length,
+    ranking: ranking.length,
+    recentResults: recentResults.length
+  });
 
   return (
     <main className="section relative isolate py-7 sm:py-9 md:py-10">
