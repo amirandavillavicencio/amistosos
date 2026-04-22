@@ -69,7 +69,7 @@ export default function SuggestedMatchCardView({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium text-accent">
-            {featured ? 'Match destacado · ' : ''}
+            {featured ? 'Cruce destacado · ' : ''}
             {tier}
           </p>
           <h3 className="mt-1 display-serif text-xl text-ink">
@@ -136,7 +136,7 @@ export default function SuggestedMatchCardView({
             href={`/matches/aceptar?matchId=${encodeURIComponent(suggestedMatchId)}`}
             className="btn-accent text-xs"
           >
-            Hacer match
+            Confirmar cruce
           </Link>
         ) : null}
         {teamA.postId ? (

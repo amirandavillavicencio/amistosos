@@ -19,10 +19,7 @@ export default function HomeRankingPreview({ teams }: HomeRankingPreviewProps) {
     <section className="rounded-3xl border border-slate-700/75 bg-slate-900/85 p-4 shadow-[0_20px_52px_rgba(2,6,23,0.5)] sm:p-5">
       <div className="mb-4 flex items-center justify-between gap-2">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-violet-200">
-            Ranking ELO
-          </p>
-          <h2 className="mt-1 text-lg font-bold text-white">Top 5 equipos</h2>
+          <h2 className="text-lg font-bold text-white">Ranking</h2>
         </div>
         <Link
           href="/ranking"
@@ -34,8 +31,7 @@ export default function HomeRankingPreview({ teams }: HomeRankingPreviewProps) {
 
       {teams.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-600 p-4 text-sm text-slate-300">
-          Aún no hay equipos rankeados. Registra resultados para iniciar la
-          tabla.
+          Todavía no hay equipos en el ranking.
         </div>
       ) : (
         <ol className="space-y-2.5">
