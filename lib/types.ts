@@ -59,7 +59,7 @@ export interface SuggestedMatchRow {
   location_score: number;
   level_score: number;
   elo_score: number;
-  status: 'active' | 'archived';
+  status: 'active' | 'matched' | 'completed' | 'archived' | 'expired' | 'unconfirmed';
   created_at: string;
 }
 
@@ -132,7 +132,7 @@ export interface SuggestedMatchInsertRow {
 export interface SuggestedMatchCard {
   id: string;
   pairKey: string;
-  status: 'active' | 'archived';
+  status: 'active' | 'matched' | 'completed' | 'archived' | 'expired' | 'unconfirmed';
   totalScore: number;
   scheduleScore: number;
   locationScore: number;

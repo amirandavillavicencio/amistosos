@@ -474,7 +474,15 @@ export async function rebuildSuggestedMatches() {
       const existingForPair = existingByPair.get(pairKey) || [];
       const primary = existingForPair.length ? pickPrimaryMatch(existingForPair) : null;
       const primaryStatus = safeString(primary?.status).toLowerCase();
-      const nextStatus: 'active' | 'archived' = primaryStatus === 'archived' ? 'archived' : 'active';
+      const nextStatus: 'active' | 'matched' | 'completed' | 'archived' | 'expired' | 'unconfirmed' = (
+        primaryStatus === 'matched'
+        || primaryStatus === 'completed'
+        || primaryStatus === 'archived'
+        || primaryStatus === 'expired'
+        || primaryStatus === 'unconfirmed'
+      )
+        ? (primaryStatus as 'matched' | 'completed' | 'archived' | 'expired' | 'unconfirmed')
+        : 'active';
       const updatePayload = {
         post_a_id: row.post_a_id,
         post_b_id: row.post_b_id,
@@ -1101,7 +1109,7 @@ export async function getMatchContact(formData: FormData): Promise<
     });
     console.log('[getMatchContact] current status:', normalizedMatchStatus || '(empty)');
 
-    if (normalizedMatchStatus !== 'active' && normalizedMatchStatus !== 'archived') {
+    if (normalizedMatchStatus !== 'active' && normalizedMatchStatus !== 'matched') {
       return { ok: false, message: 'Este match ya no está disponible.' };
     }
 
@@ -1136,13 +1144,13 @@ export async function getMatchContact(formData: FormData): Promise<
       return { ok: false, message: 'El equipo rival no tiene correo de contacto disponible.' };
     }
 
-    let persisted = normalizedMatchStatus === 'archived';
+    let persisted = normalizedMatchStatus === 'matched';
     let finalStatus = normalizedMatchStatus;
 
     if (normalizedMatchStatus === 'active') {
-      const updatePayload = { status: 'archived' as const };
+      const updatePayload = { status: 'matched' as const };
       console.log('[getMatchContact] status antes del update:', normalizedMatchStatus);
-      console.log('[getMatchContact] intentando update status active -> archived');
+      console.log('[getMatchContact] intentando update status active -> matched');
       console.log('[getMatchContact] update payload:', updatePayload);
       const { data: updateResult, error: updateError } = await supabase
         .from('suggested_matches')
@@ -1160,7 +1168,7 @@ export async function getMatchContact(formData: FormData): Promise<
       console.log('[getMatchContact] update affected rows:', updateAffectedRows);
 
       if (updateError || updateAffectedRows === 0) {
-        console.error('[getMatchContact] failed to archive suggested match after successful validation', {
+        console.error('[getMatchContact] failed to move suggested match to matched after successful validation', {
           matchId: match.id,
           updateError,
           updateAffectedRows
@@ -1183,19 +1191,19 @@ export async function getMatchContact(formData: FormData): Promise<
       }
 
       finalStatus = safeString(persistedMatch?.status).toLowerCase();
-      persisted = finalStatus === 'archived';
+      persisted = finalStatus === 'matched';
       console.log('[getMatchContact] status real después del update:', finalStatus || '(empty)');
 
       if (!persisted) {
-        console.error('[getMatchContact] update ejecutado pero status final no quedó archived', {
+        console.error('[getMatchContact] update ejecutado pero status final no quedó matched', {
           matchId: match.id,
           persistedStatus: persistedMatch?.status ?? null
         });
-        return { ok: false, message: 'No pudimos cerrar el match en el sistema. Intenta nuevamente.' };
+        return { ok: false, message: 'No pudimos marcar el match como coordinado en el sistema. Intenta nuevamente.' };
       }
     }
 
-    const matchDone = finalStatus === 'archived';
+    const matchDone = finalStatus === 'matched';
     if (persisted) {
       revalidatePath('/');
       revalidatePath('/matches/aceptar');
@@ -1207,8 +1215,8 @@ export async function getMatchContact(formData: FormData): Promise<
       matchDone,
       persisted,
       successMessage: persisted
-        ? 'Match hecho. Ya tienes el contacto del rival.'
-        : 'Contacto desbloqueado, pero no pudimos cerrar el match en el sistema.',
+        ? 'Match coordinado. Ya tienes el contacto del rival.'
+        : 'Contacto desbloqueado, pero no pudimos marcar el match como coordinado en el sistema.',
       contact: {
         clubName: safeString(rival.club_name) || 'Club rival',
         comuna: safeString(rival.comuna) || 'Comuna no informada',

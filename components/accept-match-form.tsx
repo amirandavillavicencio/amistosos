@@ -14,7 +14,7 @@ interface RivalContact {
 
 interface AcceptMatchFormProps {
   matchId: string;
-  initialMatchStatus: 'active' | 'archived';
+  initialMatchStatus: 'active' | 'matched';
   initialContact: RivalContact | null;
 }
 
@@ -22,9 +22,9 @@ export default function AcceptMatchForm({ matchId, initialMatchStatus, initialCo
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [contact, setContact] = useState<RivalContact | null>(initialContact);
-  const [matchDone, setMatchDone] = useState(initialMatchStatus === 'archived');
+  const [matchDone, setMatchDone] = useState(initialMatchStatus === 'matched');
   const [successMessage, setSuccessMessage] = useState<string | null>(
-    initialMatchStatus === 'archived' ? 'Match hecho. Ya tienes el contacto del rival.' : null
+    initialMatchStatus === 'matched' ? 'Match coordinado. Ya tienes el contacto del rival.' : null
   );
 
   const mapErrorMessage = (message?: string) => {
@@ -103,7 +103,7 @@ export default function AcceptMatchForm({ matchId, initialMatchStatus, initialCo
 
       {isPending && (
         <p className="text-sm text-muted" role="status" aria-live="polite">
-          Validando correo y desbloqueando contacto...
+          Validando correo y registrando match coordinado...
         </p>
       )}
 
@@ -121,7 +121,7 @@ export default function AcceptMatchForm({ matchId, initialMatchStatus, initialCo
 
       {matchDone && (
         <div className="inline-flex rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-200">
-          Match hecho
+          Match coordinado
         </div>
       )}
 
