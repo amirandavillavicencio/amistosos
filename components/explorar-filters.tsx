@@ -5,7 +5,7 @@ import Link from 'next/link';
 import PostCard from '@/components/post-card';
 import { EmptyState } from '@/components/ui-shell';
 import type { AvailabilityWithTeam } from '@/lib/types';
-import { formatComuna } from '@/lib/presentation';
+import { capitalize, formatComuna } from '@/lib/presentation';
 
 const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const branchOptions = [
@@ -85,7 +85,7 @@ export default function ExplorarFilters({ posts }: { posts: AvailabilityWithTeam
           {weekdays.map((day) => (
             <label key={day} className="flex items-center gap-2 rounded-xl border border-slate-700/70 bg-slate-950/30 px-2 py-2 text-xs text-slate-100">
               <input type="checkbox" checked={days.includes(day)} onChange={(e) => setDays((prev) => e.target.checked ? [...prev, day] : prev.filter((d) => d !== day))} />
-              <span className="capitalize">{day}</span>
+              <span>{capitalize(day)}</span>
             </label>
           ))}
         </div>

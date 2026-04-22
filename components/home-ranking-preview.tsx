@@ -13,6 +13,8 @@ function rankStyles(index: number): string {
 }
 
 export default function HomeRankingPreview({ teams }: HomeRankingPreviewProps) {
+  if (!Array.isArray(teams) || teams.length === 0) return null;
+
   return (
     <section className="app-card p-4 sm:p-5 md:p-6">
       <div className="mb-4 flex items-center justify-between gap-2">
@@ -24,31 +26,26 @@ export default function HomeRankingPreview({ teams }: HomeRankingPreviewProps) {
           Ver todo
         </Link>
       </div>
-
-      {teams.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-600/90 bg-slate-900/45 p-5 text-sm text-slate-300">Sin ranking por ahora.</div>
-      ) : (
-        <ol className="space-y-3">
-          {teams.map((team, index) => (
-            <li
-              key={team.id}
-              className={`flex items-center justify-between rounded-2xl border px-3.5 py-3 ${rankStyles(index)}`}
-            >
-              <div>
-                <p className="text-sm font-bold">
-                  #{index + 1} · {team.club_name}
-                </p>
-                <p className="text-xs text-slate-300">
-                  {team.matches_played} PJ · {team.wins} G · {team.losses} P
-                </p>
-              </div>
-              <span className="rounded-full border border-fuchsia-300/30 bg-fuchsia-500/15 px-2.5 py-1 text-xs font-bold text-fuchsia-100">
-                {team.win_rate}% WR
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
+      <ol className="space-y-3">
+        {teams.map((team, index) => (
+          <li
+            key={team.id}
+            className={`flex items-center justify-between rounded-2xl border px-3.5 py-3 ${rankStyles(index)}`}
+          >
+            <div>
+              <p className="text-sm font-bold">
+                #{index + 1} · {team.club_name}
+              </p>
+              <p className="text-xs text-slate-300">
+                {team.matches_played} PJ · {team.wins} G · {team.losses} P
+              </p>
+            </div>
+            <span className="rounded-full border border-fuchsia-300/30 bg-fuchsia-500/15 px-2.5 py-1 text-xs font-bold text-fuchsia-100">
+              {team.win_rate}% WR
+            </span>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

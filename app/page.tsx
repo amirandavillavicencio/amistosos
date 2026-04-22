@@ -63,7 +63,6 @@ export default async function HomePage() {
 
   return (
     <main className="section relative isolate py-8 sm:py-10 md:py-12">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_12%,rgba(168,85,247,0.16),transparent_32%),radial-gradient(circle_at_85%_18%,rgba(236,72,153,0.14),transparent_30%),radial-gradient(circle_at_50%_85%,rgba(37,99,235,0.14),transparent_32%)]" />
       <div className="space-y-6 sm:space-y-7">
         <HomeHero suggestedCount={activeSuggestedMatches.length} postCount={openAvailabilities.length} />
         <HowItWorks />

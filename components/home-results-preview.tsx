@@ -18,6 +18,8 @@ function resultTone(result: MatchResultRow): string {
 }
 
 export default function HomeResultsPreview({ results }: HomeResultsPreviewProps) {
+  if (!Array.isArray(results) || results.length === 0) return null;
+
   return (
     <section className="app-card p-4 sm:p-5 md:p-6">
       <div className="mb-4 flex items-center justify-between gap-2">
@@ -29,27 +31,22 @@ export default function HomeResultsPreview({ results }: HomeResultsPreviewProps)
           Cargar resultado
         </Link>
       </div>
-
-      {results.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-600/90 bg-slate-900/45 p-5 text-sm text-slate-300">Sin resultados por ahora.</div>
-      ) : (
-        <div className="space-y-3">
-          {results.map((result) => (
-            <article key={result.id} className={`rounded-2xl border px-3.5 py-3 ${resultTone(result)}`}>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-bold text-white">{getResultLabel(result)}</p>
-                <p className="text-xs text-slate-300">{result.match_date}</p>
-              </div>
-              <div className="mt-1 flex items-center justify-between gap-3">
-                <p className="text-xs text-slate-200">{result.opponent_name || 'Club registrado'}</p>
-                <span className="whitespace-nowrap rounded-full border border-white/20 bg-black/20 px-2.5 py-1 text-sm font-black text-white">
-                  {result.sets_won} - {result.sets_lost}
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
+      <div className="space-y-3">
+        {results.map((result) => (
+          <article key={result.id} className={`rounded-2xl border px-3.5 py-3 ${resultTone(result)}`}>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-bold text-white">{getResultLabel(result)}</p>
+              <p className="text-xs text-slate-300">{result.match_date}</p>
+            </div>
+            <div className="mt-1 flex items-center justify-between gap-3">
+              <p className="text-xs text-slate-200">{result.opponent_name || 'Club registrado'}</p>
+              <span className="whitespace-nowrap rounded-full border border-white/20 bg-black/20 px-2.5 py-1 text-sm font-black text-white">
+                {result.sets_won} - {result.sets_lost}
+              </span>
+            </div>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }

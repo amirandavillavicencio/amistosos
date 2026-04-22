@@ -5,7 +5,7 @@ import type { AvailabilityWithTeam } from '@/lib/types';
 import TeamContact from '@/components/team-contact';
 import { useAuthState } from '@/components/auth-controls';
 import TeamAvatar from '@/components/team-avatar';
-import { formatBranch, formatCategory, formatComuna, toTitleCase } from '@/lib/presentation';
+import { capitalize, formatBranch, formatCategory, formatComuna } from '@/lib/presentation';
 
 interface PostCardProps {
   post: AvailabilityWithTeam;
@@ -18,7 +18,7 @@ export default function PostCard({ post, compact = false }: PostCardProps) {
   const startTime = post.start_time?.slice(0, 5) || '--:--';
   const endTime = post.end_time?.slice(0, 5) || '--:--';
   const weekdays = Array.isArray(post?.weekdays) ? post.weekdays : post?.weekday ? [post.weekday] : [];
-  const days = weekdays.filter(Boolean).map((day) => toTitleCase(day)).join(', ');
+  const days = weekdays.filter(Boolean).map((day) => capitalize(day)).join(', ');
 
   return (
     <article className={`group app-card transition hover:-translate-y-0.5 hover:border-fuchsia-300/40 ${compact ? 'p-4' : 'p-4 sm:p-5'}`}>
