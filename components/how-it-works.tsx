@@ -17,7 +17,7 @@ export default function HowItWorks() {
       <button
         type="button"
         onClick={() => setHidden(false)}
-        className="text-xs font-semibold text-fuchsia-200 underline underline-offset-4"
+        className="w-fit text-xs font-semibold text-fuchsia-200 underline underline-offset-4 transition hover:text-fuchsia-100"
       >
         Ver ¿Cómo funciona?
       </button>
@@ -30,15 +30,15 @@ export default function HowItWorks() {
   };
 
   return (
-    <section className="app-card grid gap-4 p-4 sm:p-5">
+    <section className="app-card grid gap-4 p-4 sm:p-5 md:p-6">
       <div>
         <p className="app-eyebrow">Onboarding</p>
         <h2 className="app-title text-2xl">¿Cómo funciona?</h2>
       </div>
       <div className="grid gap-3 md:grid-cols-3">
-        <article className="rounded-2xl border border-slate-700/70 bg-slate-900/40 p-3"><p className="text-2xl">📝</p><p className="mt-2 text-sm text-slate-200">1. Publica la disponibilidad de tu equipo</p></article>
-        <article className="rounded-2xl border border-slate-700/70 bg-slate-900/40 p-3"><p className="text-2xl">🤝</p><p className="mt-2 text-sm text-slate-200">2. Recibe propuestas de equipos compatibles</p></article>
-        <article className="rounded-2xl border border-slate-700/70 bg-slate-900/40 p-3"><p className="text-2xl">🏐</p><p className="mt-2 text-sm text-slate-200">3. Coordina y ¡a jugar!</p></article>
+        <article className="rounded-2xl border border-slate-700/70 bg-slate-900/40 p-4"><p className="text-2xl">📝</p><p className="mt-2 text-sm text-slate-200">1. Publica la disponibilidad de tu equipo</p></article>
+        <article className="rounded-2xl border border-slate-700/70 bg-slate-900/40 p-4"><p className="text-2xl">🤝</p><p className="mt-2 text-sm text-slate-200">2. Recibe propuestas de equipos compatibles</p></article>
+        <article className="rounded-2xl border border-slate-700/70 bg-slate-900/40 p-4"><p className="text-2xl">🏐</p><p className="mt-2 text-sm text-slate-200">3. Coordina y ¡a jugar!</p></article>
       </div>
       <div>
         <button type="button" className="btn-secondary" onClick={dismiss}>Ya entendí</button>

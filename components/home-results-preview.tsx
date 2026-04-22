@@ -19,20 +19,23 @@ function resultTone(result: MatchResultRow): string {
 
 export default function HomeResultsPreview({ results }: HomeResultsPreviewProps) {
   return (
-    <section className="rounded-3xl border border-slate-700/75 bg-slate-900/85 p-4 shadow-[0_20px_52px_rgba(2,6,23,0.5)] sm:p-5">
+    <section className="app-card p-4 sm:p-5 md:p-6">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold text-white">Resultados</h2>
-        <Link href="/resultados" className="text-sm font-semibold text-orange-200 hover:text-orange-100">
+        <div>
+          <p className="app-eyebrow">Últimos partidos</p>
+          <h2 className="mt-1 text-xl font-black text-white">Resultados</h2>
+        </div>
+        <Link href="/resultados" className="btn-secondary !px-4 !py-2 text-xs sm:text-sm">
           Cargar resultado
         </Link>
       </div>
 
       {results.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-600 p-4 text-sm text-slate-300">Sin resultados por ahora.</div>
+        <div className="rounded-2xl border border-dashed border-slate-600/90 bg-slate-900/45 p-5 text-sm text-slate-300">Sin resultados por ahora.</div>
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {results.map((result) => (
-            <article key={result.id} className={`rounded-xl border px-3 py-2.5 ${resultTone(result)}`}>
+            <article key={result.id} className={`rounded-2xl border px-3.5 py-3 ${resultTone(result)}`}>
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-bold text-white">{getResultLabel(result)}</p>
                 <p className="text-xs text-slate-300">{result.match_date}</p>

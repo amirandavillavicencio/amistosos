@@ -28,8 +28,8 @@ export default function PostCard({ post, compact = false }: PostCardProps) {
   const weekdays = Array.isArray(post?.weekdays) ? post.weekdays : post?.weekday ? [post.weekday] : [];
   const days = weekdays.filter(Boolean).join(', ');
   return (
-    <article className={`group app-card transition hover:-translate-y-0.5 hover:border-fuchsia-300/40 ${compact ? 'p-3.5 sm:p-4' : 'p-4 sm:p-5'}`}>
-      <div className="mb-3 flex items-start justify-between gap-3">
+    <article className={`group app-card transition hover:-translate-y-0.5 hover:border-fuchsia-300/40 ${compact ? 'p-4' : 'p-4 sm:p-5'}`}>
+      <div className="mb-3.5 flex items-start justify-between gap-3">
         <div>
           <h3 className={`break-words font-bold text-white ${compact ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl'}`}>
             <Link href={`/publicaciones/${post.id}`} className="transition group-hover:text-fuchsia-200">
@@ -43,9 +43,9 @@ export default function PostCard({ post, compact = false }: PostCardProps) {
           </div>
         </div>
         {post.logo_url ? (
-          <img src={post.logo_url} alt={`Logo ${post.club_name}`} className={`${compact ? 'h-12 w-12' : 'h-14 w-14'} rounded-full border border-slate-600 object-cover`} />
+          <img src={post.logo_url} alt={`Logo ${post.club_name}`} className={`${compact ? 'h-12 w-12' : 'h-14 w-14'} rounded-full border border-slate-500 object-cover`} />
         ) : (
-          <div className={`${compact ? 'h-12 w-12' : 'h-14 w-14'} flex items-center justify-center rounded-full border border-dashed border-slate-600 text-[11px] text-slate-300`}>
+          <div className={`${compact ? 'h-12 w-12' : 'h-14 w-14'} flex items-center justify-center rounded-full border border-dashed border-slate-500 text-[11px] text-slate-300`}>
             Sin logo
           </div>
         )}
@@ -63,11 +63,11 @@ export default function PostCard({ post, compact = false }: PostCardProps) {
       />
       {!compact && post.notes && <p className="mt-3 border-t border-slate-700/80 pt-3 text-sm text-slate-300">{post.notes}</p>}
       <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-700/80 pt-3">
-        <Link href={`/publicaciones/${post.id}`} className={`font-semibold text-fuchsia-200 hover:text-fuchsia-100 hover:underline ${compact ? 'text-xs' : 'text-sm'}`}>
+        <Link href={`/publicaciones/${post.id}`} className={`btn-secondary !px-3.5 !py-2 ${compact ? 'text-xs' : 'text-sm'}`}>
           Ver detalle
         </Link>
         {canEdit ? (
-          <Link href={`/publicaciones/${post.id}/editar`} className={`font-semibold text-emerald-200 hover:text-emerald-100 hover:underline ${compact ? 'text-xs' : 'text-sm'}`}>
+          <Link href={`/publicaciones/${post.id}/editar`} className={`btn-secondary !px-3.5 !py-2 ${compact ? 'text-xs' : 'text-sm'}`}>
             Editar
           </Link>
         ) : null}
