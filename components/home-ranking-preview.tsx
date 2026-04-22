@@ -1,38 +1,29 @@
-import Link from "next/link";
-import type { ClubStatsCard } from "@/lib/types";
+import Link from 'next/link';
+import type { ClubStatsCard } from '@/lib/types';
 
 interface HomeRankingPreviewProps {
   teams: ClubStatsCard[];
 }
 
 function rankStyles(index: number): string {
-  if (index === 0)
-    return "border-yellow-300/40 bg-yellow-500/10 text-yellow-100";
-  if (index === 1) return "border-slate-300/40 bg-slate-300/10 text-slate-100";
-  if (index === 2)
-    return "border-orange-300/40 bg-orange-500/10 text-orange-100";
-  return "border-slate-600/70 bg-slate-900/70 text-slate-100";
+  if (index === 0) return 'border-yellow-300/40 bg-yellow-500/10 text-yellow-100';
+  if (index === 1) return 'border-slate-300/40 bg-slate-300/10 text-slate-100';
+  if (index === 2) return 'border-orange-300/40 bg-orange-500/10 text-orange-100';
+  return 'border-slate-600/70 bg-slate-900/70 text-slate-100';
 }
 
 export default function HomeRankingPreview({ teams }: HomeRankingPreviewProps) {
   return (
     <section className="rounded-3xl border border-slate-700/75 bg-slate-900/85 p-4 shadow-[0_20px_52px_rgba(2,6,23,0.5)] sm:p-5">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-bold text-white">Ranking</h2>
-        </div>
-        <Link
-          href="/ranking"
-          className="text-sm font-semibold text-violet-200 hover:text-violet-100"
-        >
-          Ver ranking completo
+        <h2 className="text-lg font-bold text-white">Ranking</h2>
+        <Link href="/ranking" className="text-sm font-semibold text-violet-200 hover:text-violet-100">
+          Ver todo
         </Link>
       </div>
 
       {teams.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-600 p-4 text-sm text-slate-300">
-          Todavía no hay equipos en el ranking.
-        </div>
+        <div className="rounded-2xl border border-dashed border-slate-600 p-4 text-sm text-slate-300">Sin ranking por ahora.</div>
       ) : (
         <ol className="space-y-2.5">
           {teams.map((team, index) => (
