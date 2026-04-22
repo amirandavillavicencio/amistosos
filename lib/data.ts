@@ -159,6 +159,7 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
       cards.push({
         id: row.id,
         pairKey: `${row.post_a_id}::${row.post_b_id}`,
+        status: row.status === 'archived' ? 'archived' : 'active',
         totalScore: row.compatibility_score,
         scheduleScore: row.schedule_score,
         locationScore: row.location_score,

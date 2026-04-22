@@ -60,6 +60,7 @@ export default function SuggestedMatchCardView({
   const availabilitySummary = `${teamA.schedule} / ${teamB.schedule}`;
   const suggestedMatchId = String(match?.id || '').trim();
   const hasSuggestedMatchId = Boolean(suggestedMatchId) && !suggestedMatchId.includes('::');
+  const isActiveSuggestedMatch = match.status === 'active';
 
   return (
     <article
@@ -130,7 +131,7 @@ export default function SuggestedMatchCardView({
       </ul>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {teamA.postId && teamB.postId && hasSuggestedMatchId ? (
+        {teamA.postId && teamB.postId && hasSuggestedMatchId && isActiveSuggestedMatch ? (
           <Link
             href={`/matches/aceptar?matchId=${encodeURIComponent(suggestedMatchId)}`}
             className="btn-accent text-xs"

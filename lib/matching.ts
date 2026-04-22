@@ -363,6 +363,7 @@ export function buildLiveSuggestedMatches(
       matches.push({
         id: pairKey,
         pairKey,
+        status: 'active',
         totalScore: total,
         scheduleScore: breakdown.overlapScore + breakdown.sharedDaysScore + breakdown.startTimeScore,
         locationScore: breakdown.sameComuna,
