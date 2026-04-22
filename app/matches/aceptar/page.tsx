@@ -135,7 +135,7 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
     );
   }
 
-  if (suggestedMatch.status !== 'active' && suggestedMatch.status !== 'archived') {
+  if (suggestedMatch.status !== 'active' && suggestedMatch.status !== 'matched') {
     return (
       <MatchErrorState
         title="Match no disponible"
@@ -165,7 +165,7 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
   const byId = new Map(posts.map((post) => [post.id, post]));
   const teamA = byId.get(suggestedMatch.post_a_id) || posts[0];
   const teamB = byId.get(suggestedMatch.post_b_id) || posts[1];
-  const initialUnlockedContact: InitialUnlockedContact | null = suggestedMatch.status === 'archived'
+  const initialUnlockedContact: InitialUnlockedContact | null = suggestedMatch.status === 'matched'
     ? {
       clubName: safeText(teamB.club_name, 'Club rival'),
       comuna: safeText(teamB.comuna, 'Comuna no informada'),
@@ -183,7 +183,7 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
           <div className="absolute -right-24 top-1/2 h-64 w-64 -translate-y-1/2 rounded-full bg-accent/10 blur-3xl" aria-hidden="true" />
 
           <div className="relative z-10">
-            <p className="text-center text-xs font-semibold uppercase tracking-[0.24em] text-accent">Amistoso en juego</p>
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.24em] text-accent">Amistoso coordinable</p>
             <h1 className="mt-3 text-center display-serif text-4xl text-ink sm:text-5xl lg:text-6xl">
               {safeText(teamA.club_name, 'Equipo A')} <span className="text-accent">VS</span> {safeText(teamB.club_name, 'Equipo B')}
             </h1>
@@ -205,7 +205,7 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
         <section className="mx-auto w-full max-w-3xl rounded-2xl border border-line/80 bg-paper/40 p-4 sm:p-6">
           <AcceptMatchForm
             matchId={suggestedMatch.id}
-            initialMatchStatus={suggestedMatch.status === 'archived' ? 'archived' : 'active'}
+            initialMatchStatus={suggestedMatch.status === 'matched' ? 'matched' : 'active'}
             initialContact={initialUnlockedContact}
           />
         </section>

@@ -5,7 +5,14 @@ import HomeResultsPreview from '@/components/home-results-preview';
 import PostCard from '@/components/post-card';
 import SuggestedMatchList from '@/components/suggested-match-list';
 import { rebuildSuggestedMatches } from '@/app/actions';
-import { getClubStatsRanking, getOpenAvailabilities, getRecentResults, getSuggestedMatches } from '@/lib/data';
+import {
+  getClubStatsRanking,
+  getCompletedSuggestedMatches,
+  getMatchedSuggestedMatches,
+  getOpenAvailabilities,
+  getRecentResults,
+  getSuggestedMatches
+} from '@/lib/data';
 import type { AvailabilityWithTeam, ClubStatsCard, MatchResultRow, SuggestedMatchCard } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -13,20 +20,26 @@ export const dynamic = 'force-dynamic';
 export default async function HomePage() {
   await rebuildSuggestedMatches();
 
-  let suggestedMatches: SuggestedMatchCard[] = [];
+  let activeSuggestedMatches: SuggestedMatchCard[] = [];
+  let matchedSuggestedMatches: SuggestedMatchCard[] = [];
+  let completedSuggestedMatches: SuggestedMatchCard[] = [];
   let openAvailabilities: AvailabilityWithTeam[] = [];
   let ranking: ClubStatsCard[] = [];
   let recentResults: MatchResultRow[] = [];
 
   try {
-    const [matches, availabilities, topRanking, results] = await Promise.all([
+    const [activeMatches, matchedMatches, completedMatches, availabilities, topRanking, results] = await Promise.all([
       getSuggestedMatches(6),
+      getMatchedSuggestedMatches(6),
+      getCompletedSuggestedMatches(6),
       getOpenAvailabilities(9),
       getClubStatsRanking(5),
       getRecentResults(5)
     ]);
 
-    suggestedMatches = Array.isArray(matches) ? matches : [];
+    activeSuggestedMatches = Array.isArray(activeMatches) ? activeMatches : [];
+    matchedSuggestedMatches = Array.isArray(matchedMatches) ? matchedMatches : [];
+    completedSuggestedMatches = Array.isArray(completedMatches) ? completedMatches : [];
     openAvailabilities = Array.isArray(availabilities) ? availabilities : [];
     ranking = Array.isArray(topRanking) ? topRanking : [];
     recentResults = Array.isArray(results) ? results : [];
@@ -38,26 +51,23 @@ export default async function HomePage() {
     <main className="section relative isolate py-7 sm:py-9 md:py-10">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_12%,rgba(168,85,247,0.16),transparent_32%),radial-gradient(circle_at_85%_18%,rgba(236,72,153,0.14),transparent_30%),radial-gradient(circle_at_50%_85%,rgba(37,99,235,0.14),transparent_32%)]" />
       <div className="space-y-4 sm:space-y-5">
-        <HomeHero suggestedCount={suggestedMatches.length} postCount={openAvailabilities.length} />
+        <HomeHero suggestedCount={activeSuggestedMatches.length} postCount={openAvailabilities.length} />
 
         <section className="relative overflow-hidden rounded-3xl border border-violet-300/25 bg-slate-950 p-4 shadow-[0_24px_60px_rgba(2,6,23,0.75)] sm:p-5">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-violet-200/80">Matchmaking activo</p>
-              <h2 className="text-2xl font-black text-white">Sugerencias reales para coordinar amistosos</h2>
-              <p className="mt-1 text-sm text-slate-300">Revisa compatibilidad y desbloquea el contacto del rival en un solo paso.</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-violet-200/80">Sugerencias reales</p>
+              <h2 className="text-2xl font-black text-white">Cruces listos para contacto</h2>
+              <p className="mt-1 text-sm text-slate-300">Solo matches sugeridos (status active): aún no hay contacto desbloqueado.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center rounded-full border border-violet-300/35 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-100">
-                {suggestedMatches.length} match{suggestedMatches.length === 1 ? '' : 'es'} sugerido{suggestedMatches.length === 1 ? '' : 's'}
+                {activeSuggestedMatches.length} cruce{activeSuggestedMatches.length === 1 ? '' : 's'} listo{activeSuggestedMatches.length === 1 ? '' : 's'} para contacto
               </span>
-              <Link href="/resultados" className="btn-accent">
-                Ver resultados
-              </Link>
             </div>
           </div>
 
-          {suggestedMatches.length === 0 ? (
+          {activeSuggestedMatches.length === 0 ? (
             <article className="rounded-2xl border border-dashed border-slate-700/80 bg-slate-900/50 p-7 text-center sm:p-9">
               <p className="text-lg font-semibold text-slate-100">Aún no hay cruces sugeridos</p>
               <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-300">
@@ -73,7 +83,31 @@ export default async function HomePage() {
               </div>
             </article>
           ) : (
-            <SuggestedMatchList matches={suggestedMatches} />
+            <SuggestedMatchList matches={activeSuggestedMatches} />
+          )}
+        </section>
+
+        <section className="relative overflow-hidden rounded-3xl border border-sky-300/25 bg-slate-950 p-4 shadow-[0_24px_60px_rgba(2,6,23,0.75)] sm:p-5">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-sky-200/80">Matches coordinados</p>
+              <h2 className="text-2xl font-black text-white">Contacto desbloqueado · pendiente de validar</h2>
+              <p className="mt-1 text-sm text-slate-300">Estos matches ya se coordinaron y quedan a la espera de confirmación de juego en la ventana semanal.</p>
+            </div>
+            <span className="inline-flex items-center rounded-full border border-sky-300/35 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-100">
+              {matchedSuggestedMatches.length} match{matchedSuggestedMatches.length === 1 ? '' : 'es'} coordinado{matchedSuggestedMatches.length === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          {matchedSuggestedMatches.length === 0 ? (
+            <article className="rounded-2xl border border-dashed border-slate-700/80 bg-slate-900/50 p-7 text-center sm:p-9">
+              <p className="text-lg font-semibold text-slate-100">Aún no hay matches coordinados</p>
+              <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-300">
+                Cuando un cruce se coordina, aparecerá aquí como pendiente de validar si se jugó.
+              </p>
+            </article>
+          ) : (
+            <SuggestedMatchList matches={matchedSuggestedMatches} />
           )}
         </section>
 
@@ -100,6 +134,22 @@ export default async function HomePage() {
             </div>
           )}
         </section>
+
+        {completedSuggestedMatches.length > 0 ? (
+          <section className="relative overflow-hidden rounded-3xl border border-amber-300/25 bg-slate-950 p-4 shadow-[0_24px_60px_rgba(2,6,23,0.75)] sm:p-5">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-200/80">Resultados</p>
+                <h2 className="text-2xl font-black text-white">Historial validado</h2>
+                <p className="mt-1 text-sm text-slate-300">Solo incluye matches con estado completed.</p>
+              </div>
+              <Link href="/resultados" className="btn-accent">
+                Ver resultados
+              </Link>
+            </div>
+            <SuggestedMatchList matches={completedSuggestedMatches} />
+          </section>
+        ) : null}
 
         <div className="grid gap-4 lg:grid-cols-2">
           <HomeRankingPreview teams={ranking} />

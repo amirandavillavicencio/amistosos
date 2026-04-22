@@ -107,20 +107,35 @@ export async function getLiveSuggestedMatches(limit = 12): Promise<SuggestedMatc
 }
 
 export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
+  return getSuggestedMatchesByStatus('active', limit);
+}
+
+export async function getMatchedSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
+  return getSuggestedMatchesByStatus('matched', limit);
+}
+
+export async function getCompletedSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
+  return getSuggestedMatchesByStatus('completed', limit);
+}
+
+async function getSuggestedMatchesByStatus(
+  status: 'active' | 'matched' | 'completed',
+  limit = 12
+): Promise<SuggestedMatchCard[]> {
   try {
     const supabase = getSupabaseAdmin();
     const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
     const { data: rows, error } = await supabase
       .from('suggested_matches')
       .select('*')
-      .eq('status', 'active')
+      .eq('status', status)
       .order('compatibility_score', { ascending: false })
       .limit(limit)
       .returns<SuggestedMatchRow[]>();
 
     if (error) {
       console.error('getSuggestedMatches table lookup failed', error);
-      return getLiveSuggestedMatches(limit);
+      return status === 'active' ? getLiveSuggestedMatches(limit) : [];
     }
 
     const selected = rows || [];
@@ -141,7 +156,7 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
 
     if (postsError) {
       console.error('getSuggestedMatches availabilities lookup failed', postsError);
-      return getLiveSuggestedMatches(limit);
+      return status === 'active' ? getLiveSuggestedMatches(limit) : [];
     }
 
     const safePosts = filterOutBannedAvailabilities(posts || [], bannedClubNameKeys);
@@ -159,7 +174,7 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
       cards.push({
         id: row.id,
         pairKey: `${row.post_a_id}::${row.post_b_id}`,
-        status: row.status === 'archived' ? 'archived' : 'active',
+        status: row.status,
         totalScore: row.compatibility_score,
         scheduleScore: row.schedule_score,
         locationScore: row.location_score,
@@ -190,7 +205,7 @@ export async function getSuggestedMatches(limit = 12): Promise<SuggestedMatchCar
     return cards;
   } catch (error) {
     console.error('getSuggestedMatches crashed', error);
-    return getLiveSuggestedMatches(limit);
+    return status === 'active' ? getLiveSuggestedMatches(limit) : [];
   }
 }
 
