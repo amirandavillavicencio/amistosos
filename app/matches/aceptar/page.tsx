@@ -60,37 +60,39 @@ function TeamVersusCard({
   const level = safeText(team.level, 'Sin nivel declarado');
 
   return (
-    <article className="relative flex h-full min-h-[300px] flex-col overflow-hidden rounded-2xl border border-line bg-paper/70 p-5 shadow-sm sm:p-6">
-      <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-accent/10 blur-xl" aria-hidden="true" />
+    <article className="relative flex h-full min-h-[340px] flex-col justify-between overflow-hidden rounded-3xl border border-line/80 bg-paper/80 p-6 shadow-xl shadow-black/25 sm:min-h-[390px] sm:p-8">
+      <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-accent/15 blur-2xl" aria-hidden="true" />
 
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent/80">{label}</p>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent/90">{label}</p>
 
-      <div className="mt-4 flex items-center gap-4">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-line/80 bg-paper text-lg font-black text-accent">
-          {teamName.slice(0, 2).toUpperCase()}
-        </div>
-        <div>
-          <h2 className="text-xl font-semibold text-ink sm:text-2xl">{teamName}</h2>
-          <p className="text-sm text-muted">{comuna}</p>
+        <div className="mt-6 flex items-center gap-4">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-line/80 bg-paper text-xl font-black text-accent sm:h-20 sm:w-20 sm:text-2xl">
+            {teamName.slice(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold leading-tight text-ink sm:text-3xl">{teamName}</h2>
+            <p className="mt-1 text-base text-muted">{comuna}</p>
+          </div>
         </div>
       </div>
 
-      <ul className="mt-5 space-y-2 text-sm text-ink">
-        <li className="flex items-center justify-between gap-3 rounded-lg border border-line/70 bg-paper/60 px-3 py-2">
-          <span className="text-muted">Cancha</span>
-          <span className="font-medium">{team.has_court ? 'Sí tiene' : 'No confirmada'}</span>
-        </li>
-        <li className="flex items-center justify-between gap-3 rounded-lg border border-line/70 bg-paper/60 px-3 py-2">
-          <span className="text-muted">Instagram</span>
-          <span className="max-w-[65%] truncate font-medium">{instagram}</span>
-        </li>
-        <li className="flex items-center justify-between gap-3 rounded-lg border border-line/70 bg-paper/60 px-3 py-2">
-          <span className="text-muted">Categoría</span>
-          <span className="max-w-[65%] truncate font-medium">{category || 'Sin categoría'}</span>
-        </li>
-        <li className="flex items-center justify-between gap-3 rounded-lg border border-line/70 bg-paper/60 px-3 py-2">
+      <ul className="mt-6 space-y-2 text-sm text-ink sm:text-[15px]">
+        <li className="flex items-center justify-between gap-3 rounded-xl border border-line/70 bg-paper/60 px-3 py-2.5">
           <span className="text-muted">Nivel</span>
-          <span className="font-medium">{level}</span>
+          <span className="font-semibold">{level}</span>
+        </li>
+        <li className="flex items-center justify-between gap-3 rounded-xl border border-line/70 bg-paper/60 px-3 py-2.5">
+          <span className="text-muted">Rama / categoría</span>
+          <span className="max-w-[65%] truncate text-right font-semibold">{category || 'Sin categoría'}</span>
+        </li>
+        <li className="flex items-center justify-between gap-3 rounded-xl border border-line/70 bg-paper/60 px-3 py-2.5">
+          <span className="text-muted">Cancha</span>
+          <span className="font-semibold">{team.has_court ? 'Sí tiene' : 'No confirmada'}</span>
+        </li>
+        <li className="flex items-center justify-between gap-3 rounded-xl border border-line/70 bg-paper/60 px-3 py-2.5">
+          <span className="text-muted">Instagram</span>
+          <span className="max-w-[65%] truncate text-right font-semibold">{instagram}</span>
         </li>
       </ul>
     </article>
@@ -174,26 +176,33 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
     : null;
 
   return (
-    <main className="section py-8 sm:py-10">
-      <article className="card-panel mx-auto max-w-5xl p-5 sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">Amistoso confirmado</p>
-        <h1 className="mt-2 display-serif text-3xl text-ink sm:text-4xl">{safeText(teamA.club_name, 'Equipo A')} <span className="text-accent">vs</span> {safeText(teamB.club_name, 'Equipo B')}</h1>
+    <main className="section py-6 sm:py-10">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
+        <section className="relative overflow-hidden rounded-[2rem] border border-line/80 bg-panel px-4 py-6 shadow-2xl shadow-black/30 sm:px-8 sm:py-10 lg:px-10">
+          <div className="absolute -left-24 top-1/2 h-64 w-64 -translate-y-1/2 rounded-full bg-accent/10 blur-3xl" aria-hidden="true" />
+          <div className="absolute -right-24 top-1/2 h-64 w-64 -translate-y-1/2 rounded-full bg-accent/10 blur-3xl" aria-hidden="true" />
 
-        <section className="mt-6">
-          <div className="grid items-stretch gap-4 lg:grid-cols-[1fr_auto_1fr] lg:gap-6">
-            <TeamVersusCard label="Equipo A" team={teamA} fallbackName="Equipo A" />
+          <div className="relative z-10">
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.24em] text-accent">Amistoso en juego</p>
+            <h1 className="mt-3 text-center display-serif text-4xl text-ink sm:text-5xl lg:text-6xl">
+              {safeText(teamA.club_name, 'Equipo A')} <span className="text-accent">VS</span> {safeText(teamB.club_name, 'Equipo B')}
+            </h1>
 
-            <div className="flex items-center justify-center lg:px-1">
-              <div className="inline-flex h-20 w-20 items-center justify-center rounded-full border border-accent/50 bg-accent/15 text-2xl font-black tracking-widest text-accent shadow-lg shadow-accent/20">
-                VS
+            <div className="mt-8 grid items-stretch gap-4 lg:grid-cols-[1fr_auto_1fr] lg:gap-7">
+              <TeamVersusCard label="Equipo A" team={teamA} fallbackName="Equipo A" />
+
+              <div className="flex items-center justify-center py-1 lg:px-1">
+                <div className="inline-flex h-24 w-24 items-center justify-center rounded-full border border-accent/70 bg-accent/20 text-3xl font-black tracking-[0.2em] text-accent shadow-2xl shadow-accent/30 sm:h-28 sm:w-28 sm:text-4xl">
+                  VS
+                </div>
               </div>
-            </div>
 
-            <TeamVersusCard label="Equipo B" team={teamB} fallbackName="Equipo B" />
+              <TeamVersusCard label="Equipo B" team={teamB} fallbackName="Equipo B" />
+            </div>
           </div>
         </section>
 
-        <section className="mt-8 rounded-2xl border border-line/80 bg-paper/40 p-4 sm:p-6">
+        <section className="mx-auto w-full max-w-3xl rounded-2xl border border-line/80 bg-paper/40 p-4 sm:p-6">
           <AcceptMatchForm
             matchId={suggestedMatch.id}
             initialMatchStatus={suggestedMatch.status === 'archived' ? 'archived' : 'active'}
@@ -201,10 +210,10 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
           />
         </section>
 
-        <div className="pt-4">
+        <div className="mx-auto w-full max-w-3xl">
           <Link href="/" className="btn-secondary">Cancelar</Link>
         </div>
-      </article>
+      </div>
     </main>
   );
 }
