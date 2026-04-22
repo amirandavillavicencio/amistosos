@@ -3,22 +3,14 @@
 import Link from 'next/link';
 import type { AvailabilityWithTeam } from '@/lib/types';
 import TeamContact from '@/components/team-contact';
-import { StatusBadge } from '@/components/ui-shell';
 import { useAuthState } from '@/components/auth-controls';
+import TeamAvatar from '@/components/team-avatar';
+import { formatBranch, formatCategory, formatComuna, toTitleCase } from '@/lib/presentation';
 
 interface PostCardProps {
   post: AvailabilityWithTeam;
   compact?: boolean;
 }
-
-const categoryLabel: Record<AvailabilityWithTeam['age_category'], string> = {
-  'sub-12': 'Sub-12',
-  'sub-14': 'Sub-14',
-  'sub-16': 'Sub-16',
-  'sub-18': 'Sub-18',
-  'sub-20': 'Sub-20',
-  tc: 'Todo Competidor (TC)'
-};
 
 export default function PostCard({ post, compact = false }: PostCardProps) {
   const { userId } = useAuthState();
@@ -26,7 +18,8 @@ export default function PostCard({ post, compact = false }: PostCardProps) {
   const startTime = post.start_time?.slice(0, 5) || '--:--';
   const endTime = post.end_time?.slice(0, 5) || '--:--';
   const weekdays = Array.isArray(post?.weekdays) ? post.weekdays : post?.weekday ? [post.weekday] : [];
-  const days = weekdays.filter(Boolean).join(', ');
+  const days = weekdays.filter(Boolean).map((day) => toTitleCase(day)).join(', ');
+
   return (
     <article className={`group app-card transition hover:-translate-y-0.5 hover:border-fuchsia-300/40 ${compact ? 'p-4' : 'p-4 sm:p-5'}`}>
       <div className="mb-3.5 flex items-start justify-between gap-3">
@@ -36,24 +29,22 @@ export default function PostCard({ post, compact = false }: PostCardProps) {
               {post.club_name || 'Equipo sin nombre'}
             </Link>
           </h3>
-          <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-            <StatusBadge>{post.comuna || 'Sin comuna'}</StatusBadge>
-            <StatusBadge tone="accent">{categoryLabel[post.age_category]}</StatusBadge>
-            <StatusBadge>{post.branch}</StatusBadge>
+          <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+            <span className="rounded-full border border-slate-500/60 bg-slate-800/70 px-2 py-0.5 text-slate-100">{formatComuna(post.comuna)}</span>
+            <span className="rounded-full border border-sky-300/40 bg-sky-500/10 px-2 py-0.5 text-sky-100">{formatCategory(post.age_category)}</span>
+            <span className="rounded-full border border-emerald-300/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-100">{formatBranch(post.branch)}</span>
           </div>
         </div>
-        {post.logo_url ? (
-          <img src={post.logo_url} alt={`Logo ${post.club_name}`} className={`${compact ? 'h-12 w-12' : 'h-14 w-14'} rounded-full border border-slate-500 object-cover`} />
-        ) : (
-          <div className={`${compact ? 'h-12 w-12' : 'h-14 w-14'} flex items-center justify-center rounded-full border border-dashed border-slate-500 text-[11px] text-slate-300`}>
-            Sin logo
-          </div>
-        )}
+        <TeamAvatar name={post.club_name} logoUrl={post.logo_url} sizeClassName={compact ? 'h-12 w-12' : 'h-12 w-12'} />
       </div>
       <ul className={`space-y-1.5 ${compact ? 'text-xs' : 'text-sm'} text-slate-200`}>
         <li><strong className="text-slate-100">Horario:</strong> {startTime} - {endTime}</li>
         <li><strong className="text-slate-100">Días:</strong> {days || 'Sin días informados'}</li>
-        <li><strong className="text-slate-100">Cancha:</strong> {post.has_court ? 'Sí pone cancha' : 'No pone cancha'}</li>
+        <li>
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${post.has_court ? 'border border-emerald-300/40 bg-emerald-500/10 text-emerald-100' : 'border border-slate-500/60 bg-slate-800/70 text-slate-200'}`}>
+            {post.has_court ? '✓ Pone cancha' : '✗ Sin cancha'}
+          </span>
+        </li>
       </ul>
       <TeamContact
         instagram={post.instagram}

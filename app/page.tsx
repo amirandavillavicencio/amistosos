@@ -89,10 +89,10 @@ export default async function HomePage() {
               action={
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <Link href="/publicar" className="btn-accent">
-                    Publicar
+                    Publicar disponibilidad
                   </Link>
-                  <Link href="/explorar" className="btn-secondary">
-                    Explorar
+                  <Link href="/explorar" className="text-sm font-medium text-fuchsia-200 underline-offset-4 hover:text-fuchsia-100 hover:underline">
+                    Explorar equipos
                   </Link>
                 </div>
               }
@@ -119,9 +119,12 @@ export default async function HomePage() {
               title="Aún no hay cruces coordinados"
               description="Publica hoy y comienza a coordinar amistosos."
               action={
-                <div className="mt-1">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <Link href="/publicar" className="btn-accent">
-                    Publicar ahora
+                    Publicar disponibilidad
+                  </Link>
+                  <Link href="/explorar" className="text-sm font-medium text-fuchsia-200 underline-offset-4 hover:text-fuchsia-100 hover:underline">
+                    Explorar equipos
                   </Link>
                 </div>
               }
@@ -148,9 +151,12 @@ export default async function HomePage() {
               title="Aún no hay publicaciones"
               description="Activa tu zona con la primera publicación."
               action={
-                <div className="mt-1">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <Link href="/publicar" className="btn-accent">
-                    Publicar ahora
+                    Publicar disponibilidad
+                  </Link>
+                  <Link href="/explorar" className="text-sm font-medium text-fuchsia-200 underline-offset-4 hover:text-fuchsia-100 hover:underline">
+                    Explorar equipos
                   </Link>
                 </div>
               }
@@ -164,38 +170,27 @@ export default async function HomePage() {
           )}
         </section>
 
-        <section className="app-card relative overflow-hidden border-amber-300/25 bg-slate-950/90 p-4 sm:p-5 md:p-6">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="app-eyebrow">Cierre de partidos</p>
-              <h2 className="mt-1 text-2xl font-black text-white">Resultados</h2>
+        {completedSuggestedMatches.length > 0 ? (
+          <section className="app-card relative overflow-hidden border-amber-300/25 bg-slate-950/90 p-4 sm:p-5 md:p-6">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="app-eyebrow">Cierre de partidos</p>
+                <h2 className="mt-1 text-2xl font-black text-white">Resultados</h2>
+              </div>
+              <Link href="/resultados" className="btn-accent">
+                Ir a resultados
+              </Link>
             </div>
-            <Link href="/resultados" className="btn-accent">
-              Ir a resultados
-            </Link>
-          </div>
-          {completedSuggestedMatches.length === 0 ? (
-            <EmptyState
-              icon="🏆"
-              title="Aún no hay resultados"
-              description="Cuando se reporten partidos aparecerán aquí."
-              action={
-                <div className="mt-1">
-                  <Link href="/publicar" className="btn-accent">
-                    Publicar ahora
-                  </Link>
-                </div>
-              }
-            />
-          ) : (
             <SuggestedMatchList matches={completedSuggestedMatches} />
-          )}
-        </section>
+          </section>
+        ) : null}
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <HomeRankingPreview teams={ranking} />
-          <HomeResultsPreview results={recentResults} />
-        </div>
+        {(ranking.length > 0 || recentResults.length > 0) ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {ranking.length > 0 ? <HomeRankingPreview teams={ranking} /> : null}
+            {recentResults.length > 0 ? <HomeResultsPreview results={recentResults} /> : null}
+          </div>
+        ) : null}
       </div>
     </main>
   );

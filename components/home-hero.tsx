@@ -16,7 +16,7 @@ export default function HomeHero({
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-fuchsia-200">Amistosos Vóley</p>
           <h1 className="mt-2 text-3xl font-black leading-tight tracking-tight text-white sm:text-4xl">Salta a la cancha</h1>
-          <p className="mt-2 max-w-xl text-sm text-slate-300 sm:text-base">Conecta equipos, coordina cruces y mantené el ritmo de competencia.</p>
+          <p className="mt-2 max-w-xl text-base text-slate-300">Publica tu disponibilidad y encuentra equipos rivales en tu comuna</p>
 
           <div className="mt-5 flex flex-wrap gap-2.5">
             <Link
@@ -35,11 +35,11 @@ export default function HomeHero({
         </div>
 
         <div className="grid grid-cols-2 gap-2.5 sm:min-w-72">
-          <div className="rounded-2xl border border-violet-300/35 bg-violet-500/10 p-3.5 backdrop-blur">
+          <div className="rounded-2xl border border-violet-300/35 bg-violet-500/10 p-3.5 backdrop-blur" title="Un cruce es un partido coordinado entre dos equipos">
             <p className="whitespace-nowrap text-[11px] uppercase tracking-wider text-violet-100/90">Cruces activos</p>
             <p className="mt-1 text-2xl font-black text-white sm:text-3xl">{suggestedCount}</p>
           </div>
-          <div className="rounded-2xl border border-emerald-300/35 bg-emerald-500/10 p-3.5 backdrop-blur">
+          <div className="rounded-2xl border border-emerald-300/35 bg-emerald-500/10 p-3.5 backdrop-blur" title="Un cruce es un partido coordinado entre dos equipos">
             <p className="whitespace-nowrap text-[11px] uppercase tracking-wider text-emerald-100/90">Publicaciones</p>
             <p className="mt-1 text-2xl font-black text-white sm:text-3xl">{postCount}</p>
           </div>

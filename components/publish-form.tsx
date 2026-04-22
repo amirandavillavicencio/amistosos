@@ -30,6 +30,7 @@ export default function PublishForm() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const { userId, accessToken, loading } = useAuthState();
+  const [notes, setNotes] = useState('');
 
   return (
     <form
@@ -84,6 +85,7 @@ export default function PublishForm() {
             }
 
             setClubName('');
+            setNotes('');
             router.push('/publicacion-exitosa');
           } catch (err) {
             setError(err instanceof Error ? err.message : 'Ocurrió un error inesperado');
@@ -193,8 +195,9 @@ export default function PublishForm() {
         </section>
 
         <section className="grid gap-3">
-          <h3 className="text-sm font-semibold text-white">Extra</h3>
-          <textarea name="notes" placeholder="Observaciones (opcional)" className="field min-h-24" />
+          <h3 className="text-sm font-semibold text-white">Descripción</h3>
+          <textarea name="notes" maxLength={280} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Ej: buscamos rival de nivel similar, máximo 10 jugadores por equipo..." className="field min-h-24" />
+          <p className="text-right text-xs text-slate-400">{notes.length}/280</p>
         </section>
       </fieldset>
 
