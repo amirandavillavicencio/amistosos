@@ -26,12 +26,7 @@ export default function HomeResultsPreview({
     <section className="rounded-3xl border border-slate-700/75 bg-slate-900/85 p-4 shadow-[0_20px_52px_rgba(2,6,23,0.5)] sm:p-5">
       <div className="mb-4 flex items-center justify-between gap-2">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-orange-200">
-            Resultados
-          </p>
-          <h2 className="mt-1 text-lg font-bold text-white">
-            Últimos cargados
-          </h2>
+          <h2 className="text-lg font-bold text-white">Últimos resultados</h2>
         </div>
         <Link
           href="/resultados"
@@ -43,7 +38,7 @@ export default function HomeResultsPreview({
 
       {results.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-600 p-4 text-sm text-slate-300">
-          Todavía no hay resultados recientes. Sé el primero en registrar uno.
+          Todavía no hay resultados.
         </div>
       ) : (
         <div className="space-y-2.5">
