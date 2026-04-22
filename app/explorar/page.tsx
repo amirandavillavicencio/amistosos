@@ -1,42 +1,24 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import PostCard from '@/components/post-card';
-import { EmptyState, PageHeader, SectionShell } from '@/components/ui-shell';
+import ExplorarFilters from '@/components/explorar-filters';
+import { PageHeader } from '@/components/ui-shell';
 import { getOpenAvailabilities } from '@/lib/data';
 import type { AvailabilityWithTeam } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+export const metadata: Metadata = {
+  title: 'Explorar equipos | Amistosos Vóley',
+  description: 'Filtra equipos por comuna, día, categoría, rama y disponibilidad de cancha para coordinar amistosos.'
+};
 
-interface ExplorarPageProps {
-  searchParams?: {
-    rama?: string;
-    dia?: string;
-    categoria?: string;
-  };
-}
-
-export default async function ExplorarPage({ searchParams }: ExplorarPageProps) {
-  const branch = searchParams?.rama || '';
-  const weekday = searchParams?.dia || '';
-  const ageCategory = searchParams?.categoria || '';
-
+export default async function ExplorarPage() {
   let posts: AvailabilityWithTeam[] = [];
 
   try {
-    posts = await getOpenAvailabilities(60, {
-      branch: branch || undefined,
-      weekday: weekday || undefined,
-      ageCategory: ageCategory || undefined
-    });
+    posts = await getOpenAvailabilities(120);
   } catch (error) {
-    console.error('ExplorarPage data load failed', {
-      route: '/explorar',
-      branch,
-      weekday,
-      ageCategory,
-      error
-    });
+    console.error('ExplorarPage data load failed', { route: '/explorar', error });
   }
 
   return (
@@ -44,58 +26,11 @@ export default async function ExplorarPage({ searchParams }: ExplorarPageProps) 
       <PageHeader
         eyebrow="Explorar equipos"
         title="Disponibilidades abiertas"
-        description="Filtra por rama, día y categoría para encontrar rivales que sí calzan con tu disponibilidad real."
+        description="Usa filtros reactivos para encontrar rivales compatibles al instante."
         action={<Link href="/" className="btn-secondary">Volver al inicio</Link>}
       />
 
-      <SectionShell className="mb-5">
-        <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" method="GET">
-          <select name="categoria" defaultValue={ageCategory} className="field">
-            <option value="">Todas las categorías</option>
-            <option value="sub-12">Sub-12</option>
-            <option value="sub-14">Sub-14</option>
-            <option value="sub-16">Sub-16</option>
-            <option value="sub-18">Sub-18</option>
-            <option value="sub-20">Sub-20</option>
-            <option value="tc">Todo Competidor (TC)</option>
-          </select>
-
-          <select name="rama" defaultValue={branch} className="field">
-            <option value="">Todas las ramas</option>
-            <option value="femenina">Femenina</option>
-            <option value="masculina">Masculina</option>
-            <option value="mixta">Mixta</option>
-          </select>
-
-          <select name="dia" defaultValue={weekday} className="field">
-            <option value="">Cualquier día</option>
-            {weekdays.map((day) => (
-              <option key={day} value={day}>
-                {day}
-              </option>
-            ))}
-          </select>
-
-          <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1 lg:justify-end">
-            <button type="submit" className="btn-accent">Aplicar filtros</button>
-            <Link href="/explorar" className="btn-secondary">Limpiar</Link>
-          </div>
-        </form>
-      </SectionShell>
-
-      {posts.length === 0 ? (
-        <EmptyState
-          title="Todavía no hay partidos publicados"
-          description="Tu equipo puede ser el primero en activar la rueda de amistosos en tu zona."
-          action={<Link href="/publicar" className="btn-accent">Publicar mi disponibilidad</Link>}
-        />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
-        </div>
-      )}
+      <ExplorarFilters posts={posts} />
     </main>
   );
 }

@@ -4,6 +4,7 @@ import HomeRankingPreview from '@/components/home-ranking-preview';
 import HomeResultsPreview from '@/components/home-results-preview';
 import PostCard from '@/components/post-card';
 import SuggestedMatchList from '@/components/suggested-match-list';
+import HowItWorks from '@/components/how-it-works';
 import { rebuildSuggestedMatches } from '@/app/actions';
 import {
   getClubStatsRanking,
@@ -64,6 +65,7 @@ export default async function HomePage() {
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_12%,rgba(168,85,247,0.16),transparent_32%),radial-gradient(circle_at_85%_18%,rgba(236,72,153,0.14),transparent_30%),radial-gradient(circle_at_50%_85%,rgba(37,99,235,0.14),transparent_32%)]" />
       <div className="space-y-5 sm:space-y-6">
         <HomeHero suggestedCount={activeSuggestedMatches.length} postCount={openAvailabilities.length} />
+        <HowItWorks />
 
         <section className="relative overflow-hidden rounded-3xl border border-violet-300/25 bg-slate-950 p-4 shadow-[0_24px_60px_rgba(2,6,23,0.75)] sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -79,7 +81,7 @@ export default async function HomePage() {
 
           {activeSuggestedMatches.length === 0 ? (
             <article className="rounded-2xl border border-dashed border-slate-700/80 bg-slate-900/50 p-7 text-center sm:p-9">
-              <p className="text-lg font-semibold text-slate-100">Aún no hay cruces activos</p>
+              <p className="text-5xl">⚡</p><p className="text-lg font-semibold text-slate-100">Aún no hay cruces activos</p><p className="text-sm text-slate-300">¡Sé el primero en tu comuna en publicar!</p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 <Link href="/publicar" className="btn-accent">
                   Publicar
@@ -106,7 +108,7 @@ export default async function HomePage() {
 
           {matchedSuggestedMatches.length === 0 ? (
             <article className="rounded-2xl border border-dashed border-slate-700/80 bg-slate-900/50 p-7 text-center sm:p-9">
-              <p className="text-lg font-semibold text-slate-100">Aún no hay cruces coordinados</p>
+              <p className="text-5xl">🤝</p><p className="text-lg font-semibold text-slate-100">Aún no hay cruces coordinados</p><p className="text-sm text-slate-300">Publica hoy y comienza a coordinar amistosos.</p><div className="mt-4"><Link href="/publicar" className="btn-accent">Publicar ahora</Link></div>
             </article>
           ) : (
             <SuggestedMatchList matches={matchedSuggestedMatches} />
@@ -123,7 +125,7 @@ export default async function HomePage() {
 
           {openAvailabilities.length === 0 ? (
             <article className="rounded-2xl border border-dashed border-slate-700/80 bg-slate-900/50 p-8 text-center">
-              <p className="text-lg font-semibold text-slate-100">Aún no hay publicaciones</p>
+              <p className="text-5xl">📣</p><p className="text-lg font-semibold text-slate-100">Aún no hay publicaciones</p><p className="text-sm text-slate-300">Activa tu zona con la primera publicación.</p><div className="mt-4"><Link href="/publicar" className="btn-accent">Publicar ahora</Link></div>
             </article>
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -134,19 +136,26 @@ export default async function HomePage() {
           )}
         </section>
 
-        {completedSuggestedMatches.length > 0 ? (
-          <section className="relative overflow-hidden rounded-3xl border border-amber-300/25 bg-slate-950 p-4 shadow-[0_24px_60px_rgba(2,6,23,0.75)] sm:p-5">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-2xl font-black text-white">Resultados</h2>
-              </div>
-              <Link href="/resultados" className="btn-accent">
-                Ir a resultados
-              </Link>
+        <section className="relative overflow-hidden rounded-3xl border border-amber-300/25 bg-slate-950 p-4 shadow-[0_24px_60px_rgba(2,6,23,0.75)] sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-black text-white">Resultados</h2>
             </div>
+            <Link href="/resultados" className="btn-accent">
+              Ir a resultados
+            </Link>
+          </div>
+          {completedSuggestedMatches.length === 0 ? (
+            <article className="rounded-2xl border border-dashed border-slate-700/80 bg-slate-900/50 p-7 text-center sm:p-9">
+              <p className="text-5xl">🏆</p>
+              <p className="text-lg font-semibold text-slate-100">Aún no hay resultados</p>
+              <p className="text-sm text-slate-300">Cuando se reporten partidos aparecerán aquí.</p>
+              <div className="mt-4"><Link href="/publicar" className="btn-accent">Publicar ahora</Link></div>
+            </article>
+          ) : (
             <SuggestedMatchList matches={completedSuggestedMatches} />
-          </section>
-        ) : null}
+          )}
+        </section>
 
         <div className="grid gap-4 lg:grid-cols-2">
           <HomeRankingPreview teams={ranking} />

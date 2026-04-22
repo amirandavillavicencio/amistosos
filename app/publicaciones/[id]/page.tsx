@@ -1,10 +1,28 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import TeamContact from '@/components/team-contact';
-import { EmptyState, SectionShell, StatusBadge } from '@/components/ui-shell';
+import OwnerActions from '@/components/owner-actions';
+import { SectionShell, StatusBadge } from '@/components/ui-shell';
 import { getAvailabilityById } from '@/lib/data';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const post = await getAvailabilityById(params.id);
+  if (!post) return { title: 'Publicación no encontrada | Amistosos Vóley' };
+
+  const days = (post.weekdays || (post.weekday ? [post.weekday] : [])).join(', ');
+  const description = `${post.comuna} · ${days || 'Sin días'} · ${post.start_time?.slice(0, 5)}-${post.end_time?.slice(0, 5)} · ${post.age_category}`;
+  const url = `https://amistosos.vercel.app/publicaciones/${post.id}`;
+
+  return {
+    title: `${post.club_name} | Amistosos Vóley`,
+    description,
+    openGraph: { title: post.club_name, description, url },
+    twitter: { card: 'summary_large_image', title: post.club_name, description }
+  };
+}
 
 export default async function PublicacionDetallePage({ params }: { params: { id: string } }) {
   const post = await getAvailabilityById(params.id);
@@ -43,20 +61,11 @@ export default async function PublicacionDetallePage({ params }: { params: { id:
 
         {post.notes ? <p className="mt-4 rounded-2xl border border-slate-700/80 bg-slate-900/50 p-3 text-sm text-slate-200">{post.notes}</p> : null}
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href={`/publicaciones/${post.id}/editar`} className="btn-accent">Editar disponibilidad</Link>
+        <OwnerActions ownerId={post.owner_id} postId={post.id} />
+        <div className="mt-3">
           <Link href="/explorar" className="btn-secondary">Ver más publicaciones</Link>
         </div>
       </SectionShell>
-
-      {!post.contact_email ? (
-        <div className="mt-5">
-          <EmptyState
-            title="Esta publicación no se puede editar"
-            description="No tiene correo asociado para validación."
-          />
-        </div>
-      ) : null}
     </main>
   );
 }

@@ -175,6 +175,23 @@ async function assertClubNotBanned(clubName: string) {
   }
 }
 
+async function getUserIdFromAccessToken(accessTokenRaw: FormDataEntryValue | null) {
+  const accessToken = String(accessTokenRaw || '').trim();
+  if (!accessToken) {
+    return { ok: false as const, message: 'Debes iniciar sesión para continuar.' };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.auth.getUser(accessToken);
+
+  if (error || !data?.user?.id) {
+    return { ok: false as const, message: 'Tu sesión expiró. Inicia sesión nuevamente.' };
+  }
+
+  return { ok: true as const, userId: data.user.id };
+}
+
+
 export async function rebuildSuggestedMatches() {
   try {
     const supabase = getSupabaseAdmin();
@@ -686,6 +703,9 @@ export async function createAvailability(formData: FormData) {
     const notes = normalizeOptional(formData.get('notes'));
     const contact_email = normalizeOptional(formData.get('contact_email'));
 
+    const authUser = await getUserIdFromAccessToken(formData.get('access_token'));
+    if (!authUser.ok) return authUser;
+
     if (!club_name || !comuna) {
       throw new Error('Completa todos los campos requeridos.');
     }
@@ -699,6 +719,16 @@ export async function createAvailability(formData: FormData) {
     await assertClubNotBanned(club_name);
 
     const supabase = getSupabaseAdmin();
+
+    const { count: activeCount } = await supabase
+      .from('availabilities')
+      .select('id', { head: true, count: 'exact' })
+      .eq('owner_id', authUser.userId)
+      .in('status', ['open', 'active', 'published']);
+
+    if ((activeCount || 0) >= 3) {
+      return { ok: false, message: 'Ya tienes 3 publicaciones activas. Cierra una para crear otra.' };
+    }
 
     const { data: inserted, error } = await supabase
       .from('availabilities')
@@ -720,7 +750,8 @@ export async function createAvailability(formData: FormData) {
         phone,
         instagram,
         logo_url,
-        status: 'open'
+        status: 'open',
+        owner_id: authUser.userId
       })
       .select('id')
       .single();
@@ -756,41 +787,34 @@ export async function createAvailability(formData: FormData) {
 }
 
 
-export async function verifyAvailabilityOwnership(id: string, emailInput: string) {
+export async function verifyAvailabilityOwnership(id: string, accessToken: string) {
   const safeId = String(id || '').trim();
-  const email = normalizeOptional(emailInput);
-
   if (!safeId) {
     return { ok: false, message: 'No encontramos la publicación a editar.' };
   }
 
-  if (!email) {
-    return { ok: false, message: 'Debes ingresar un correo para verificar.' };
-  }
+  const authUser = await getUserIdFromAccessToken(accessToken);
+  if (!authUser.ok) return authUser;
 
   const supabase = getSupabaseAdmin();
   const { data: existing, error: existingError } = await supabase
     .from('availabilities')
-    .select('id, contact_email')
+    .select('id, owner_id')
     .eq('id', safeId)
-    .maybeSingle<{ id: string; contact_email: string | null }>();
+    .maybeSingle<{ id: string; owner_id: string | null }>();
 
   if (existingError || !existing) {
     return { ok: false, message: 'No encontramos la publicación indicada.' };
   }
 
-  if (!existing.contact_email) {
-    return { ok: false, message: 'Esta publicación no se puede editar porque no tiene correo asociado.' };
-  }
-
-  if (existing.contact_email.trim().toLowerCase() !== email.toLowerCase()) {
-    return { ok: false, message: 'Este correo no tiene permiso para modificar esta publicación.' };
+  if (!existing.owner_id || existing.owner_id !== authUser.userId) {
+    return { ok: false, message: 'No tienes permiso para modificar esta publicación.' };
   }
 
   return {
     ok: true,
-    verifiedEmail: email,
-    message: 'Correo verificado, puedes editar esta disponibilidad.'
+    verifiedEmail: authUser.userId,
+    message: 'Propiedad verificada.'
   };
 }
 
@@ -798,7 +822,8 @@ export async function updateAvailability(formData: FormData) {
   assertHoneypot(formData);
 
   const id = String(formData.get('id') || '').trim();
-  const email = normalizeOptional(formData.get('contact_email'));
+  const authUser = await getUserIdFromAccessToken(formData.get('access_token'));
+  if (!authUser.ok) return authUser;
   const intent = String(formData.get('intent') || 'update').trim().toLowerCase();
   const comuna = String(formData.get('comuna') || '').trim();
   const city = String(formData.get('city') || 'Santiago').trim() || 'Santiago';
@@ -816,25 +841,20 @@ export async function updateAvailability(formData: FormData) {
   const logo_url = normalizeOptional(formData.get('logo_url'));
 
   if (!id) return { ok: false, message: 'No encontramos la publicación a editar.' };
-  if (!email) return { ok: false, message: 'Debes ingresar el correo de contacto.' };
 
   const supabase = getSupabaseAdmin();
   const { data: existing, error: existingError } = await supabase
     .from('availabilities')
-    .select('id, contact_email, club_name')
+    .select('id, owner_id, club_name')
     .eq('id', id)
-    .maybeSingle<{ id: string; contact_email: string | null; club_name: string }>();
+    .maybeSingle<{ id: string; owner_id: string | null; club_name: string }>();
 
   if (existingError || !existing) {
     return { ok: false, message: 'No encontramos la publicación indicada.' };
   }
 
-  if (!existing.contact_email) {
-    return { ok: false, message: 'Esta publicación no se puede editar porque no tiene correo asociado.' };
-  }
-
-  if (existing.contact_email.trim().toLowerCase() !== email.toLowerCase()) {
-    return { ok: false, message: 'Correo incorrecto. No tienes permiso para editar esta publicación.' };
+  if (!existing.owner_id || existing.owner_id !== authUser.userId) {
+    return { ok: false, message: 'No tienes permiso para editar esta publicación.' };
   }
 
   if (intent === 'deactivate') {

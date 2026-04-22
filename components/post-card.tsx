@@ -1,7 +1,10 @@
+'use client';
+
 import Link from 'next/link';
 import type { AvailabilityWithTeam } from '@/lib/types';
 import TeamContact from '@/components/team-contact';
 import { StatusBadge } from '@/components/ui-shell';
+import { useAuthState } from '@/components/auth-controls';
 
 interface PostCardProps {
   post: AvailabilityWithTeam;
@@ -18,6 +21,8 @@ const categoryLabel: Record<AvailabilityWithTeam['age_category'], string> = {
 };
 
 export default function PostCard({ post, compact = false }: PostCardProps) {
+  const { userId } = useAuthState();
+  const canEdit = Boolean(userId && post.owner_id && userId === post.owner_id);
   const startTime = post.start_time?.slice(0, 5) || '--:--';
   const endTime = post.end_time?.slice(0, 5) || '--:--';
   const weekdays = Array.isArray(post?.weekdays) ? post.weekdays : post?.weekday ? [post.weekday] : [];
@@ -61,7 +66,7 @@ export default function PostCard({ post, compact = false }: PostCardProps) {
         <Link href={`/publicaciones/${post.id}`} className={`font-semibold text-fuchsia-200 hover:text-fuchsia-100 hover:underline ${compact ? 'text-xs' : 'text-sm'}`}>
           Ver detalle
         </Link>
-        {post.contact_email ? (
+        {canEdit ? (
           <Link href={`/publicaciones/${post.id}/editar`} className={`font-semibold text-emerald-200 hover:text-emerald-100 hover:underline ${compact ? 'text-xs' : 'text-sm'}`}>
             Editar
           </Link>

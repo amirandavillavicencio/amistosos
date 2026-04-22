@@ -8,10 +8,10 @@ const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado
 
 export default function EditAvailabilityForm({
   post,
-  verifiedEmail
+  accessToken
 }: {
   post: AvailabilityWithTeam;
-  verifiedEmail?: string;
+  accessToken: string;
 }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,19 +51,10 @@ export default function EditAvailabilityForm({
       <input type="hidden" name="id" value={post.id} />
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
 
-      {verifiedEmail ? (
-        <>
-          <input type="hidden" name="contact_email" value={verifiedEmail} />
-          <p className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
-            Correo verificado, puedes editar esta disponibilidad.
-          </p>
-        </>
-      ) : (
-        <div>
-          <label className="mb-1 block text-sm text-slate-300">Correo de contacto (verificación obligatoria)</label>
-          <input name="contact_email" type="email" required className="field" placeholder="correo usado al publicar" />
-        </div>
-      )}
+      <input type="hidden" name="access_token" value={accessToken} />
+      <p className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+        Propietario verificado. Puedes editar o desactivar esta disponibilidad.
+      </p>
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm text-slate-300">Comuna</label>
