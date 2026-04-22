@@ -5,7 +5,7 @@ import OwnerActions from '@/components/owner-actions';
 import TeamAvatar from '@/components/team-avatar';
 import { SectionShell, StatusBadge } from '@/components/ui-shell';
 import { getAvailabilityById } from '@/lib/data';
-import { formatBranch, formatCategory, formatComuna, toTitleCase } from '@/lib/presentation';
+import { capitalize, formatBranch, formatCategory, formatComuna } from '@/lib/presentation';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   const post = await getAvailabilityById(params.id);
   if (!post) return { title: 'Publicación no encontrada | Amistosos Vóley' };
 
-  const days = (post.weekdays || (post.weekday ? [post.weekday] : [])).map((day) => toTitleCase(day)).join(', ');
+  const days = (post.weekdays || (post.weekday ? [post.weekday] : [])).map((day) => capitalize(day)).join(', ');
   const description = `${formatComuna(post.comuna)} · ${days || 'Sin días'} · ${post.start_time?.slice(0, 5)}-${post.end_time?.slice(0, 5)} · ${formatCategory(post.age_category)}`;
   const url = `https://amistosos.vercel.app/publicaciones/${post.id}`;
 
@@ -72,7 +72,7 @@ export default async function PublicacionDetallePage({ params }: { params: { id:
         <section className="mt-4 grid gap-2.5">
           <DetailRow icon="📍" label="Comuna" value={formatComuna(post.comuna)} />
           <DetailRow icon="🕒" label="Horario" value={`${post.start_time?.slice(0, 5) || '--:--'} - ${post.end_time?.slice(0, 5) || '--:--'}`} />
-          <DetailRow icon="📅" label="Días" value={weekdays.length ? weekdays.map((day) => toTitleCase(day)).join(', ') : 'Sin días informados'} />
+          <DetailRow icon="📅" label="Días" value={weekdays.length ? weekdays.map((day) => capitalize(day)).join(', ') : 'Sin días informados'} />
           <DetailRow icon="🏐" label="Categoría" value={formatCategory(post.age_category)} />
           <DetailRow icon="👥" label="Rama" value={formatBranch(post.branch)} />
           <DetailRow icon="🏟️" label="Cancha" value={post.has_court ? 'Pone cancha' : 'Sin cancha'} />

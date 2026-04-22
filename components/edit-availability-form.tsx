@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { updateAvailability, uploadTeamLogo } from '@/app/actions';
+import { capitalize } from '@/lib/presentation';
 import type { AvailabilityWithTeam } from '@/lib/types';
 
 const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
@@ -92,7 +93,7 @@ export default function EditAvailabilityForm({
           {weekdays.map((day) => (
             <label key={day} className="flex items-center gap-2 rounded-xl border border-slate-700/70 bg-slate-950/30 px-2 py-2 text-sm text-slate-100">
               <input type="checkbox" name="weekdays" value={day} defaultChecked={post.weekdays?.includes(day)} className="h-4 w-4 accent-fuchsia-500" />
-              <span className="capitalize">{day}</span>
+              <span>{capitalize(day)}</span>
             </label>
           ))}
         </div>

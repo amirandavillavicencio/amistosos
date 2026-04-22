@@ -1,5 +1,8 @@
 const AVATAR_COLORS = ['bg-violet-600', 'bg-sky-600', 'bg-emerald-600', 'bg-fuchsia-600', 'bg-orange-500', 'bg-indigo-600'] as const;
 
+export const capitalize = (str: string) =>
+  str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+
 export function toTitleCase(value: string | null | undefined): string {
   return String(value || '')
     .trim()
