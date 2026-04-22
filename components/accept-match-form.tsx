@@ -61,16 +61,21 @@ export default function AcceptMatchForm({ matchId, initialMatchStatus, initialCo
           setSuccessMessage(result.successMessage);
         });
       }}
-      className="space-y-4"
+      className="space-y-5"
       aria-busy={isPending}
     >
       <input type="hidden" name="website" value="" />
       <input type="hidden" name="match_id" value={matchId} />
 
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent/90">Validación de contacto</p>
+        <p className="mt-2 text-sm text-muted">
+          Confirma el correo de uno de los equipos para desbloquear el contacto rival.
+        </p>
+      </div>
+
       {!matchDone && (
         <>
-          <p className="text-sm text-muted">Ingresa el correo de uno de los equipos para desbloquear el contacto del rival.</p>
-
           <fieldset disabled={isPending} className="space-y-4 disabled:opacity-80">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-ink">
