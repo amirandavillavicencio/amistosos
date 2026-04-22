@@ -29,6 +29,106 @@ export interface AvailabilityFilters {
   ageCategory?: string;
 }
 
+const HOME_DIAGNOSTIC_SAMPLE_LIMIT = 50;
+
+function normalizeStatus(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function shouldTreatAvailabilityAsOpen(status: unknown): boolean {
+  const normalized = normalizeStatus(status);
+
+  if (!normalized) return true;
+  if (USABLE_AVAILABILITY_STATUSES.includes(normalized as (typeof USABLE_AVAILABILITY_STATUSES)[number])) {
+    return true;
+  }
+
+  const closedStatuses = new Set([
+    'closed',
+    'archived',
+    'cancelled',
+    'canceled',
+    'deleted',
+    'completed',
+    'matched',
+    'expired',
+    'inactive'
+  ]);
+
+  return !closedStatuses.has(normalized);
+}
+
+function summarizeStatusDistribution(rows: Array<{ status?: unknown }>): Record<string, number> {
+  return rows.reduce<Record<string, number>>((acc, row) => {
+    const key = normalizeStatus(row?.status) || '(empty)';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+export async function logHomeProductionDiagnostics() {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const [
+      { count: availabilitiesCount, error: availCountError },
+      { count: suggestedCount, error: suggestedCountError },
+      { count: teamsCount, error: teamsCountError },
+      { count: photosCount, error: photosCountError }
+    ] = await Promise.all([
+      supabase.from('availabilities').select('id', { count: 'exact', head: true }),
+      supabase.from('suggested_matches').select('id', { count: 'exact', head: true }),
+      supabase.from('teams').select('id', { count: 'exact', head: true }),
+      supabase.from('match_photos').select('id', { count: 'exact', head: true })
+    ]);
+
+    if (availCountError || suggestedCountError || teamsCountError || photosCountError) {
+      console.error('[home:diagnostics] count query errors', {
+        availCountError,
+        suggestedCountError,
+        teamsCountError,
+        photosCountError
+      });
+    }
+
+    const { data: availabilityRows, error: availabilityRowsError } = await supabase
+      .from('availabilities')
+      .select('id,status,branch,age_category,created_at')
+      .order('created_at', { ascending: false })
+      .limit(HOME_DIAGNOSTIC_SAMPLE_LIMIT);
+
+    const statusDistribution = summarizeStatusDistribution((availabilityRows || []) as Array<{ status?: unknown }>);
+
+    if (availabilityRowsError) {
+      console.error('[home:diagnostics] availability sample query failed', availabilityRowsError);
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseHost = (() => {
+      try {
+        return new URL(supabaseUrl).hostname;
+      } catch {
+        return '(invalid-url)';
+      }
+    })();
+
+    console.log('[home:diagnostics] runtime snapshot', {
+      vercelEnv: process.env.VERCEL_ENV || 'unknown',
+      vercelBranch: process.env.VERCEL_GIT_COMMIT_REF || 'unknown',
+      vercelCommitSha: process.env.VERCEL_GIT_COMMIT_SHA || 'unknown',
+      nodeEnv: process.env.NODE_ENV || 'unknown',
+      supabaseHost,
+      availabilitiesCount: availabilitiesCount ?? null,
+      suggestedMatchesCount: suggestedCount ?? null,
+      teamsCount: teamsCount ?? null,
+      matchPhotosCount: photosCount ?? null,
+      availabilityStatusDistribution: statusDistribution
+    });
+  } catch (error) {
+    console.error('[home:diagnostics] crashed', error);
+  }
+}
+
 function filterOutBannedAvailabilities(
   rows: AvailabilityWithTeam[],
   bannedClubNameKeys: Set<string>
@@ -68,7 +168,33 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
     }
 
     const sourcePosts = (data || []) as AvailabilityWithTeam[];
-    return filterOutBannedAvailabilities(sourcePosts, bannedClubNameKeys);
+    if (sourcePosts.length > 0) {
+      return filterOutBannedAvailabilities(sourcePosts, bannedClubNameKeys);
+    }
+
+    const { data: fallbackRows, error: fallbackError } = await supabase
+      .from('availabilities')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit * 3);
+
+    if (fallbackError) {
+      console.error('getOpenAvailabilities fallback failed', fallbackError);
+      return [];
+    }
+
+    const fallbackOpenRows = ((fallbackRows || []) as AvailabilityWithTeam[]).filter((row) =>
+      shouldTreatAvailabilityAsOpen(row.status)
+    );
+
+    console.warn('getOpenAvailabilities recovered via fallback', {
+      initialFilteredCount: sourcePosts.length,
+      fallbackRowsCount: (fallbackRows || []).length,
+      fallbackOpenRowsCount: fallbackOpenRows.length,
+      availabilityStatusDistribution: summarizeStatusDistribution((fallbackRows || []) as Array<{ status?: unknown }>)
+    });
+
+    return filterOutBannedAvailabilities(fallbackOpenRows.slice(0, limit), bannedClubNameKeys);
   } catch (error) {
     console.error('getOpenAvailabilities crashed', error);
     return [];
@@ -82,7 +208,6 @@ export async function getLiveSuggestedMatches(limit = 12): Promise<SuggestedMatc
     const { data, error } = await supabase
       .from('availabilities')
       .select('*')
-      .in('status', [...USABLE_AVAILABILITY_STATUSES])
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -90,7 +215,8 @@ export async function getLiveSuggestedMatches(limit = 12): Promise<SuggestedMatc
       return [];
     }
 
-    const sourcePosts = filterOutBannedAvailabilities((data || []) as AvailabilityWithTeam[], bannedClubNameKeys);
+    const openRows = ((data || []) as AvailabilityWithTeam[]).filter((row) => shouldTreatAvailabilityAsOpen(row.status));
+    const sourcePosts = filterOutBannedAvailabilities(openRows, bannedClubNameKeys);
     const { matches, stats } = buildLiveSuggestedMatches(sourcePosts, limit);
 
     console.log('[getLiveSuggestedMatches] total availabilities:', stats.totalAvailabilities);
@@ -140,6 +266,7 @@ async function getSuggestedMatchesByStatus(
 
     const selected = rows || [];
     if (!selected.length) {
+      console.warn('getSuggestedMatchesByStatus empty', { status, limit });
       return [];
     }
 
