@@ -61,39 +61,39 @@ export default function AcceptMatchForm({ matchId, initialMatchStatus, initialCo
           setSuccessMessage(result.successMessage);
         });
       }}
-      className="mt-6 space-y-4"
+      className="space-y-4"
       aria-busy={isPending}
     >
-      {!matchDone && <p className="text-sm text-ink">Pon un correo de uno de los equipos para ver el contacto del rival</p>}
-
       <input type="hidden" name="website" value="" />
       <input type="hidden" name="match_id" value={matchId} />
 
       {!matchDone && (
-        <fieldset disabled={isPending} className="space-y-4 disabled:opacity-80">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-ink">
-              Correo de un equipo del match
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              placeholder="tuclub@correo.cl"
-              className="mt-1 w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
-            />
-          </div>
-        </fieldset>
-      )}
+        <>
+          <p className="text-sm text-muted">Ingresa el correo de uno de los equipos para desbloquear el contacto del rival.</p>
 
-      {!matchDone && (
-        <div className="flex flex-wrap gap-2 pt-2">
-          <button type="submit" disabled={isPending} className="btn-accent inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-70">
-            {isPending && <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />}
-            {isPending ? 'Validando...' : 'Ver contacto'}
-          </button>
-        </div>
+          <fieldset disabled={isPending} className="space-y-4 disabled:opacity-80">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-ink">
+                Correo de un equipo del match
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                placeholder="tuclub@correo.cl"
+                className="mt-1 w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+              />
+            </div>
+          </fieldset>
+
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button type="submit" disabled={isPending} className="btn-accent inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-70">
+              {isPending && <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />}
+              {isPending ? 'Validando...' : 'Ver contacto'}
+            </button>
+          </div>
+        </>
       )}
 
       {isPending && (
@@ -103,34 +103,34 @@ export default function AcceptMatchForm({ matchId, initialMatchStatus, initialCo
       )}
 
       {error && (
-        <p className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">
+        <p className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200" role="alert">
           {error}
         </p>
       )}
 
       {successMessage && (
-        <p className="rounded-lg border border-emerald-300 bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-900" role="status">
+        <p className="rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-200" role="status">
           {successMessage}
         </p>
       )}
 
       {matchDone && (
-        <div className="inline-flex rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
-          Match realizado
+        <div className="inline-flex rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-200">
+          Match hecho
         </div>
       )}
 
       {contact && (
         <div className="space-y-3">
-          <article className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{matchDone ? 'Match hecho' : 'Contacto desbloqueado'}</p>
-          <h3 className="mt-1 text-lg font-semibold text-ink">{contact.clubName}</h3>
-          <ul className="mt-2 space-y-1 text-sm text-ink">
-            <li><span className="font-medium">Comuna:</span> {contact.comuna}</li>
-            <li><span className="font-medium">Cancha:</span> {contact.hasCourt ? 'Sí, tiene cancha' : 'No confirmada'}</li>
-            <li><span className="font-medium">Correo:</span> {contact.contactEmail}</li>
-            <li><span className="font-medium">Notas:</span> {contact.notes || 'Sin notas'}</li>
-          </ul>
+          <article className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Contacto desbloqueado</p>
+            <h3 className="mt-1 text-lg font-semibold text-ink">{contact.clubName}</h3>
+            <ul className="mt-2 space-y-1 text-sm text-ink">
+              <li><span className="font-medium">Comuna:</span> {contact.comuna}</li>
+              <li><span className="font-medium">Cancha:</span> {contact.hasCourt ? 'Sí, tiene cancha' : 'No confirmada'}</li>
+              <li><span className="font-medium">Correo:</span> {contact.contactEmail}</li>
+              <li><span className="font-medium">Notas:</span> {contact.notes || 'Sin notas'}</li>
+            </ul>
           </article>
 
           {matchDone && (
