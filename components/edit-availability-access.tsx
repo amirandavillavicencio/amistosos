@@ -3,50 +3,42 @@
 import { useState } from 'react';
 import { verifyAvailabilityOwnership } from '@/app/actions';
 import EditAvailabilityForm from '@/components/edit-availability-form';
+import AuthControls, { useAuthState } from '@/components/auth-controls';
 import type { AvailabilityWithTeam } from '@/lib/types';
 
 export default function EditAvailabilityAccess({ post }: { post: AvailabilityWithTeam }) {
-  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const { accessToken, userId } = useAuthState();
+  const [verified, setVerified] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
 
   return (
-    <div className="mt-4">
-      {!verifiedEmail ? (
+    <div className="mt-4 space-y-3">
+      <AuthControls />
+      {!verified ? (
         <form
-          action={async (formData) => {
+          action={async () => {
             setStatusError(null);
             setStatusMessage(null);
-            const email = String(formData.get('verification_email') || '').trim();
-            const result = await verifyAvailabilityOwnership(post.id, email);
-            if (!result.ok || !result.verifiedEmail) {
-              setStatusError(result.message || 'No pudimos verificar el correo.');
+            const result = await verifyAvailabilityOwnership(post.id, accessToken || '');
+            if (!result.ok) {
+              setStatusError(result.message || 'No pudimos verificar permisos.');
               return;
             }
-            setVerifiedEmail(result.verifiedEmail);
-            setStatusMessage(result.message || 'Correo verificado, puedes editar esta disponibilidad.');
+            setVerified(true);
+            setStatusMessage(result.message || 'Propiedad verificada.');
           }}
           className="app-card mt-5 grid gap-3 p-4 sm:p-5"
         >
-          <p className="text-sm text-slate-200">Ingresa el correo con el que publicaste para habilitar la edición.</p>
-          <div>
-            <label className="mb-1 block text-sm text-slate-300">Correo de verificación</label>
-            <input
-              name="verification_email"
-              type="email"
-              required
-              className="field"
-              placeholder="correo usado al publicar"
-            />
-          </div>
-          <button type="submit" className="btn-accent w-full justify-center md:w-auto">Verificar correo</button>
+          <p className="text-sm text-slate-200">Solo el dueño autenticado puede editar esta publicación.</p>
+          <button type="submit" disabled={!userId} className="btn-accent w-full justify-center disabled:opacity-60 md:w-auto">Verificar permisos</button>
           {statusError && <p className="text-sm text-rose-300">{statusError}</p>}
           {statusMessage && <p className="text-sm text-emerald-300">{statusMessage}</p>}
         </form>
       ) : (
         <>
           {statusMessage && <p className="mb-2 text-sm text-emerald-300">{statusMessage}</p>}
-          <EditAvailabilityForm post={post} verifiedEmail={verifiedEmail} />
+          <EditAvailabilityForm post={post} accessToken={accessToken || ''} />
         </>
       )}
     </div>
