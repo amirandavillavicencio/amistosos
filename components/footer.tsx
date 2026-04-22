@@ -11,7 +11,7 @@ export default function Footer() {
         >
           Andrés Miranda
         </a>{' '}
-        · Versión beta
+        · Versión beta · <a href="[LINK_FEEDBACK]" className="font-medium text-slate-200 hover:underline">Enviar feedback</a>
       </p>
     </footer>
   );
