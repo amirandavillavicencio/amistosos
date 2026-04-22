@@ -15,18 +15,17 @@ interface RivalContact {
 interface AcceptMatchFormProps {
   matchId: string;
   initialMatchStatus: 'active' | 'archived';
+  initialContact: RivalContact | null;
 }
 
-export default function AcceptMatchForm({ matchId, initialMatchStatus }: AcceptMatchFormProps) {
+export default function AcceptMatchForm({ matchId, initialMatchStatus, initialContact }: AcceptMatchFormProps) {
   const [isPending, startTransition] = useTransition();
-  const [isExpanded, setIsExpanded] = useState(initialMatchStatus === 'active');
   const [error, setError] = useState<string | null>(null);
-  const [contact, setContact] = useState<RivalContact | null>(null);
+  const [contact, setContact] = useState<RivalContact | null>(initialContact);
   const [matchDone, setMatchDone] = useState(initialMatchStatus === 'archived');
   const [successMessage, setSuccessMessage] = useState<string | null>(
     initialMatchStatus === 'archived' ? 'Match hecho. Ya tienes el contacto del rival.' : null
   );
-  const [persistWarning, setPersistWarning] = useState<string | null>(null);
 
   const mapErrorMessage = (message?: string) => {
     if (!message) {
@@ -40,34 +39,15 @@ export default function AcceptMatchForm({ matchId, initialMatchStatus }: AcceptM
     return message;
   };
 
-  if (!isExpanded && !matchDone) {
-    return (
-      <div className="mt-6">
-        <button
-          type="button"
-          className="btn-accent inline-flex items-center gap-2"
-          onClick={() => {
-            setError(null);
-            setContact(null);
-            setSuccessMessage(null);
-            setPersistWarning(null);
-            setIsExpanded(true);
-          }}
-        >
-          Hacer match
-        </button>
-      </div>
-    );
-  }
-
   return (
     <form
       action={(formData) => {
         startTransition(async () => {
           setError(null);
-          setContact(null);
+          if (!matchDone) {
+            setContact(null);
+          }
           setSuccessMessage(null);
-          setPersistWarning(null);
 
           const result = await getMatchContact(formData);
 
@@ -79,9 +59,6 @@ export default function AcceptMatchForm({ matchId, initialMatchStatus }: AcceptM
           setContact(result.contact);
           setMatchDone(result.matchDone);
           setSuccessMessage(result.successMessage);
-          if (!result.persisted) {
-            setPersistWarning('Mostramos el contacto, pero no pudimos guardar el estado final del match. Intenta de nuevo más tarde.');
-          }
         });
       }}
       className="mt-6 space-y-4"
@@ -141,12 +118,6 @@ export default function AcceptMatchForm({ matchId, initialMatchStatus }: AcceptM
         <div className="inline-flex rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
           Match realizado
         </div>
-      )}
-
-      {persistWarning && (
-        <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status">
-          {persistWarning}
-        </p>
       )}
 
       {contact && (

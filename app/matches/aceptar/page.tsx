@@ -13,6 +13,14 @@ interface AcceptMatchPageProps {
   };
 }
 
+interface InitialUnlockedContact {
+  clubName: string;
+  comuna: string;
+  hasCourt: boolean;
+  contactEmail: string;
+  notes: string | null;
+}
+
 function safeText(value: string | null | undefined, fallback: string): string {
   const clean = String(value ?? '').trim();
   return clean || fallback;
@@ -104,6 +112,15 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
   const teamB = byId.get(suggestedMatch.post_b_id) || posts[1];
   const teamAName = safeText(teamA.club_name, 'Equipo A');
   const teamBName = safeText(teamB.club_name, 'Equipo B');
+  const initialUnlockedContact: InitialUnlockedContact | null = suggestedMatch.status === 'archived'
+    ? {
+      clubName: safeText(teamB.club_name, 'Club rival'),
+      comuna: safeText(teamB.comuna, 'Comuna no informada'),
+      hasCourt: Boolean(teamB.has_court),
+      contactEmail: safeText(teamB.contact_email, 'Sin correo disponible'),
+      notes: safeText(teamB.notes, '') || null
+    }
+    : null;
 
   return (
     <main className="section py-8 sm:py-10">
@@ -111,7 +128,9 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
         <p className="text-xs font-semibold uppercase tracking-wide text-accent">Contacto de amistoso</p>
         <h1 className="mt-1 display-serif text-3xl text-ink">Hacer match con el equipo rival</h1>
         <p className="mt-2 text-sm text-muted">
-          Pon un correo de uno de los equipos para ver el contacto del rival.
+          {suggestedMatch.status === 'archived'
+            ? 'Este match ya fue realizado. Te mostramos el contacto desbloqueado.'
+            : 'Pon un correo de uno de los equipos para ver el contacto del rival.'}
         </p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -130,6 +149,7 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
         <AcceptMatchForm
           matchId={suggestedMatch.id}
           initialMatchStatus={suggestedMatch.status === 'archived' ? 'archived' : 'active'}
+          initialContact={initialUnlockedContact}
         />
 
         <div className="pt-2">

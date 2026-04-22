@@ -1137,6 +1137,7 @@ export async function getMatchContact(formData: FormData): Promise<
     }
 
     let persisted = normalizedMatchStatus === 'archived';
+    let finalStatus = normalizedMatchStatus;
 
     if (normalizedMatchStatus === 'active') {
       const updatePayload = { status: 'archived' as const };
@@ -1147,6 +1148,7 @@ export async function getMatchContact(formData: FormData): Promise<
         .from('suggested_matches')
         .update(updatePayload)
         .eq('id', matchId)
+        .eq('status', 'active')
         .select('id,status');
 
       console.log('[getMatchContact] resultado del update:', updateResult);
@@ -1166,31 +1168,34 @@ export async function getMatchContact(formData: FormData): Promise<
         if (updateAffectedRows === 0) {
           console.error('[getMatchContact] update afectó 0 filas para matchId', matchId);
         }
-      } else {
-        const { data: persistedMatch, error: persistedMatchError } = await supabase
-          .from('suggested_matches')
-          .select('id,post_a_id,post_b_id,status')
-          .eq('id', matchId)
-          .maybeSingle<{ id: string; post_a_id: string; post_b_id: string; status: string }>();
+      }
 
-        console.log('[getMatchContact] select posterior al update:', persistedMatch);
+      const { data: persistedMatch, error: persistedMatchError } = await supabase
+        .from('suggested_matches')
+        .select('id,status')
+        .eq('id', matchId)
+        .maybeSingle<{ id: string; status: string }>();
 
-        if (persistedMatchError) {
-          console.error('[getMatchContact] error verificando persistencia tras update:', persistedMatchError);
-        }
+      console.log('[getMatchContact] select posterior al update:', persistedMatch);
 
-        persisted = safeString(persistedMatch?.status).toLowerCase() === 'archived';
+      if (persistedMatchError) {
+        console.error('[getMatchContact] error verificando persistencia tras update:', persistedMatchError);
+      }
 
-        if (!persisted) {
-          console.error('[getMatchContact] update ejecutado pero status final no quedó archived', {
-            matchId: match.id,
-            persistedStatus: persistedMatch?.status ?? null
-          });
-        }
+      finalStatus = safeString(persistedMatch?.status).toLowerCase();
+      persisted = finalStatus === 'archived';
+      console.log('[getMatchContact] status real después del update:', finalStatus || '(empty)');
+
+      if (!persisted) {
+        console.error('[getMatchContact] update ejecutado pero status final no quedó archived', {
+          matchId: match.id,
+          persistedStatus: persistedMatch?.status ?? null
+        });
+        return { ok: false, message: 'No pudimos cerrar el match en el sistema. Intenta nuevamente.' };
       }
     }
 
-    const matchDone = normalizedMatchStatus === 'archived' || persisted;
+    const matchDone = finalStatus === 'archived';
     if (persisted) {
       revalidatePath('/');
       revalidatePath('/matches/aceptar');
