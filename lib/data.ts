@@ -31,6 +31,17 @@ export interface AvailabilityFilters {
 
 const HOME_DIAGNOSTIC_SAMPLE_LIMIT = 50;
 
+
+function isMatchingDebugEnabled(): boolean {
+  return String(process.env.DEBUG_MATCHING || '').trim().toLowerCase() === 'true';
+}
+
+function debugMatchingLog(message: string, payload: Record<string, unknown>) {
+  if (!isMatchingDebugEnabled()) return;
+  console.log(`[matching:debug] ${message}`, payload);
+}
+
+
 function normalizeStatus(value: unknown): string {
   return String(value ?? '').trim().toLowerCase();
 }
@@ -251,12 +262,11 @@ async function getSuggestedMatchesByStatus(
   try {
     const supabase = getSupabaseAdmin();
     const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
-    const { data: rows, error } = await supabase
+    const { data: rawRows, error } = await supabase
       .from('suggested_matches')
-      .select('*')
-      .eq('status', status)
+      .select('id,post_a_id,post_b_id,status,compatibility_score,schedule_score,location_score,level_score,elo_score,created_at')
       .order('compatibility_score', { ascending: false })
-      .limit(limit)
+      .limit(Math.max(limit * 5, 30))
       .returns<SuggestedMatchRow[]>();
 
     if (error) {
@@ -264,7 +274,28 @@ async function getSuggestedMatchesByStatus(
       return status === 'active' ? getLiveSuggestedMatches(limit) : [];
     }
 
-    const selected = rows || [];
+    const allRows = rawRows || [];
+    debugMatchingLog('suggested_matches raw sample', {
+      requestedStatus: status,
+      limit,
+      rawCount: allRows.length,
+      rows: allRows.slice(0, 30).map((row) => ({
+        id: row.id,
+        post_a_id: row.post_a_id,
+        post_b_id: row.post_b_id,
+        status: row.status,
+        score: row.compatibility_score,
+        created_at: row.created_at
+      }))
+    });
+
+    const selected = allRows.filter((row) => normalizeStatus(row.status) === status);
+    debugMatchingLog('suggested_matches after status filter', {
+      requestedStatus: status,
+      selectedCount: selected.length,
+      skippedByStatus: allRows.length - selected.length
+    });
+
     if (!selected.length) {
       console.warn('getSuggestedMatchesByStatus empty', { status, limit });
       return [];
@@ -288,12 +319,29 @@ async function getSuggestedMatchesByStatus(
 
     const safePosts = filterOutBannedAvailabilities(posts || [], bannedClubNameKeys);
     const postsById = new Map(safePosts.map((post) => [post.id, post]));
+    debugMatchingLog('suggested_matches availability join summary', {
+      requestedStatus: status,
+      requestedIds: ids.length,
+      fetchedPosts: (posts || []).length,
+      fetchedOpenPosts: safePosts.length
+    });
 
     const cards: SuggestedMatchCard[] = [];
     for (const row of selected) {
       const a = postsById.get(row.post_a_id);
       const b = postsById.get(row.post_b_id);
-      if (!a || !b) continue;
+      if (!a || !b) {
+        debugMatchingLog('suggested_match discarded', {
+          reason: !a && !b ? 'join_failed_both_posts_missing_or_not_open' : !a ? 'join_failed_post_a_missing_or_not_open' : 'join_failed_post_b_missing_or_not_open',
+          rowId: row.id,
+          status: row.status,
+          post_a_id: row.post_a_id,
+          post_b_id: row.post_b_id,
+          postAStatus: a?.status ?? null,
+          postBStatus: b?.status ?? null
+        });
+        continue;
+      }
 
       const sharedWeekdays = getSharedWeekdays(a, b);
       const overlapMinutes = getTimeOverlapMinutes(a, b);
@@ -329,6 +377,7 @@ async function getSuggestedMatchesByStatus(
       });
     }
 
+    debugMatchingLog('suggested_matches final cards', { requestedStatus: status, cardsCount: cards.length });
     return cards;
   } catch (error) {
     console.error('getSuggestedMatches crashed', error);
