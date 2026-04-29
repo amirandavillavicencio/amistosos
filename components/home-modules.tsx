@@ -10,9 +10,9 @@ export default function HomeModules() {
   return (
     <section className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
       {modules.map((item) => (
-        <article key={item.title} className="rounded-3xl border border-[#e2d5c8] bg-[#fffaf3] p-5">
-          <h3 className="font-display text-2xl text-[#3f2d1f]">{item.title}</h3>
-          <p className="mt-2 text-sm text-[#6b5a4c]">{item.text}</p>
+        <article key={item.title} className="rounded-3xl border border-[#d4e2fa] bg-white p-5 shadow-sm">
+          <h3 className="font-display text-3xl text-[#0f2f6a]">{item.title}</h3>
+          <p className="mt-2 text-sm text-[#2d4f88]">{item.text}</p>
         </article>
       ))}
     </section>
