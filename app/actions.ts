@@ -30,6 +30,17 @@ const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const MIN_GAME_TIME_MINUTES = 8 * 60;
 const MAX_GAME_TIME_MINUTES = 23 * 60;
 
+
+function isMatchingDebugEnabled(): boolean {
+  return String(process.env.DEBUG_MATCHING || '').trim().toLowerCase() === 'true';
+}
+
+function debugMatchingLog(message: string, payload: Record<string, unknown>) {
+  if (!isMatchingDebugEnabled()) return;
+  console.log(`[matching:debug] ${message}`, payload);
+}
+
+
 function parseTime(value: string) {
   const [h, m] = value.split(':').map(Number);
   if (Number.isNaN(h) || Number.isNaN(m)) {
@@ -535,15 +546,18 @@ export async function rebuildSuggestedMatches() {
       const existingForPair = existingByPair.get(pairKey) || [];
       const primary = existingForPair.length ? pickPrimaryMatch(existingForPair) : null;
       const primaryStatus = safeString(primary?.status).toLowerCase();
-      const nextStatus: 'active' | 'matched' | 'completed' | 'archived' | 'expired' | 'unconfirmed' = (
-        primaryStatus === 'matched'
-        || primaryStatus === 'completed'
-        || primaryStatus === 'archived'
-        || primaryStatus === 'expired'
-        || primaryStatus === 'unconfirmed'
-      )
-        ? (primaryStatus as 'matched' | 'completed' | 'archived' | 'expired' | 'unconfirmed')
+      const terminalStatuses = new Set(['completed', 'archived', 'expired']);
+      const nextStatus: 'active' | 'matched' | 'completed' | 'archived' | 'expired' | 'unconfirmed' = terminalStatuses.has(primaryStatus)
+        ? (primaryStatus as 'completed' | 'archived' | 'expired')
         : 'active';
+      if (primary && nextStatus !== primaryStatus) {
+        debugMatchingLog('rebuildSuggestedMatches reactivated non-terminal pair', {
+          pairKey,
+          matchId: primary.id,
+          previousStatus: primaryStatus || '(empty)',
+          nextStatus
+        });
+      }
       const updatePayload = {
         post_a_id: row.post_a_id,
         post_b_id: row.post_b_id,
@@ -679,6 +693,14 @@ export async function rebuildSuggestedMatches() {
     } else if (!pairsPassingThreshold) {
       mainCause = 'score_threshold_filtered_all_pairs';
     }
+
+    debugMatchingLog('rebuildSuggestedMatches status distribution', {
+      existingStatuses: (existingMatches || []).reduce<Record<string, number>>((acc, row) => {
+        const key = safeString((row as { status?: unknown }).status).toLowerCase() || '(empty)';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {})
+    });
 
     console.log('rebuildSuggestedMatches completed', {
       availabilitiesCount: availabilities.length,
