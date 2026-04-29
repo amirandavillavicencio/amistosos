@@ -31,7 +31,13 @@ function teamStatus(match: SuggestedMatchCard) {
   return null;
 }
 
-export default function SuggestedMatchPanel({ match }: { match?: SuggestedMatchCard }) {
+export default function SuggestedMatchPanel({ matches }: { matches?: SuggestedMatchCard[] }) {
+  console.log('[SuggestedMatchPanel:props]', {
+    count: matches?.length ?? 0,
+  });
+
+  const match = (matches || []).find((item) => ['active', 'unconfirmed', 'matched'].includes(item.status));
+
   if (!match) {
     return (
       <aside className="rounded-[2rem] border border-[#c6daf8] bg-white p-5 shadow-sm">
