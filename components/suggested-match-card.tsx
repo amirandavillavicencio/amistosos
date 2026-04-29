@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { SuggestedMatchCard } from '@/lib/types';
-import { formatTimeLabel, formatWeekdayLabel, toMinutes } from '@/lib/matching';
+import { formatWeekdayLabel, toMinutes } from '@/lib/matching';
 import TeamContact from '@/components/team-contact';
 
 const categoryLabel: Record<string, string> = {
@@ -24,12 +24,33 @@ function safeText(value: string | null | undefined, fallback: string): string {
 }
 
 function getInitials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase() ?? '')
-    .join('') || 'EQ';
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word[0]?.toUpperCase() ?? '')
+      .join('') || 'EQ'
+  );
+}
+
+function formatSchedule(start: string | null | undefined, end: string | null | undefined): string {
+  const startMinutes = toMinutes(start);
+  const endMinutes = toMinutes(end);
+
+  if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+    return 'Horario por confirmar';
+  }
+
+  const toLabel = (minutes: number) => {
+    const hours = Math.floor(minutes / 60)
+      .toString()
+      .padStart(2, '0');
+    const mins = (minutes % 60).toString().padStart(2, '0');
+    return `${hours}:${mins}`;
+  };
+
+  return `${toLabel(startMinutes)} - ${toLabel(endMinutes)}`;
 }
 
 function buildTeamViewModel(match: SuggestedMatchCard, side: 'a' | 'b', index: number) {
@@ -48,9 +69,7 @@ function buildTeamViewModel(match: SuggestedMatchCard, side: 'a' | 'b', index: n
     logoUrl: safeText(team?.logo_url, ''),
     initials: getInitials(clubName),
     instagram: team?.instagram || null,
-    phone: team?.phone || null,
-    startTime: team?.start_time,
-    endTime: team?.end_time
+    scheduleLabel: formatSchedule(team?.start_time, team?.end_time)
   };
 }
 
@@ -82,6 +101,47 @@ function getSharedScheduleLabel(match: SuggestedMatchCard): string {
   return `${toLabel(overlapStart)} - ${toLabel(overlapEnd)}`;
 }
 
+function TeamCard({
+  team
+}: {
+  team: ReturnType<typeof buildTeamViewModel>;
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-700 bg-slate-900/75 p-5">
+      <div className="flex items-center gap-4">
+        {team.logoUrl ? (
+          <img src={team.logoUrl} alt={`Logo de ${team.clubName}`} className="h-14 w-14 rounded-full object-cover ring-2 ring-violet-300/20" />
+        ) : (
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-500/20 text-sm font-bold text-violet-100 ring-2 ring-violet-300/25">
+            {team.initials}
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="truncate text-xl font-bold text-white">{team.clubName}</p>
+          <p className="mt-0.5 text-sm text-slate-300">{team.comuna}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2.5">
+        <span className="rounded-full border border-slate-600 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-100">{team.category}</span>
+        <span className="rounded-full border border-slate-600 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-100">{team.branch}</span>
+        <span className="rounded-full border border-violet-400/30 bg-violet-500/20 px-3 py-1 text-xs font-medium text-violet-100">{team.courtLabel}</span>
+      </div>
+
+      <p className="mt-4 text-sm text-slate-200">{team.scheduleLabel}</p>
+      {team.instagram ? (
+        <TeamContact
+          instagram={team.instagram}
+          phone={null}
+          className="mt-2"
+          labelClassName="font-semibold text-slate-100"
+          valueClassName="text-violet-200 hover:underline"
+        />
+      ) : null}
+    </section>
+  );
+}
+
 export default function SuggestedMatchCardView({
   match,
   featured = false
@@ -105,110 +165,34 @@ export default function SuggestedMatchCardView({
   const isActiveSuggestedMatch = match.status === 'active';
 
   return (
-    <article
-      className={`card-panel w-full p-4 sm:p-6 ${featured ? 'border-accent/70 bg-panel shadow-[0_14px_34px_rgba(15,23,42,0.45)]' : ''}`}
-    >
-      <header className="mb-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">Cruce sugerido</p>
-        <h3 className="mt-1 text-2xl font-extrabold text-white">{teamA.clubName} vs {teamB.clubName}</h3>
-        <p className="mt-1 text-sm text-slate-200">Coinciden en día, horario y categoría</p>
+    <article className={`card-panel w-full p-5 sm:p-7 ${featured ? 'border-violet-300/70 bg-slate-950/90 shadow-[0_18px_50px_rgba(15,23,42,0.55)]' : ''}`}>
+      <header className="mb-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-200">Cruce sugerido</p>
+        <p className="mt-2 text-sm text-slate-200">Coinciden en día, horario y categoría</p>
       </header>
 
-      <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
-        {[teamA].map((team) => (
-          <section key={team.id} className="rounded-2xl border border-line bg-slate-900/70 p-4">
-            <div className="flex items-center gap-3">
-              {team.logoUrl ? (
-                <img src={team.logoUrl} alt={`Logo de ${team.clubName}`} className="h-12 w-12 rounded-full object-cover" />
-              ) : (
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/25 text-sm font-bold text-white">
-                  {team.initials}
-                </div>
-              )}
-              <div className="min-w-0">
-                <p className="truncate text-lg font-bold text-white">{team.clubName}</p>
-                <p className="text-sm text-slate-300">{team.comuna}</p>
-              </div>
-            </div>
+      <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
+        <TeamCard team={teamA} />
 
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-slate-700 px-2.5 py-1 text-xs font-medium text-slate-100">{team.category}</span>
-              <span className="rounded-full bg-slate-700 px-2.5 py-1 text-xs font-medium text-slate-100">{team.branch}</span>
-              <span className="rounded-full bg-violet-500/20 px-2.5 py-1 text-xs font-medium text-violet-100">{team.courtLabel}</span>
-            </div>
-
-            <div className="mt-3 text-xs text-slate-200">
-              <p>
-                Horario: {formatTimeLabel(team.startTime)} - {formatTimeLabel(team.endTime)}
-              </p>
-              {team.instagram ? (
-                <TeamContact
-                  instagram={team.instagram}
-                  phone={null}
-                  className="mt-1"
-                  labelClassName="font-semibold text-slate-100"
-                  valueClassName="text-violet-200 hover:underline"
-                />
-              ) : null}
-            </div>
-          </section>
-        ))}
-
-        <div className="mx-auto flex items-center justify-center rounded-full border border-violet-300/50 bg-violet-500/20 px-4 py-2 text-sm font-bold text-violet-100 md:h-fit md:self-center">
+        <div className="mx-auto flex items-center justify-center self-center rounded-full border border-violet-300/35 bg-violet-500/20 px-4 py-2 text-sm font-bold tracking-wide text-violet-100">
           VS
         </div>
 
-        {[teamB].map((team) => (
-          <section key={team.id} className="rounded-2xl border border-line bg-slate-900/70 p-4">
-            <div className="flex items-center gap-3">
-              {team.logoUrl ? (
-                <img src={team.logoUrl} alt={`Logo de ${team.clubName}`} className="h-12 w-12 rounded-full object-cover" />
-              ) : (
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/25 text-sm font-bold text-white">
-                  {team.initials}
-                </div>
-              )}
-              <div className="min-w-0">
-                <p className="truncate text-lg font-bold text-white">{team.clubName}</p>
-                <p className="text-sm text-slate-300">{team.comuna}</p>
-              </div>
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-slate-700 px-2.5 py-1 text-xs font-medium text-slate-100">{team.category}</span>
-              <span className="rounded-full bg-slate-700 px-2.5 py-1 text-xs font-medium text-slate-100">{team.branch}</span>
-              <span className="rounded-full bg-violet-500/20 px-2.5 py-1 text-xs font-medium text-violet-100">{team.courtLabel}</span>
-            </div>
-
-            <div className="mt-3 text-xs text-slate-200">
-              <p>
-                Horario: {formatTimeLabel(team.startTime)} - {formatTimeLabel(team.endTime)}
-              </p>
-              {team.instagram ? (
-                <TeamContact
-                  instagram={team.instagram}
-                  phone={null}
-                  className="mt-1"
-                  labelClassName="font-semibold text-slate-100"
-                  valueClassName="text-violet-200 hover:underline"
-                />
-              ) : null}
-            </div>
-          </section>
-        ))}
+        <TeamCard team={teamB} />
       </div>
 
-      <div className="mt-4 rounded-2xl border border-line bg-slate-900/60 p-4">
-        <div className="grid gap-2 text-sm text-slate-100 sm:grid-cols-2 lg:grid-cols-5">
-          <p><span className="font-semibold text-white">Día:</span> {firstSharedDay}</p>
-          <p><span className="font-semibold text-white">Horario:</span> {sharedSchedule}</p>
-          <p><span className="font-semibold text-white">Categoría:</span> {category}</p>
-          <p><span className="font-semibold text-white">Rama:</span> {branch}</p>
-          <p><span className="font-semibold text-white">Cancha:</span> {courtDetail}</p>
+      <div className="mt-5 rounded-2xl border border-slate-700 bg-slate-900/70 p-4 sm:p-5">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          {[['Día en común', firstSharedDay], ['Horario', sharedSchedule], ['Categoría', category], ['Rama', branch], ['Cancha', courtDetail]].map(([label, value]) => (
+            <div key={label} className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+              <p className="mt-1 break-words text-sm font-semibold text-slate-100">{value}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      <footer className="mt-5 flex flex-wrap gap-3">
+      <footer className="mt-6 flex flex-wrap gap-3">
         {teamA.postId && teamB.postId && hasSuggestedMatchId && isActiveSuggestedMatch ? (
           <Link href={`/matches/aceptar?matchId=${encodeURIComponent(suggestedMatchId)}`} className="btn-accent text-sm">
             Confirmar cruce
