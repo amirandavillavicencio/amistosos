@@ -1,18 +1,8 @@
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-800 bg-slate-950/90 px-4 py-5 text-center text-xs text-slate-400 backdrop-blur sm:px-6">
-      <p className="mx-auto max-w-4xl leading-relaxed">
-        Desarrollado por{' '}
-        <a
-          href="https://www.linkedin.com/in/andresmiranda"
-          target="_blank"
-          rel="noreferrer"
-          className="font-medium text-slate-200 hover:underline"
-        >
-          Andrés Miranda
-        </a>{' '}
-        · Versión beta · <a href="[LINK_FEEDBACK]" className="font-medium text-slate-200 hover:underline">Enviar feedback</a>
-      </p>
+    <footer className="border-t border-[#ddcdbf] bg-[#f8efe4] px-4 py-5 text-center text-sm text-[#5f4d3e] sm:px-6">
+      <p className="font-display text-xl text-[#3f2d1f]">Amistosos Vóley</p>
+      <p className="mt-1">Versión beta · Desarrollado por Andrés Miranda · Feedback</p>
     </footer>
   );
 }

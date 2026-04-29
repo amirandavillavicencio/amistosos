@@ -21,47 +21,44 @@ export default function PostCard({ post, compact = false }: PostCardProps) {
   const days = weekdays.filter(Boolean).map((day) => capitalize(day)).join(', ');
 
   return (
-    <article className={`group app-card transition hover:-translate-y-0.5 hover:border-fuchsia-300/40 ${compact ? 'p-4' : 'p-4 sm:p-5'}`}>
+    <article className={`rounded-3xl border border-[#e2d5c8] bg-[#fffaf3] transition hover:-translate-y-0.5 ${compact ? 'p-4' : 'p-4 sm:p-5'}`}>
       <div className="mb-3.5 flex items-start justify-between gap-3">
         <div>
-          <h3 className={`break-words font-bold text-white ${compact ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl'}`}>
-            <Link href={`/publicaciones/${post.id}`} className="transition group-hover:text-fuchsia-200">
+          <h3 className={`break-words font-semibold text-[#3f2d1f] ${compact ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl'}`}>
+            <Link href={`/publicaciones/${post.id}`} className="transition hover:text-[#9a5b3f]">
               {post.club_name || 'Equipo sin nombre'}
             </Link>
           </h3>
           <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-            <span className="rounded-full border border-slate-500/60 bg-slate-800/70 px-2 py-0.5 text-slate-100">{formatComuna(post.comuna)}</span>
-            <span className="rounded-full border border-sky-300/40 bg-sky-500/10 px-2 py-0.5 text-sky-100">{formatCategory(post.age_category)}</span>
-            <span className="rounded-full border border-emerald-300/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-100">{formatBranch(post.branch)}</span>
+            <span className="rounded-full border border-[#d8c6b6] bg-[#f8efe4] px-2 py-0.5 text-[#5f4d3e]">{formatComuna(post.comuna)}</span>
+            <span className="rounded-full border border-[#d8c6b6] bg-[#f8efe4] px-2 py-0.5 text-[#5f4d3e]">{formatCategory(post.age_category)}</span>
+            <span className="rounded-full border border-[#d8c6b6] bg-[#f8efe4] px-2 py-0.5 text-[#5f4d3e]">{formatBranch(post.branch)}</span>
           </div>
         </div>
-        <TeamAvatar name={post.club_name} logoUrl={post.logo_url} sizeClassName={compact ? 'h-12 w-12' : 'h-12 w-12'} />
+        <TeamAvatar name={post.club_name} logoUrl={post.logo_url} sizeClassName="h-12 w-12" />
       </div>
-      <ul className={`space-y-1.5 ${compact ? 'text-xs' : 'text-sm'} text-slate-200`}>
-        <li><strong className="text-slate-100">Horario:</strong> {startTime} - {endTime}</li>
-        <li><strong className="text-slate-100">Días:</strong> {days || 'Sin días informados'}</li>
+      <ul className={`space-y-1.5 ${compact ? 'text-xs' : 'text-sm'} text-[#5f4d3e]`}>
+        <li><strong className="text-[#3f2d1f]">Horario:</strong> {startTime} - {endTime}</li>
+        <li><strong className="text-[#3f2d1f]">Día:</strong> {days || 'Sin días informados'}</li>
         <li>
-          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${post.has_court ? 'border border-emerald-300/40 bg-emerald-500/10 text-emerald-100' : 'border border-slate-500/60 bg-slate-800/70 text-slate-200'}`}>
-            {post.has_court ? '✓ Pone cancha' : '✗ Sin cancha'}
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${post.has_court ? 'border border-[#b8c99f] bg-[#eff6e5] text-[#43603a]' : 'border border-[#d8c6b6] bg-[#f8efe4] text-[#5f4d3e]'}`}>
+            {post.has_court ? 'Tiene cancha' : 'No tiene cancha'}
           </span>
         </li>
       </ul>
       <TeamContact
         instagram={post.instagram}
         phone={post.phone}
-        className={`mt-2 space-y-1 ${compact ? 'text-xs' : 'text-sm'} text-slate-200`}
-        labelClassName="font-semibold text-slate-100"
+        className={`mt-2 space-y-1 ${compact ? 'text-xs' : 'text-sm'} text-[#5f4d3e]`}
+        labelClassName="font-semibold text-[#4f3f31]"
+        valueClassName="text-[#7a4c37] hover:underline"
       />
-      {!compact && post.notes && <p className="mt-3 border-t border-slate-700/80 pt-3 text-sm text-slate-300">{post.notes}</p>}
-      <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-700/80 pt-3">
+      {!compact && post.notes && <p className="mt-3 border-t border-[#eadfd4] pt-3 text-sm text-[#6b5a4c]">{post.notes}</p>}
+      <div className="mt-3 flex flex-wrap gap-2 border-t border-[#eadfd4] pt-3">
         <Link href={`/publicaciones/${post.id}`} className={`btn-secondary !px-3.5 !py-2 ${compact ? 'text-xs' : 'text-sm'}`}>
           Ver detalle
         </Link>
-        {canEdit ? (
-          <Link href={`/publicaciones/${post.id}/editar`} className={`btn-secondary !px-3.5 !py-2 ${compact ? 'text-xs' : 'text-sm'}`}>
-            Editar
-          </Link>
-        ) : null}
+        {canEdit ? <Link href={`/publicaciones/${post.id}/editar`} className={`btn-secondary !px-3.5 !py-2 ${compact ? 'text-xs' : 'text-sm'}`}>Editar</Link> : null}
       </div>
     </article>
   );
