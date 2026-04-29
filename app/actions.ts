@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import { createHash, randomBytes } from 'crypto';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
 import { getActiveBannedClubNameKeys, isClubBannedByName, normalizeClubNameKey } from '@/lib/banned-clubs';
 import { sendMatchNotificationEmails } from '@/lib/email/send-match-notification';
@@ -156,6 +157,19 @@ function assertHoneypot(formData: FormData) {
   if (honeypot) {
     throw new Error('Solicitud bloqueada.');
   }
+}
+
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function hashCode(code: string): string {
+  return createHash('sha256').update(code).digest('hex');
 }
 
 async function getRequestIp() {
@@ -1365,6 +1379,8 @@ export async function registerMatchResult(formData: FormData) {
   const notes = normalizeOptional(formData.get('notes'));
   const winnerClubId = String(formData.get('winner_club_id') || '').trim();
   const proofPhoto = formData.get('proof_photo');
+  const teamACode = String(formData.get('codigo_equipo_a') || '').trim();
+  const teamBCode = String(formData.get('codigo_equipo_b') || '').trim();
 
   if (!clubId || !matchDate || !validBranches.has(branch) || !validMatchTypes.has(matchType)) {
     throw new Error('Completa los datos requeridos del resultado.');
@@ -1435,6 +1451,13 @@ export async function registerMatchResult(formData: FormData) {
   }
 
   const ownActual = resolveMatchOutcome(setsWon, setsLost);
+  const teamACodeHash = teamACode ? hashCode(teamACode) : hashCode(randomBytes(12).toString('hex'));
+  const teamBCodeHash = teamBCode ? hashCode(teamBCode) : hashCode(randomBytes(12).toString('hex'));
+  const nowIso = new Date().toISOString();
+  const teamAConfirmedAt = teamACode ? nowIso : null;
+  const teamBConfirmedAt = teamBCode ? nowIso : null;
+  const rankingValidatedAt = teamACode && teamBCode ? nowIso : null;
+  const rankingStatus = teamACode && teamBCode ? 'confirmado' : 'pendiente';
   const ownConfidence = confidenceFromHistory(club.matches_played);
 
   const opponentRating = opponent.current_elo;
@@ -1485,6 +1508,31 @@ export async function registerMatchResult(formData: FormData) {
     })
     .eq('id', opponent.id);
 
+  await supabase.from('match_results').insert({
+    club_id: club.id,
+    opponent_club_id: opponent.id,
+    winner_club_id: winnerClubId,
+    opponent_name: opponent.club_name,
+    match_date: matchDate,
+    branch,
+    match_type: matchType,
+    sets_won: setsWon,
+    sets_lost: setsLost,
+    set_scores: setScores,
+    location,
+    notes,
+    proof_photo_url: proofPhotoUrl,
+    elo_before: club.current_elo,
+    elo_after: ownUpdate.newRating,
+    elo_delta: ownUpdate.delta,
+    team_a_code_hash: teamACodeHash,
+    team_b_code_hash: teamBCodeHash,
+    team_a_result_confirmed_at: teamAConfirmedAt,
+    team_b_result_confirmed_at: teamBConfirmedAt,
+    ranking_validated_at: rankingValidatedAt,
+    ranking_status: rankingStatus
+  });
+
   revalidatePath('/');
   revalidatePath('/ranking');
   revalidatePath(`/club/${club.id}`);
@@ -1492,6 +1540,31 @@ export async function registerMatchResult(formData: FormData) {
   revalidatePath('/resultados');
 
   return { ok: true };
+}
+
+export async function saveMatchStream(formData: FormData) {
+  const matchId = String(formData.get('match_id') || '').trim();
+  const email = String(formData.get('correo_equipo') || '').trim().toLowerCase();
+  const streamUrl = String(formData.get('stream_url') || '').trim();
+  if (!matchId || !email || !streamUrl) return { ok: false, message: 'Completa todos los campos.' };
+  if (!isValidHttpUrl(streamUrl)) return { ok: false, message: 'Ingresa un enlace válido (http/https).' };
+  const supabase = getSupabaseAdmin();
+  const { data: match } = await supabase
+    .from('suggested_matches')
+    .select('id,post_a_id,post_b_id,status')
+    .eq('id', matchId)
+    .maybeSingle<{ id: string; post_a_id: string; post_b_id: string; status: string }>();
+  if (!match || match.status !== 'matched') return { ok: false, message: 'El cruce no está confirmado.' };
+  const { data: posts } = await supabase.from('availabilities').select('id,contact_email').in('id', [match.post_a_id, match.post_b_id]);
+  const authorizedPost = (posts || []).find((p) => String(p.contact_email || '').trim().toLowerCase() === email);
+  if (!authorizedPost) return { ok: false, message: 'Solo un equipo involucrado puede editar la transmisión.' };
+  await supabase.from('suggested_matches').update({
+    stream_url: streamUrl,
+    stream_submitted_by_post_id: authorizedPost.id,
+    stream_submitted_at: new Date().toISOString()
+  }).eq('id', matchId);
+  revalidatePath('/');
+  return { ok: true, message: 'Transmisión guardada correctamente.' };
 }
 
 function parseResultScore(value: string): { ownSets: number; rivalSets: number; ownWon: boolean } | null {

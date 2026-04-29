@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { SuggestedMatchCard } from '@/lib/types';
 import { formatWeekdayLabel, toMinutes } from '@/lib/matching';
 import TeamContact from '@/components/team-contact';
+import MatchStreamForm from '@/components/match-stream-form';
 
 const categoryLabel: Record<string, string> = {
   'sub-12': 'Sub-12',
@@ -163,12 +164,17 @@ export default function SuggestedMatchCardView({
   const suggestedMatchId = String(match?.id || '').trim();
   const hasSuggestedMatchId = Boolean(suggestedMatchId) && !suggestedMatchId.includes('::');
   const isActiveSuggestedMatch = match.status === 'active';
+  const isConfirmedMatch = match.status === 'matched';
+  const matchBadge = isConfirmedMatch ? 'Cruce confirmado' : 'Cruce disponible';
+  const wrapperClass = isConfirmedMatch
+    ? 'border-[#ef8b6d] bg-white shadow-[0_0_0_1px_rgba(239,139,109,0.35),0_14px_35px_rgba(190,40,40,0.22)]'
+    : 'border-[#f4c24d] bg-white shadow-[0_0_0_1px_rgba(244,194,77,0.45),0_14px_35px_rgba(223,170,28,0.2)]';
 
   return (
-    <article className={`card-panel w-full p-5 sm:p-7 ${featured ? 'border-violet-300/70 bg-slate-950/90 shadow-[0_18px_50px_rgba(15,23,42,0.55)]' : ''}`}>
+    <article className={`card-panel w-full p-5 sm:p-7 ${wrapperClass} ${featured ? 'ring-1 ring-white/60' : ''}`}>
       <header className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-200">Cruce sugerido</p>
-        <p className="mt-2 text-sm text-slate-200">Coinciden en día, horario y categoría</p>
+        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${isConfirmedMatch ? 'bg-[#ffe3d9] text-[#842f1e]' : 'bg-[#fff4cf] text-[#7e5a00]'}`}>{matchBadge}</span>
+        <p className="mt-2 text-sm text-slate-700">Coinciden en día, horario y categoría</p>
       </header>
 
       <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
@@ -192,6 +198,18 @@ export default function SuggestedMatchCardView({
         </div>
       </div>
 
+      {isConfirmedMatch ? (
+        <section className="mt-4 rounded-2xl border border-[#ffd9d0] bg-[#fff8f7] p-4">
+          <p className="text-sm font-semibold text-[#7f2819]">Información práctica</p>
+          <p className="mt-1 text-sm text-slate-700">Lugar: {match.a?.has_court ? `${teamA.clubName}` : match.b?.has_court ? `${teamB.clubName}` : 'Lugar por confirmar'}</p>
+          <p className="text-sm text-slate-700">Comuna: {teamA.comuna}</p>
+          <p className="text-sm text-slate-700">Día: {firstSharedDay}</p>
+          <p className="text-sm text-slate-700">Hora: {sharedSchedule || 'Horario por confirmar'}</p>
+          <p className="text-sm text-slate-700">Cancha: {courtDetail}</p>
+          {match.streamUrl ? <a href={match.streamUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-sm font-semibold text-[#0f3b82] underline">Ver transmisión</a> : null}
+          <MatchStreamForm matchId={suggestedMatchId} />
+        </section>
+      ) : null}
       <footer className="mt-6 flex flex-wrap gap-3">
         {teamA.postId && teamB.postId && hasSuggestedMatchId && isActiveSuggestedMatch ? (
           <Link href={`/matches/aceptar?matchId=${encodeURIComponent(suggestedMatchId)}`} className="btn-accent text-sm">

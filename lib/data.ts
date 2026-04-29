@@ -264,7 +264,7 @@ async function getSuggestedMatchesByStatus(
     const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
     const { data: rawRows, error } = await supabase
       .from('suggested_matches')
-      .select('id,post_a_id,post_b_id,status,compatibility_score,schedule_score,location_score,level_score,elo_score,created_at')
+      .select('id,post_a_id,post_b_id,status,compatibility_score,schedule_score,location_score,level_score,elo_score,stream_url,stream_submitted_by_post_id,stream_submitted_at,created_at')
       .order('compatibility_score', { ascending: false })
       .limit(Math.max(limit * 5, 30))
       .returns<SuggestedMatchRow[]>();
@@ -284,6 +284,9 @@ async function getSuggestedMatchesByStatus(
         post_a_id: row.post_a_id,
         post_b_id: row.post_b_id,
         status: row.status,
+        streamUrl: row.stream_url || null,
+        streamSubmittedByPostId: row.stream_submitted_by_post_id || null,
+        streamSubmittedAt: row.stream_submitted_at || null,
         score: row.compatibility_score,
         created_at: row.created_at
       }))

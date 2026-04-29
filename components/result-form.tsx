@@ -35,6 +35,7 @@ export default function ResultForm({ teams, initialClubId, initialOpponentClubId
   const [opponentId, setOpponentId] = useState('');
   const [winnerId, setWinnerId] = useState('');
   const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [estadoConfirmacion, setEstadoConfirmacion] = useState<'pendiente' | 'confirmado'>('pendiente');
 
   useEffect(() => {
     const resolvedClub = initialClubId || findTeamIdByName(teams, initialClubName);
@@ -91,6 +92,9 @@ export default function ResultForm({ teams, initialClubId, initialOpponentClubId
 
         try {
           await registerMatchResult(formData);
+          const hasA = String(formData.get('codigo_equipo_a') || '').trim().length > 0;
+          const hasB = String(formData.get('codigo_equipo_b') || '').trim().length > 0;
+          setEstadoConfirmacion(hasA && hasB ? 'confirmado' : 'pendiente');
           setSuccess('Resultado guardado correctamente.');
           setTimeout(() => setSuccess(null), 3000);
         } catch (err) {
@@ -181,6 +185,8 @@ export default function ResultForm({ teams, initialClubId, initialOpponentClubId
 
         <input name="set_scores" className="field" placeholder="Marcador por sets (ej: 25-22, 22-25, 15-12)" />
         <input name="location" className="field" placeholder="Ubicación (opcional)" />
+        <input name="codigo_equipo_a" className="field" placeholder="Código de equipo A" />
+        <input name="codigo_equipo_b" className="field" placeholder="Código de equipo B" />
 
         <div className="md:col-span-2">
           <label className="mb-1 block text-xs text-slate-300">Foto comprobante (opcional)</label>
@@ -208,6 +214,9 @@ export default function ResultForm({ teams, initialClubId, initialOpponentClubId
       <button type="submit" disabled={isSubmitDisabled} className="btn-accent w-full disabled:cursor-not-allowed disabled:opacity-60 md:w-fit">Cargar resultado</button>
 
       {isSubmitDisabled && <p className="text-xs text-rose-300">Completa club, rival y ganador para continuar.</p>}
+      <div className={`rounded-xl px-3 py-2 text-sm ${estadoConfirmacion === 'confirmado' ? 'bg-emerald-500/20 text-emerald-200' : 'bg-amber-400/20 text-amber-200'}`}>
+        {estadoConfirmacion === 'confirmado' ? 'Resultado confirmado. Este resultado ya puede contar para el ranking' : 'Resultado pendiente de confirmación. Falta el código del otro equipo'}
+      </div>
       {error && <p className="text-sm text-rose-300">{error}</p>}
       <p className={successClass}>{success}</p>
     </form>
