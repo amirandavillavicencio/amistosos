@@ -9,11 +9,11 @@ import type {
   SuggestedMatchScoreBreakdown
 } from '@/lib/types';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { hasTimeOverlap, normalizeBranch, normalizeCategory, parseWeekdays } from '@/lib/format';
 
 export const USABLE_AVAILABILITY_STATUSES = ['open', 'active', 'published'] as const;
 
 const USABLE_STATUS_SET = new Set<string>(USABLE_AVAILABILITY_STATUSES);
-const VALID_WEEKDAYS = new Set(['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']);
 const WEEKDAY_LABELS: Record<string, string> = {
   lunes: 'Lunes',
   martes: 'Martes',
@@ -24,12 +24,9 @@ const WEEKDAY_LABELS: Record<string, string> = {
   domingo: 'Domingo'
 };
 
-function stripAccents(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
 
 export function normalizeText(value: string | null | undefined): string {
-  return stripAccents(String(value ?? '')).trim().toLowerCase();
+  return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
 }
 
 export function normalizeId(value: string | null | undefined): string {
@@ -68,26 +65,7 @@ export function formatWeekdayList(days: string[]): string {
 }
 
 export function resolveWeekdays(post: Pick<MatchingAvailability, 'weekday' | 'weekdays'>): string[] {
-  const values = [
-    ...(Array.isArray(post.weekdays) ? post.weekdays : []),
-    post.weekday
-  ];
-
-  const seen = new Set<string>();
-  const resolved: string[] = [];
-
-  for (const value of values) {
-    const normalized = normalizeText(value);
-
-    if (!normalized || !VALID_WEEKDAYS.has(normalized) || seen.has(normalized)) {
-      continue;
-    }
-
-    seen.add(normalized);
-    resolved.push(normalized);
-  }
-
-  return resolved;
+  return parseWeekdays(post.weekday, post.weekdays);
 }
 
 export function toMinutes(value: string | null | undefined): number | null {
@@ -217,14 +195,13 @@ export function canPostsMatch(a: MatchingAvailability, b: MatchingAvailability):
   if (!isAvailabilityEligible(a) || !isAvailabilityEligible(b)) return false;
   if (normalizeId(a.id) === normalizeId(b.id)) return false;
   if (normalizeClubName(a.club_name) === normalizeClubName(b.club_name)) return false;
-  if (!sameNormalizedValue(a.branch, b.branch)) return false;
-  if (!sameNormalizedValue(a.age_category, b.age_category)) return false;
+  if (normalizeBranch(a.branch) !== normalizeBranch(b.branch)) return false;
+  if (normalizeCategory(a.age_category) !== normalizeCategory(b.age_category)) return false;
 
   const sharedWeekdays = getSharedWeekdays(a, b);
   if (sharedWeekdays.length === 0) return false;
 
-  if (getTimeOverlapMinutes(a, b) <= 0) return false;
-  if (!a.has_court && !b.has_court) return false;
+  if (!hasTimeOverlap(a.start_time, a.end_time, b.start_time, b.end_time)) return false;
 
   return true;
 }

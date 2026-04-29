@@ -17,6 +17,7 @@ import {
   getSuggestedMatches
 } from '@/lib/data';
 import type { AvailabilityWithTeam, ClubStatsCard, MatchResultRow, SuggestedMatchCard } from '@/lib/types';
+import { formatPlural } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -75,7 +76,7 @@ export default async function HomePage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center whitespace-nowrap rounded-full border border-violet-300/35 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-100">
-                {activeSuggestedMatches.length} cruce{activeSuggestedMatches.length === 1 ? '' : 's'}
+                {formatPlural(activeSuggestedMatches.length, 'cruce', 'cruces')}
               </span>
             </div>
           </div>
@@ -84,7 +85,7 @@ export default async function HomePage() {
             <EmptyState
               icon="⚡"
               title="Aún no hay cruces activos"
-              description="¡Sé el primero en tu comuna en publicar!"
+              description={openAvailabilities.length > 1 ? 'Hay publicaciones abiertas, pero aún no se generaron cruces activos. Estamos reintentando el matching automáticamente.' : '¡Sé el primero en tu comuna en publicar!'}
               action={
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <Link href="/publicar" className="btn-accent">
@@ -108,7 +109,7 @@ export default async function HomePage() {
               <h2 className="mt-1 text-2xl font-black text-white">Cruces coordinados</h2>
             </div>
             <span className="inline-flex items-center whitespace-nowrap rounded-full border border-sky-300/35 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-100">
-              {matchedSuggestedMatches.length} cruce{matchedSuggestedMatches.length === 1 ? '' : 's'}
+              {formatPlural(matchedSuggestedMatches.length, 'cruce', 'cruces')}
             </span>
           </div>
 
