@@ -27,6 +27,12 @@ export default async function HomePage() {
     console.error('HomePage data load failed', error);
   }
 
+  console.log('[home:suggestedMatches]', {
+    count: activeSuggestedMatches?.length ?? 0,
+    statuses: activeSuggestedMatches?.map((m) => m.status),
+    ids: activeSuggestedMatches?.map((m) => m.id),
+  });
+
   return (
     <main className="section py-8">
       <nav className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-[#224f9d] bg-[#0f3b82] px-4 py-3 shadow-sm">
@@ -40,7 +46,7 @@ export default async function HomePage() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <HomeHero suggestedCount={activeSuggestedMatches.length} postCount={openAvailabilities.length} />
-        <SuggestedMatchPanel match={activeSuggestedMatches[0]} />
+        <SuggestedMatchPanel matches={activeSuggestedMatches} />
       </div>
 
       <section className="mt-6">
