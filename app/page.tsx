@@ -57,7 +57,7 @@ export default async function HomePage() {
           <article className="rounded-3xl border border-[#c6daf8] bg-white p-5">
             <h3 className="font-display text-3xl text-[#0f2f6a]">¿Tu equipo busca amistoso?</h3>
             <p className="mt-2 text-sm text-[#2d4f88]">Publica tu disponibilidad.</p>
-            <Link href="/publicar" className="btn-accent mt-4">Publicar equipo</Link>
+            <Link href="/publicar" className="btn-secondary mt-4">Crear publicación</Link>
           </article>
         </div>
       </section>

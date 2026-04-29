@@ -61,6 +61,9 @@ export interface SuggestedMatchRow {
   level_score: number;
   elo_score: number;
   status: 'active' | 'matched' | 'completed' | 'archived' | 'expired' | 'unconfirmed';
+  stream_url?: string | null;
+  stream_submitted_by_post_id?: string | null;
+  stream_submitted_at?: string | null;
   created_at: string;
 }
 
@@ -134,6 +137,9 @@ export interface SuggestedMatchCard {
   id: string;
   pairKey: string;
   status: 'active' | 'matched' | 'completed' | 'archived' | 'expired' | 'unconfirmed';
+  streamUrl?: string | null;
+  streamSubmittedByPostId?: string | null;
+  streamSubmittedAt?: string | null;
   totalScore: number;
   scheduleScore: number;
   locationScore: number;
@@ -174,6 +180,12 @@ export interface MatchResultRow {
   elo_before: number;
   elo_after: number;
   elo_delta: number;
+  team_a_code_hash: string | null;
+  team_b_code_hash: string | null;
+  team_a_result_confirmed_at: string | null;
+  team_b_result_confirmed_at: string | null;
+  ranking_validated_at: string | null;
+  ranking_status: 'pendiente' | 'confirmado';
   created_at: string;
 }
 
