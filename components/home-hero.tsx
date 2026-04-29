@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { formatPlural } from '@/lib/format';
 
 export default function HomeHero({
   suggestedCount = 0,
@@ -8,43 +9,39 @@ export default function HomeHero({
   postCount?: number;
 }) {
   return (
-    <section className="app-card relative overflow-hidden border-fuchsia-400/25 bg-slate-950/95 p-5 sm:p-6 md:p-7">
-      <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-violet-500/30 blur-3xl" />
-      <div className="pointer-events-none absolute -right-16 bottom-0 h-56 w-56 rounded-full bg-orange-500/20 blur-3xl" />
-
-      <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+    <section className="rounded-[2rem] border border-[#ddcdbf] bg-[#f8efe4] p-6 sm:p-8">
+      <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-fuchsia-200">Amistosos Vóley</p>
-          <h1 className="mt-2 text-3xl font-black leading-tight tracking-tight text-white sm:text-4xl">Salta a la cancha</h1>
-          <p className="mt-2 max-w-xl text-base text-slate-300">Publica tu disponibilidad y encuentra equipos rivales en tu comuna</p>
+          <h1 className="font-display text-4xl leading-tight text-[#3f2d1f] sm:text-5xl">Encuentra rival para tu próximo amistoso</h1>
+          <p className="mt-3 max-w-2xl text-base text-[#6b5a4c]">
+            Publica cuándo puede jugar tu equipo y revisa cruces con otros equipos disponibles.
+          </p>
 
-          <div className="mt-5 flex flex-wrap gap-2.5">
-            <Link
-              href="/publicar"
-              className="btn-accent"
-            >
-              Publicar
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/publicar" className="btn-accent">
+              Publicar equipo
             </Link>
-            <Link
-              href="/ranking"
-              className="btn-secondary"
-            >
-              Ver ranking
+            <Link href="/explorar" className="btn-secondary">
+              Ver equipos
             </Link>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5 sm:min-w-72">
-          <div className="rounded-2xl border border-violet-300/35 bg-violet-500/10 p-3.5 backdrop-blur" title="Un cruce es un partido coordinado entre dos equipos">
-            <p className="whitespace-nowrap text-[11px] uppercase tracking-wider text-violet-100/90">Cruces activos</p>
-            <p className="mt-1 text-2xl font-black text-white sm:text-3xl">{suggestedCount}</p>
-          </div>
-          <div className="rounded-2xl border border-emerald-300/35 bg-emerald-500/10 p-3.5 backdrop-blur" title="Un cruce es un partido coordinado entre dos equipos">
-            <p className="whitespace-nowrap text-[11px] uppercase tracking-wider text-emerald-100/90">Publicaciones</p>
-            <p className="mt-1 text-2xl font-black text-white sm:text-3xl">{postCount}</p>
-          </div>
+        <div className="grid min-w-[230px] grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-1">
+          <Metric label="Equipos activos" value={formatPlural(postCount, 'equipo', 'equipos')} />
+          <Metric label="Cruces disponibles" value={formatPlural(suggestedCount, 'cruce', 'cruces')} />
+          <Metric label="Beta" value="Sí" />
         </div>
       </div>
     </section>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-[#d8c6b6] bg-[#fffaf3] p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#7b6757]">{label}</p>
+      <p className="mt-1 font-display text-2xl text-[#3f2d1f]">{value}</p>
+    </div>
   );
 }
