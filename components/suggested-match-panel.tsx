@@ -27,7 +27,7 @@ function sharedTime(match: SuggestedMatchCard) {
 
 function teamStatus(match: SuggestedMatchCard) {
   if (match.status === 'matched') return 'Cruce confirmado';
-  if (match.status === 'pending') return 'Falta la confirmación del otro equipo';
+  if (match.status === 'unconfirmed') return 'Falta la confirmación del otro equipo';
   return null;
 }
 
