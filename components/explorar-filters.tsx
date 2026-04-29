@@ -61,10 +61,11 @@ export default function ExplorarFilters({ posts }: { posts: AvailabilityWithTeam
               );
             })}
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-slate-700 px-2 py-2">
+          <div className="flex items-center gap-2 rounded-xl border border-slate-700 px-2 py-2" aria-label="Filtro de cancha">
+            <span className="text-xs text-slate-300">Cancha:</span>
             {[
-              { value: 'true', label: '✓ Pone cancha' },
-              { value: 'false', label: '✗ Sin cancha' }
+              { value: 'true', label: 'Con cancha' },
+              { value: 'false', label: 'Sin cancha' }
             ].map((option) => {
               const active = hasCourt === option.value;
               return (

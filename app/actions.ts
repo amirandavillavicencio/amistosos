@@ -6,6 +6,7 @@ import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo
 import { getActiveBannedClubNameKeys, isClubBannedByName, normalizeClubNameKey } from '@/lib/banned-clubs';
 import { sendMatchNotificationEmails } from '@/lib/email/send-match-notification';
 import { USABLE_AVAILABILITY_STATUSES } from '@/lib/matching';
+import { hasTimeOverlap, normalizeBranch, normalizeCategory, parseWeekdays } from '@/lib/format';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type {
   AvailabilityRow,
@@ -325,14 +326,8 @@ export async function rebuildSuggestedMatches() {
           normalizeForComparison((b as { level?: unknown })?.level)
           || normalizeForComparison((b as { expected_level?: unknown })?.expected_level);
 
-        const daysA = getNormalizedDaysFromAvailability(
-          (a as { weekday?: unknown })?.weekday,
-          (a as { weekdays?: unknown })?.weekdays
-        );
-        const daysB = getNormalizedDaysFromAvailability(
-          (b as { weekday?: unknown })?.weekday,
-          (b as { weekdays?: unknown })?.weekdays
-        );
+        const daysA = parseWeekdays((a as { weekday?: unknown })?.weekday, (a as { weekdays?: unknown })?.weekdays);
+        const daysB = parseWeekdays((b as { weekday?: unknown })?.weekday, (b as { weekdays?: unknown })?.weekdays);
         const hasSharedDay = daysA.some((d) => daysB.includes(d));
         console.log('rebuildSuggestedMatches shared day evaluation', {
           postAId,
@@ -345,18 +340,13 @@ export async function rebuildSuggestedMatches() {
           pairsWithSharedDays += 1;
         }
 
-        const aStart = parseMinutesSafe((a as { start_time?: unknown })?.start_time);
-        const aEnd = parseMinutesSafe((a as { end_time?: unknown })?.end_time);
-        const bStart = parseMinutesSafe((b as { start_time?: unknown })?.start_time);
-        const bEnd = parseMinutesSafe((b as { end_time?: unknown })?.end_time);
-        const hasTimeOverlap =
-          aStart !== null &&
-          aEnd !== null &&
-          bStart !== null &&
-          bEnd !== null &&
-          aStart < bEnd &&
-          bStart < aEnd;
-        if (hasTimeOverlap) {
+        const hasOverlappingTime = hasTimeOverlap(
+          (a as { start_time?: string | null })?.start_time ?? null,
+          (a as { end_time?: string | null })?.end_time ?? null,
+          (b as { start_time?: string | null })?.start_time ?? null,
+          (b as { end_time?: string | null })?.end_time ?? null
+        );
+        if (hasOverlappingTime) {
           pairsWithTimeOverlap += 1;
         }
 
@@ -380,9 +370,24 @@ export async function rebuildSuggestedMatches() {
           scheduleScore += 8;
         }
 
-        if (hasTimeOverlap) {
+        if (hasOverlappingTime) {
           compatibilityScore += 8;
           scheduleScore += 8;
+        }
+
+        const aBranch = normalizeBranch((a as { branch?: unknown })?.branch as string);
+        const bBranch = normalizeBranch((b as { branch?: unknown })?.branch as string);
+        const aCategory = normalizeCategory((a as { age_category?: unknown })?.age_category as string);
+        const bCategory = normalizeCategory((b as { age_category?: unknown })?.age_category as string);
+
+        if (aBranch && bBranch && aBranch === bBranch) {
+          compatibilityScore += 12;
+          levelScore += 6;
+        }
+
+        if (aCategory && bCategory && aCategory === bCategory) {
+          compatibilityScore += 10;
+          levelScore += 4;
         }
 
         if (aLevel && bLevel && aLevel === bLevel) {
@@ -390,9 +395,16 @@ export async function rebuildSuggestedMatches() {
           levelScore += 4;
         }
 
-        if (Boolean((a as { has_court?: unknown })?.has_court) && Boolean((b as { has_court?: unknown })?.has_court)) {
-          compatibilityScore += 3;
-          locationScore += 3;
+        const aHasCourt = Boolean((a as { has_court?: unknown })?.has_court);
+        const bHasCourt = Boolean((b as { has_court?: unknown })?.has_court);
+        if (aHasCourt !== bHasCourt) {
+          compatibilityScore += 12;
+          locationScore += 8;
+        } else if (aHasCourt && bHasCourt) {
+          compatibilityScore += 8;
+          locationScore += 5;
+        } else {
+          compatibilityScore += 2;
         }
 
         if (compatibilityScore < 15) {
