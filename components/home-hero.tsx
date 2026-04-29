@@ -9,28 +9,26 @@ export default function HomeHero({
   postCount?: number;
 }) {
   return (
-    <section className="rounded-[2rem] border border-[#1d4a95] bg-[#0f3b82] p-6 sm:p-8">
-      <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+    <section className="rounded-[2rem] border border-[#1f58ad] bg-[#0f3b82] p-6 sm:p-8 lg:p-10">
+      <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-end">
         <div>
-          <h1 className="font-display text-5xl leading-tight text-white sm:text-6xl">Encuentra rival para tu próximo amistoso</h1>
-          <p className="mt-3 max-w-2xl text-base text-[#dbe8ff]">
-            Publica cuándo puede jugar tu equipo y revisa cruces con otros equipos disponibles.
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ffd447]">Amistosos Vóley</p>
+          <h1 className="mt-2 font-display text-5xl leading-[0.95] text-white sm:text-6xl lg:text-7xl">Encuentra rival para tu próximo amistoso</h1>
+          <p className="mt-4 max-w-2xl text-base text-[#dbe8ff] sm:text-lg">
+            Publica disponibilidad y revisa cruces activos por comuna, categoría, rama y horario.
           </p>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/publicar" className="btn-accent">
-              Publicar equipo
-            </Link>
-            <Link href="/explorar" className="btn-secondary">
-              Ver equipos
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link href="/publicar" className="btn-accent">Publicar equipo</Link>
+            <Link href="/explorar" className="btn-secondary border-white/60 bg-white/95 text-[#0f3b82] hover:bg-white">
+              Explorar equipos
             </Link>
           </div>
         </div>
 
-        <div className="grid min-w-[230px] grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-1">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
           <Metric label="Equipos activos" value={formatPlural(postCount, 'equipo', 'equipos')} />
           <Metric label="Cruces disponibles" value={formatPlural(suggestedCount, 'cruce', 'cruces')} />
-          <Metric label="Beta" value="Sí" />
         </div>
       </div>
     </section>
@@ -39,9 +37,9 @@ export default function HomeHero({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-[#f3cb2c] bg-white p-3 shadow-sm">
+    <div className="rounded-2xl border border-[#d0e0fb] bg-white p-4 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-wide text-[#21529f]">{label}</p>
-      <p className="mt-1 font-display text-3xl text-[#0f2f6a]">{value}</p>
+      <p className="mt-1 font-display text-4xl leading-none text-[#0f2f6a]">{value}</p>
     </div>
   );
 }

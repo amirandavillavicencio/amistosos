@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import ExplorarFilters from '@/components/explorar-filters';
-import { PageHeader } from '@/components/ui-shell';
 import { getOpenAvailabilities } from '@/lib/data';
 import type { AvailabilityWithTeam } from '@/lib/types';
 
@@ -22,15 +21,21 @@ export default async function ExplorarPage() {
   }
 
   return (
-    <main className="section">
-      <PageHeader
-        eyebrow="Explorar equipos"
-        title="Disponibilidades abiertas"
-        description="Usa filtros reactivos para encontrar rivales compatibles al instante."
-        action={<Link href="/" className="btn-secondary">Volver al inicio</Link>}
-      />
+    <main className="section py-8">
+      <section className="rounded-[2rem] border border-[#1f58ad] bg-[#0f3b82] px-6 py-7 sm:px-8 sm:py-9">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ffd447]">Explorar equipos</p>
+            <h1 className="mt-2 font-display text-5xl leading-none text-white sm:text-6xl">Disponibilidades abiertas</h1>
+            <p className="mt-3 max-w-2xl text-base text-[#dbe8ff]">Filtra por comuna, categoría, rama, días y cancha para encontrar rival.</p>
+          </div>
+          <Link href="/" className="btn-secondary border-white/65 bg-white/95 text-[#0f3b82] hover:bg-white">Volver al inicio</Link>
+        </div>
+      </section>
 
-      <ExplorarFilters posts={posts} />
+      <section className="mt-6">
+        <ExplorarFilters posts={posts} />
+      </section>
     </main>
   );
 }

@@ -21,3 +21,12 @@ body {
 .btn-secondary {
   @apply inline-flex items-center justify-center rounded-full border border-[#1e4f9f] bg-white px-5 py-2.5 text-sm font-medium text-[#12336a] transition hover:bg-[#edf4ff];
 }
+
+
+.field {
+  @apply h-[46px] w-full rounded-xl border border-[#c5d8f8] bg-[#f7faff] px-3 text-sm text-[#12336a] outline-none transition focus:border-[#1f58ad] focus:bg-white;
+}
+
+.app-card {
+  @apply rounded-[1.6rem] border border-[#d4e2fa] bg-white shadow-[0_4px_20px_rgba(16,52,111,0.06)];
+}
