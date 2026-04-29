@@ -1,10 +1,6 @@
 import type { Metadata } from 'next';
-import { Fraunces, Plus_Jakarta_Sans } from 'next/font/google';
 import Footer from '@/components/footer';
 import './globals.css';
-
-const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-display' });
-const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-sans' });
 
 const siteUrl = 'https://amistosos.vercel.app';
 const ogImage = `${siteUrl}/og-image.jpg`;
@@ -18,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${fraunces.variable} ${jakarta.variable}`}>
+    <html lang="es">
       <body className="flex min-h-screen flex-col">
         <div className="flex-1">{children}</div>
         <Footer />

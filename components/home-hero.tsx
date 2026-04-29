@@ -9,11 +9,11 @@ export default function HomeHero({
   postCount?: number;
 }) {
   return (
-    <section className="rounded-[2rem] border border-[#ddcdbf] bg-[#f8efe4] p-6 sm:p-8">
+    <section className="rounded-[2rem] border border-[#1d4a95] bg-[#0f3b82] p-6 sm:p-8">
       <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div>
-          <h1 className="font-display text-4xl leading-tight text-[#3f2d1f] sm:text-5xl">Encuentra rival para tu próximo amistoso</h1>
-          <p className="mt-3 max-w-2xl text-base text-[#6b5a4c]">
+          <h1 className="font-display text-5xl leading-tight text-white sm:text-6xl">Encuentra rival para tu próximo amistoso</h1>
+          <p className="mt-3 max-w-2xl text-base text-[#dbe8ff]">
             Publica cuándo puede jugar tu equipo y revisa cruces con otros equipos disponibles.
           </p>
 
@@ -39,9 +39,9 @@ export default function HomeHero({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-[#d8c6b6] bg-[#fffaf3] p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#7b6757]">{label}</p>
-      <p className="mt-1 font-display text-2xl text-[#3f2d1f]">{value}</p>
+    <div className="rounded-2xl border border-[#f3cb2c] bg-white p-3 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#21529f]">{label}</p>
+      <p className="mt-1 font-display text-3xl text-[#0f2f6a]">{value}</p>
     </div>
   );
 }

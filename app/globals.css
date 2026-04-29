@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 body {
-  @apply bg-[#f4e9dc] text-[#4f3f31] antialiased;
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  @apply bg-[#f4f8ff] text-[#12336a] antialiased;
+  font-family: "DM Sans", "Plus Jakarta Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   overflow-x: clip;
 }
 
@@ -12,12 +12,12 @@ body {
   @apply mx-auto w-full max-w-6xl px-4 sm:px-6 md:px-8;
 }
 
-.font-display { font-family: var(--font-display), ui-serif, Georgia, serif; }
+.font-display { font-family: "Bebas Neue", Impact, "Arial Narrow Bold", sans-serif; letter-spacing: 0.02em; }
 
 .btn-accent {
-  @apply inline-flex items-center justify-center rounded-full border border-[#9a5b3f] bg-[#9a5b3f] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#8a4e35];
+  @apply inline-flex items-center justify-center rounded-full border border-[#f5bf00] bg-[#ffd447] px-5 py-2.5 text-sm font-semibold text-[#0f2f6a] shadow-sm transition hover:bg-[#f7c813];
 }
 
 .btn-secondary {
-  @apply inline-flex items-center justify-center rounded-full border border-[#ccb8a7] bg-[#fffaf3] px-5 py-2.5 text-sm font-medium text-[#4f3f31] transition hover:border-[#9a5b3f] hover:text-[#9a5b3f];
+  @apply inline-flex items-center justify-center rounded-full border border-[#1e4f9f] bg-white px-5 py-2.5 text-sm font-medium text-[#12336a] transition hover:bg-[#edf4ff];
 }

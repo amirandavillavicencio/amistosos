@@ -29,8 +29,8 @@ export default async function HomePage() {
 
   return (
     <main className="section py-8">
-      <nav className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-[#ddcdbf] bg-[#fffaf3] px-4 py-3">
-        <p className="font-display text-2xl text-[#3f2d1f]">Amistosos Vóley</p>
+      <nav className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-[#224f9d] bg-[#0f3b82] px-4 py-3 shadow-sm">
+        <p className="font-display text-3xl text-white">AMISTOSOS VÓLEY</p>
         <div className="flex items-center gap-2">
           <Link href="/ranking" className="btn-secondary !px-4 !py-2">Ranking</Link>
           <Link href="/explorar" className="btn-secondary !px-4 !py-2">Explorar</Link>
@@ -47,16 +47,16 @@ export default async function HomePage() {
         <HomeModules />
       </section>
 
-      <section className="mt-6 rounded-[2rem] border border-[#ddcdbf] bg-[#f8efe4] p-5">
+      <section className="mt-6 rounded-[2rem] border border-[#c6daf8] bg-[#eaf2ff] p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="font-display text-3xl text-[#3f2d1f]">Publicaciones activas</h2>
+          <h2 className="font-display text-4xl text-[#0f2f6a]">Publicaciones activas</h2>
           <Link href="/explorar" className="btn-secondary">Ver equipos</Link>
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {openAvailabilities.map((post) => <PostCard key={post.id} post={post} compact />)}
-          <article className="rounded-3xl border border-[#d8c6b6] bg-[#fffaf3] p-5">
-            <h3 className="font-display text-2xl text-[#3f2d1f]">¿Tu equipo busca amistoso?</h3>
-            <p className="mt-2 text-sm text-[#6b5a4c]">Publica tu disponibilidad.</p>
+          <article className="rounded-3xl border border-[#c6daf8] bg-white p-5">
+            <h3 className="font-display text-3xl text-[#0f2f6a]">¿Tu equipo busca amistoso?</h3>
+            <p className="mt-2 text-sm text-[#2d4f88]">Publica tu disponibilidad.</p>
             <Link href="/publicar" className="btn-accent mt-4">Publicar equipo</Link>
           </article>
         </div>
