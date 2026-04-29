@@ -50,7 +50,7 @@ export default async function HomePage() {
       <section className="mt-6 rounded-[2rem] border border-[#c6daf8] bg-[#eaf2ff] p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="font-display text-4xl text-[#0f2f6a]">Publicaciones activas</h2>
-          <Link href="/explorar" className="btn-secondary">Ver equipos</Link>
+          <Link href="/explorar" className="btn-secondary">Explorar equipos</Link>
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {openAvailabilities.map((post) => <PostCard key={post.id} post={post} compact />)}
