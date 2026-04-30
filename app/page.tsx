@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function HomePage() {
-  await logHomeProductionDiagnostics();
+  const diagnostics = await logHomeProductionDiagnostics();
 
   let activeSuggestedMatches: SuggestedMatchCard[] = [];
   let openAvailabilities: AvailabilityWithTeam[] = [];
@@ -23,6 +23,11 @@ export default async function HomePage() {
     openAvailabilities = Array.isArray(availabilities) ? availabilities : [];
   } catch (error) {
     console.error('HomePage data load failed', error);
+  }
+
+
+  if ((diagnostics?.suggestedMatchesCount ?? 0) > 0 && activeSuggestedMatches.length === 0) {
+    console.error("[home-error] raw suggested matches exist but getSuggestedMatches returned 0");
   }
 
   console.log('[home-debug] activeAvailabilities', openAvailabilities.length);
