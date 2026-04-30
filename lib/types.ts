@@ -45,6 +45,7 @@ export interface AvailabilityRow {
   phone: string | null;
   instagram: string | null;
   logo_url: string | null;
+  confirmation_code: string | null;
   owner_id: string | null;
 }
 
