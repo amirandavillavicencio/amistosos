@@ -392,6 +392,25 @@ async function getSuggestedMatchesByStatus(
     console.log('[getSuggestedMatches] discarded', discardedIds);
     console.log('[getSuggestedMatches] renderable', cards.length);
     debugMatchingLog('suggested_matches final cards', { requestedStatus: status, cardsCount: cards.length });
+
+    if (selected.length > 0 && cards.length === 0) {
+      console.error('getSuggestedMatchesByStatus selected rows could not be rendered', {
+        status,
+        limit,
+        selectedIds: selected.map((row) => row.id),
+        selectedPostIds: selected.map((row) => ({ id: row.id, post_a_id: row.post_a_id, post_b_id: row.post_b_id })),
+        joinedPostIds: safePosts.map((post) => post.id)
+      });
+
+      if (status === 'active') {
+        console.warn('getSuggestedMatchesByStatus using live fallback because active selected > 0 but cards == 0', {
+          status,
+          limit
+        });
+        return getLiveSuggestedMatches(limit);
+      }
+    }
+
     return cards.slice(0, limit);
   } catch (error) {
     console.error('getSuggestedMatches crashed', error);
