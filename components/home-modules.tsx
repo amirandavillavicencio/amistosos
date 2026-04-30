@@ -1,7 +1,7 @@
 const modules = [
   { title: 'Publica disponibilidad', text: 'Indica días, horario, categoría y si tienes cancha.' },
-  { title: 'Revisa cruces', text: 'Mira equipos que calzan con tus datos de disponibilidad.' },
-  { title: 'Coordina el amistoso', text: 'Si ambos aceptan, el cruce queda confirmado.' },
+  { title: 'Revisa matches', text: 'Mira equipos que calzan con tus datos de disponibilidad.' },
+  { title: 'Coordina el amistoso', text: 'Si ambos aceptan, el match queda confirmado.' },
   { title: 'Registra resultados', text: 'Sube el marcador del partido jugado.' },
   { title: 'Sigue el ranking', text: 'Los resultados van ordenando la tabla general.' }
 ];
