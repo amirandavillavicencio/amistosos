@@ -1,59 +1,114 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+import Link from 'next/link';
+import HomeHero from '@/components/home-hero';
+import HomeMatchesSection from '@/components/home-matches-section';
+import HomeModules from '@/components/home-modules';
+import { getOpenAvailabilities, getSuggestedMatches, logHomeProductionDiagnostics } from '@/lib/data';
+import type { AvailabilityWithTeam, SuggestedMatchCard } from '@/lib/types';
 
-body {
-  @apply bg-[#e8f0fb] text-[#12336a] antialiased;
-  font-family: "DM Sans", "Plus Jakarta Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
-  overflow-x: clip;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export default async function HomePage() {
+  const diagnostics = await logHomeProductionDiagnostics();
+
+  let activeSuggestedMatches: SuggestedMatchCard[] = [];
+  let openAvailabilities: AvailabilityWithTeam[] = [];
+
+  try {
+    const [activeMatches, availabilities] = await Promise.all([getSuggestedMatches(8), getOpenAvailabilities(8)]);
+    activeSuggestedMatches = Array.isArray(activeMatches) ? activeMatches : [];
+    openAvailabilities = Array.isArray(availabilities) ? availabilities : [];
+  } catch (error) {
+    console.error('HomePage data load failed', error);
+  }
+
+  if ((diagnostics?.suggestedMatchesCount ?? 0) > 0 && activeSuggestedMatches.length === 0) {
+    console.error('[home-error] raw suggested matches exist but getSuggestedMatches returned 0');
+  }
+
+  return (
+    <main className="home-shell">
+      <div className="home-page">
+        <nav className="mb-[18px] flex items-center justify-between gap-4 rounded-[20px] border border-white/10 bg-[#0a2447] px-3 py-2.5 pl-5 shadow-[0_12px_32px_rgba(10,36,71,0.22),inset_0_1px_0_rgba(255,255,255,0.06)] max-sm:flex-col max-sm:items-stretch max-sm:rounded-2xl">
+          <Link href="/" className="flex items-center gap-2.5 font-display text-[26px] font-black uppercase tracking-[0.04em] text-white">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#f9c900] text-[18px] leading-none">🏐</span>
+            AMISTOSOS VÓLEY
+          </Link>
+
+          <div className="flex items-center gap-2 max-sm:flex-col">
+            <Link href="/ranking" className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-transparent px-[18px] py-2.5 text-[13.5px] font-semibold text-white/70 transition hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/15 hover:text-white max-sm:w-full">
+              Ranking
+            </Link>
+            <Link href="/explorar" className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-transparent px-[18px] py-2.5 text-[13.5px] font-semibold text-white/70 transition hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/15 hover:text-white max-sm:w-full">
+              Explorar
+            </Link>
+            <Link href="/publicar" className="inline-flex items-center justify-center rounded-xl bg-[#f9c900] px-[18px] py-2.5 text-[13.5px] font-bold text-[#0a2447] shadow-[0_4px_14px_rgba(249,201,0,0.35)] transition hover:-translate-y-0.5 hover:bg-[#ffd114] hover:shadow-[0_6px_20px_rgba(249,201,0,0.45)] max-sm:w-full">
+              + Publicar equipo
+            </Link>
+          </div>
+        </nav>
+
+        <section className="mb-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <HomeHero suggestedCount={activeSuggestedMatches.length} postCount={openAvailabilities.length} />
+          <HomeSideCard matchesCount={activeSuggestedMatches.length} />
+        </section>
+
+        <HomeMatchesSection matches={activeSuggestedMatches} />
+
+        <section className="mt-4">
+          <HomeModules />
+        </section>
+      </div>
+    </main>
+  );
 }
 
-.section {
-  @apply mx-auto w-full max-w-6xl px-4 sm:px-6 md:px-8;
+function HomeSideCard({ matchesCount }: { matchesCount: number }) {
+  return (
+    <aside className="flex flex-col justify-between rounded-[28px] border border-[#dce9fd] bg-white p-[26px] shadow-[0_8px_28px_rgba(10,36,71,0.07)]">
+      <div>
+        <p className="mb-3.5 inline-flex rounded-lg border border-[#dce9fd] bg-[#f3f8ff] px-3 py-1 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[#1042a0]">
+          Cómo funciona
+        </p>
+
+        <h2 className="font-display text-[34px] font-black uppercase leading-[0.95] tracking-tight text-[#0a2447]">
+          Publica y confirma
+        </h2>
+
+        <p className="mt-2.5 text-sm leading-[1.55] text-[#5a7bb5]">
+          Publica disponibilidad, guarda tu código privado y confirma cuando el sistema encuentre un match compatible.
+        </p>
+
+        <div className="mt-[18px] grid gap-2">
+          <SideStep number="1" text="Publica días, horario, rama y categoría" />
+          <SideStep number="2" text="El sistema crea matches compatibles automáticamente" />
+          <SideStep number="3" text="Cada equipo confirma con su código privado" />
+        </div>
+      </div>
+
+      <div className="mt-5 flex flex-wrap gap-2">
+        <Link href="/publicar" className="inline-flex items-center justify-center rounded-xl bg-[#f9c900] px-[18px] py-2.5 text-[13.5px] font-bold text-[#0a2447] shadow-[0_4px_14px_rgba(249,201,0,0.35)] transition hover:-translate-y-0.5 hover:bg-[#ffd114]">
+          Publicar equipo
+        </Link>
+        <Link href="/explorar" className="inline-flex items-center justify-center rounded-xl border border-[#c0d4f5] bg-white px-[18px] py-2.5 text-[13.5px] font-semibold text-[#1042a0] transition hover:-translate-y-0.5 hover:border-[#1a55c8] hover:bg-[#f3f8ff]">
+          Ver todos
+        </Link>
+      </div>
+
+      <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.12em] text-[#2b6bea]">
+        Hoy hay {matchesCount === 1 ? '1 match disponible' : `${matchesCount} matches disponibles`}
+      </p>
+    </aside>
+  );
 }
 
-.font-display {
-  font-family: "Barlow Condensed", "Bebas Neue", Impact, "Arial Narrow Bold", sans-serif;
-  letter-spacing: 0.02em;
-}
-
-.home-shell {
-  position: relative;
-  isolation: isolate;
-  min-height: 100%;
-  background: #e8f0fb;
-}
-
-.home-shell::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image: radial-gradient(circle, rgba(16, 66, 160, 0.08) 1px, transparent 1px);
-  background-size: 28px 28px;
-}
-
-.home-page {
-  position: relative;
-  z-index: 1;
-  width: min(1200px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 20px 0 52px;
-}
-
-.btn-accent {
-  @apply inline-flex items-center justify-center rounded-full border border-[#f5bf00] bg-[#ffd447] px-5 py-2.5 text-sm font-semibold text-[#0f2f6a] shadow-sm transition hover:bg-[#f7c813];
-}
-
-.btn-secondary {
-  @apply inline-flex items-center justify-center rounded-full border border-[#1e4f9f] bg-white px-5 py-2.5 text-sm font-medium text-[#12336a] transition hover:bg-[#edf4ff];
-}
-
-.field {
-  @apply h-[46px] w-full rounded-xl border border-[#c5d8f8] bg-[#f7faff] px-3 text-sm text-[#12336a] outline-none transition focus:border-[#1f58ad] focus:bg-white;
-}
-
-.app-card {
-  @apply rounded-[1.6rem] border border-[#d4e2fa] bg-white shadow-[0_4px_20px_rgba(16,52,111,0.06)];
+function SideStep({ number, text }: { number: string; text: string }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <span className="mt-px grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md bg-[#0a2447] text-[11px] font-extrabold text-white">
+        {number}
+      </span>
+      <p className="text-[13px] leading-relaxed text-[#0d2750]">{text}</p>
+    </div>
+  );
 }
