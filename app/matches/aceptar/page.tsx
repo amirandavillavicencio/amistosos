@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { confirmMatchWithCode } from '@/app/actions';
+import BackHomeLink from '@/components/back-home-link';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type { AvailabilityWithTeam } from '@/lib/types';
 
@@ -24,7 +25,7 @@ function MatchErrorState({ title, message }: { title: string; message: string })
       <article className="card-panel p-6 text-center">
         <h1 className="display-serif text-2xl text-ink">{title}</h1>
         <p className="mt-2 text-sm text-muted">{message}</p>
-        <Link href="/" className="btn-secondary mt-4 inline-flex">Volver al inicio</Link>
+        <BackHomeLink className="mt-4" />
       </article>
     </main>
   );
@@ -105,6 +106,7 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
   return (
     <main className="section py-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
+        <BackHomeLink className="w-fit" />
         <section className="relative overflow-hidden rounded-[2rem] border border-line/80 bg-panel px-4 py-6 shadow-2xl shadow-black/30 sm:px-8 sm:py-10 lg:px-10">
           <div className="relative z-10">
             <p className="text-center text-xs font-semibold uppercase tracking-[0.24em] text-accent">Amistoso coordinable</p>

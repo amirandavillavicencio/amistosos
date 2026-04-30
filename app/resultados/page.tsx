@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import BackHomeLink from '@/components/back-home-link';
 import ResultForm from '@/components/result-form';
 import { EmptyState, PageHeader, SectionShell, StatusBadge } from '@/components/ui-shell';
 import { getAllTeamsMinimal, getRecentResults } from '@/lib/data';
@@ -40,7 +41,7 @@ export default async function ResultadosPage({ searchParams }: ResultadosPagePro
         eyebrow="Carga de historial"
         title="Cargar resultado"
         description="Carga marcadores oficiales indicando claramente contra quién fue el amistoso."
-        action={<Link href="/" className="btn-secondary">Volver al inicio</Link>}
+        action={<BackHomeLink />}
       />
 
       <ResultForm

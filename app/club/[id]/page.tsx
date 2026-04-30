@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import BackHomeLink from '@/components/back-home-link';
 import { EmptyState, SectionShell, StatusBadge } from '@/components/ui-shell';
 import { HISTORY_MINIMUM, getTeamProfile } from '@/lib/data';
 
@@ -11,7 +12,10 @@ export default async function ClubProfilePage({ params }: { params: { id: string
 
   return (
     <main className="section">
-      <Link href="/ranking" className="editorial-link">← Volver al ranking</Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link href="/ranking" className="editorial-link">← Volver al ranking</Link>
+        <BackHomeLink />
+      </div>
 
       <SectionShell className="mt-4">
         <p className="app-eyebrow">Resumen del equipo</p>

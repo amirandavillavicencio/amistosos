@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import BackHomeLink from '@/components/back-home-link';
 import ExplorarFilters from '@/components/explorar-filters';
 import { getOpenAvailabilities } from '@/lib/data';
 import type { AvailabilityWithTeam } from '@/lib/types';
@@ -29,7 +29,7 @@ export default async function ExplorarPage() {
             <h1 className="mt-2 font-display text-5xl leading-none text-white sm:text-6xl">Disponibilidades abiertas</h1>
             <p className="mt-3 max-w-2xl text-base text-[#dbe8ff]">Filtra por comuna, categoría, rama, días y cancha para encontrar rival.</p>
           </div>
-          <Link href="/" className="btn-secondary border-white/65 bg-white/95 text-[#0f3b82] hover:bg-white">Volver al inicio</Link>
+          <BackHomeLink className="border-white/65 bg-white/95 text-[#0f3b82] hover:border-white hover:bg-white" />
         </div>
       </section>
 
