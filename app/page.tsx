@@ -5,6 +5,7 @@ import SuggestedMatchPanel from '@/components/suggested-match-panel';
 import HowItWorks from '@/components/how-it-works';
 import HomeModules from '@/components/home-modules';
 import HomeCTA from '@/components/home-cta';
+import HomeMatchesSection from '@/components/home-matches-section';
 import { getOpenAvailabilities, getSuggestedMatches, logHomeProductionDiagnostics } from '@/lib/data';
 import type { AvailabilityWithTeam, SuggestedMatchCard } from '@/lib/types';
 
@@ -36,28 +37,26 @@ export default async function HomePage() {
 
   return (
     <main className="section py-8">
-      <nav className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-[#224f9d] bg-[#0f3b82] px-4 py-3 shadow-sm">
+      <nav className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-[#234c93] bg-[#071b3d] px-4 py-3 shadow-sm">
         <p className="font-display text-3xl text-white">AMISTOSOS VÓLEY</p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link href="/ranking" className="btn-secondary !px-4 !py-2">Ranking</Link>
           <Link href="/explorar" className="btn-secondary !px-4 !py-2">Explorar</Link>
           <Link href="/publicar" className="btn-accent !px-4 !py-2">Publicar equipo</Link>
         </div>
       </nav>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <HomeHero suggestedCount={activeSuggestedMatches.length} postCount={openAvailabilities.length} />
         <SuggestedMatchPanel matches={activeSuggestedMatches} />
-      </div>
-
-      <section className="mt-6">
-        <HomeModules />
       </section>
 
-      <section className="mt-6 rounded-[2rem] border border-[#c6daf8] bg-[#eaf2ff] p-5">
+      <HomeMatchesSection matches={activeSuggestedMatches} />
+
+      <section className="mt-6 rounded-[2rem] border border-[#c6daf8] bg-[#eef4ff] p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="font-display text-4xl text-[#0f2f6a]">Publicaciones activas</h2>
-          <Link href="/explorar" className="btn-secondary">Explorar equipos</Link>
+          <Link href="/explorar" className="btn-secondary">Ver detalle</Link>
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {openAvailabilities.map((post) => <PostCard key={post.id} post={post} compact />)}
@@ -69,8 +68,8 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <section className="mt-6"><HomeModules /></section>
       <section className="mt-6"><HowItWorks /></section>
       <section className="mt-6"><HomeCTA /></section>
     </main>
-  );
-}
+  );}
