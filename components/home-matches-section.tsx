@@ -151,7 +151,7 @@ function MatchCard({ match }: { match: SuggestedMatchCard }) {
             {statusLabel(match.status)}
           </span>
 
-          <h3 className="mt-3 break-words font-display text-2xl uppercase leading-[0.95] tracking-tight text-[#0a2447] sm:text-3xl">
+          <h3 className="mt-3 break-words font-display text-[1.65rem] leading-[1.02] tracking-tight text-[#0a2447] sm:text-[1.9rem]">
             {teamAName}{' '}
             <span className="text-[#2b6bea]">vs</span>{' '}
             {teamBName}
