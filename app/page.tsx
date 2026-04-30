@@ -5,7 +5,6 @@ import SuggestedMatchPanel from '@/components/suggested-match-panel';
 import HowItWorks from '@/components/how-it-works';
 import HomeModules from '@/components/home-modules';
 import HomeCTA from '@/components/home-cta';
-import { rebuildSuggestedMatches } from '@/app/actions';
 import { getOpenAvailabilities, getSuggestedMatches, logHomeProductionDiagnostics } from '@/lib/data';
 import type { AvailabilityWithTeam, SuggestedMatchCard } from '@/lib/types';
 
@@ -14,7 +13,6 @@ export const revalidate = 0;
 
 export default async function HomePage() {
   await logHomeProductionDiagnostics();
-  await rebuildSuggestedMatches();
 
   let activeSuggestedMatches: SuggestedMatchCard[] = [];
   let openAvailabilities: AvailabilityWithTeam[] = [];
@@ -27,11 +25,9 @@ export default async function HomePage() {
     console.error('HomePage data load failed', error);
   }
 
-  console.log('[home:suggestedMatches]', {
-    count: activeSuggestedMatches?.length ?? 0,
-    statuses: activeSuggestedMatches?.map((m) => m.status),
-    ids: activeSuggestedMatches?.map((m) => m.id),
-  });
+  console.log('[home-debug] activeAvailabilities', openAvailabilities.length);
+  console.log('[home-debug] suggestedMatches', activeSuggestedMatches.length);
+  console.log('[home-debug] suggestedMatches raw', JSON.stringify(activeSuggestedMatches, null, 2));
 
   return (
     <main className="section py-8">

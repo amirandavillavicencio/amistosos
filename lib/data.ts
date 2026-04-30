@@ -324,9 +324,9 @@ async function getSuggestedMatchesByStatus(
 
     const discardedIds: string[] = [];
 
-    console.log('[getSuggestedMatches] raw suggested_matches count', selected.length);
-    console.log('[getSuggestedMatches] availability ids buscados', ids);
-    console.log('[getSuggestedMatches] availabilities encontradas', safePosts.length);
+    console.log('[getSuggestedMatches] raw rows', selected.length);
+    console.log('[getSuggestedMatches] ids', ids);
+    console.log('[getSuggestedMatches] posts found', safePosts.length);
 
     debugMatchingLog('suggested_matches availability join summary', {
       requestedStatus: status,
@@ -388,7 +388,7 @@ async function getSuggestedMatchesByStatus(
     }
 
 
-    console.log('[getSuggestedMatches] renderable matches count', cards.length);
+    console.log('[getSuggestedMatches] renderable', cards.length);
     console.log('[getSuggestedMatches] ids descartados si falta algún post', discardedIds);
     debugMatchingLog('suggested_matches final cards', { requestedStatus: status, cardsCount: cards.length });
     return cards;
