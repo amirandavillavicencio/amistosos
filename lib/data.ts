@@ -48,6 +48,7 @@ function shouldTreatAvailabilityAsOpen(status: unknown): boolean {
   const normalized = normalizeStatus(status);
 
   if (!normalized) return true;
+
   if (USABLE_AVAILABILITY_STATUSES.includes(normalized as (typeof USABLE_AVAILABILITY_STATUSES)[number])) {
     return true;
   }
@@ -155,6 +156,7 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
   try {
     const supabase = getSupabaseAdmin();
     const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
+
     let query = supabase
       .from('availabilities')
       .select('*')
@@ -181,6 +183,7 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
     }
 
     const sourcePosts = (data || []) as AvailabilityWithTeam[];
+
     if (sourcePosts.length > 0) {
       return filterOutBannedAvailabilities(sourcePosts, bannedClubNameKeys);
     }
@@ -217,6 +220,7 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
 export async function getLiveSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
   try {
     const supabase = getSupabaseAdmin();
+
     const { data, error } = await supabase
       .from('availabilities')
       .select('*')
@@ -263,11 +267,16 @@ async function getSuggestedMatchesByStatus(
 ): Promise<SuggestedMatchCard[]> {
   try {
     const supabase = getSupabaseAdmin();
-    const { data: rawRows, error } = await supabase
+
+    const { data: rows, error } = await supabase
       .from('suggested_matches')
-      .select('id,post_a_id,post_b_id,status,compatibility_score,schedule_score,location_score,level_score,elo_score,stream_url,stream_submitted_by_post_id,stream_submitted_at,created_at')
+      .select(
+        'id,post_a_id,post_b_id,status,compatibility_score,schedule_score,location_score,level_score,elo_score,stream_url,stream_submitted_by_post_id,stream_submitted_at,created_at'
+      )
+      .eq('status', status)
       .order('compatibility_score', { ascending: false })
-      .limit(Math.max(limit * 5, 30))
+      .order('created_at', { ascending: false })
+      .limit(Math.max(limit, 12))
       .returns<SuggestedMatchRow[]>();
 
     if (error) {
@@ -275,39 +284,38 @@ async function getSuggestedMatchesByStatus(
       return status === 'active' ? getLiveSuggestedMatches(limit) : [];
     }
 
-    const allRows = rawRows || [];
-    debugMatchingLog('suggested_matches raw sample', {
-      requestedStatus: status,
-      limit,
-      rawCount: allRows.length,
-      rows: allRows.slice(0, 30).map((row) => ({
-        id: row.id,
-        post_a_id: row.post_a_id,
-        post_b_id: row.post_b_id,
-        status: row.status,
-        streamUrl: row.stream_url || null,
-        streamSubmittedByPostId: row.stream_submitted_by_post_id || null,
-        streamSubmittedAt: row.stream_submitted_at || null,
-        score: row.compatibility_score,
-        created_at: row.created_at
-      }))
-    });
+    const selected = rows || [];
 
-    const selected = allRows.filter((row) => normalizeStatus(row.status) === status);
-    debugMatchingLog('suggested_matches after status filter', {
-      requestedStatus: status,
-      selectedCount: selected.length,
-      skippedByStatus: allRows.length - selected.length
-    });
+    console.log('[getSuggestedMatches] raw rows', selected.length);
+    console.log('[getSuggestedMatches] selected', selected.length);
 
     if (!selected.length) {
       console.warn('getSuggestedMatchesByStatus empty', { status, limit });
-      return [];
+      return status === 'active' ? getLiveSuggestedMatches(limit) : [];
     }
 
     const ids = Array.from(
-      new Set(selected.flatMap((row) => [row.post_a_id, row.post_b_id]).filter(Boolean))
+      new Set(
+        selected
+          .flatMap((row) => [row.post_a_id, row.post_b_id])
+          .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+      )
     );
+
+    console.log('[getSuggestedMatches] ids', ids);
+
+    if (!ids.length) {
+      console.error('[getSuggestedMatches] selected rows have no availability ids', {
+        status,
+        selected: selected.map((row) => ({
+          id: row.id,
+          post_a_id: row.post_a_id,
+          post_b_id: row.post_b_id
+        }))
+      });
+
+      return status === 'active' ? getLiveSuggestedMatches(limit) : [];
+    }
 
     const { data: posts, error: postsError } = await supabase
       .from('availabilities')
@@ -322,51 +330,45 @@ async function getSuggestedMatchesByStatus(
 
     const safePosts = (posts || []) as AvailabilityWithTeam[];
     const postsById = new Map(safePosts.map((post) => [post.id, post]));
-
     const discardedIds: string[] = [];
+    const cards: SuggestedMatchCard[] = [];
 
-    console.log('[getSuggestedMatches] raw rows', rawRows?.length ?? 0);
-    console.log('[getSuggestedMatches] selected', selected.length);
-    console.log('[getSuggestedMatches] ids', ids);
     console.log('[getSuggestedMatches] posts found', safePosts.length);
 
-    debugMatchingLog('suggested_matches availability join summary', {
-      requestedStatus: status,
-      requestedIds: ids.length,
-      fetchedPosts: (posts || []).length,
-      fetchedOpenPosts: safePosts.length
-    });
-
-    const cards: SuggestedMatchCard[] = [];
     for (const row of selected) {
       const a = postsById.get(row.post_a_id);
       const b = postsById.get(row.post_b_id);
+
       if (!a || !b) {
         discardedIds.push(row.id);
-        debugMatchingLog('suggested_match discarded', {
-          reason: !a && !b ? 'join_failed_both_posts_missing' : !a ? 'join_failed_post_a_missing' : 'join_failed_post_b_missing',
+        console.error('[getSuggestedMatches] discarded suggested match because a post is missing', {
           rowId: row.id,
-          status: row.status,
           post_a_id: row.post_a_id,
           post_b_id: row.post_b_id,
-          postAStatus: a?.status ?? null,
-          postBStatus: b?.status ?? null
+          hasPostA: Boolean(a),
+          hasPostB: Boolean(b),
+          fetchedPostIds: safePosts.map((post) => post.id)
         });
         continue;
       }
 
       const sharedWeekdays = getSharedWeekdays(a, b);
       const overlapMinutes = getTimeOverlapMinutes(a, b);
+      const compatibilityScore = Number(row.compatibility_score ?? 0);
+      const scheduleScore = Number(row.schedule_score ?? 0);
+      const locationScore = Number(row.location_score ?? 0);
+      const levelScore = Number(row.level_score ?? 0);
+      const eloScore = Number(row.elo_score ?? 0);
 
       cards.push({
         id: row.id,
         pairKey: `${row.post_a_id}::${row.post_b_id}`,
         status: row.status,
-        totalScore: row.compatibility_score,
-        scheduleScore: row.schedule_score,
-        locationScore: row.location_score,
-        levelScore: row.level_score,
-        eloScore: row.elo_score,
+        totalScore: compatibilityScore,
+        scheduleScore,
+        locationScore,
+        levelScore,
+        eloScore,
         branch: a.branch,
         ageCategory: a.age_category,
         overlapMinutes,
@@ -375,15 +377,15 @@ async function getSuggestedMatchesByStatus(
         b,
         breakdown: {
           base: 0,
-          sameComuna: row.location_score,
-          courtAvailability: row.level_score,
-          overlapScore: row.schedule_score,
+          sameComuna: locationScore,
+          courtAvailability: 0,
+          overlapScore: scheduleScore,
           sharedDaysScore: 0,
           startTimeScore: 0,
           overlapMinutes,
           sharedWeekdays,
           startTimeDifferenceMinutes: Number.POSITIVE_INFINITY,
-          totalBeforeClamp: row.compatibility_score,
+          totalBeforeClamp: compatibilityScore,
           items: []
         }
       });
@@ -391,24 +393,23 @@ async function getSuggestedMatchesByStatus(
 
     console.log('[getSuggestedMatches] discarded', discardedIds);
     console.log('[getSuggestedMatches] renderable', cards.length);
-    debugMatchingLog('suggested_matches final cards', { requestedStatus: status, cardsCount: cards.length });
 
-    if (selected.length > 0 && cards.length === 0) {
-      console.error('getSuggestedMatchesByStatus selected rows could not be rendered', {
-        status,
-        limit,
-        selectedIds: selected.map((row) => row.id),
-        selectedPostIds: selected.map((row) => ({ id: row.id, post_a_id: row.post_a_id, post_b_id: row.post_b_id })),
-        joinedPostIds: safePosts.map((post) => post.id)
+    debugMatchingLog('suggested_matches final cards', {
+      requestedStatus: status,
+      selectedCount: selected.length,
+      cardsCount: cards.length,
+      discardedIds
+    });
+
+    if (!cards.length && status === 'active') {
+      console.error('[getSuggestedMatches] active rows exist but no renderable cards were built; falling back to live matches', {
+        selectedCount: selected.length,
+        ids,
+        postsFound: safePosts.length,
+        discardedIds
       });
 
-      if (status === 'active') {
-        console.warn('getSuggestedMatchesByStatus using live fallback because active selected > 0 but cards == 0', {
-          status,
-          limit
-        });
-        return getLiveSuggestedMatches(limit);
-      }
+      return getLiveSuggestedMatches(limit);
     }
 
     return cards.slice(0, limit);
@@ -433,6 +434,7 @@ export function getRemainingSuggestedMatches(
 export async function getRecentMatchPhotos(limit = 12): Promise<MatchPhotoRow[]> {
   try {
     const supabase = getSupabaseAdmin();
+
     const { data, error } = await supabase
       .from('match_photos')
       .select('*')
@@ -456,6 +458,7 @@ export async function getRecentMatchPhotos(limit = 12): Promise<MatchPhotoRow[]>
 export async function getClubStatsRanking(limit = 20): Promise<ClubStatsCard[]> {
   try {
     const supabase = getSupabaseAdmin();
+
     const { data: stats, error } = await supabase
       .from('teams')
       .select('club_name, current_elo, matches_played, wins, losses, draws, updated_at')
@@ -485,6 +488,7 @@ export async function getClubStatsRanking(limit = 20): Promise<ClubStatsCard[]> 
       losses: Number(team.losses || 0),
       last_match_date: null
     })) as ClubStatsRow[];
+
     if (!base.length) return [];
 
     const { data: photos, error: photosError } = await supabase
@@ -504,6 +508,7 @@ export async function getClubStatsRanking(limit = 20): Promise<ClubStatsCard[]> 
 
     for (const photo of photos || []) {
       if (!photo?.club_name_key || !photo?.comuna) continue;
+
       if (!comunaByClub.has(photo.club_name_key)) {
         comunaByClub.set(photo.club_name_key, photo.comuna);
       }
@@ -523,6 +528,7 @@ export async function getClubStatsRanking(limit = 20): Promise<ClubStatsCard[]> 
 export async function getTopTeams(limit = 8): Promise<TeamRow[]> {
   try {
     const supabase = getSupabaseAdmin();
+
     const { data, error } = await supabase
       .from('teams')
       .select('*')
@@ -546,6 +552,7 @@ export async function getTopTeams(limit = 8): Promise<TeamRow[]> {
 export async function getRecentResults(limit = 10): Promise<MatchResultRow[]> {
   try {
     const supabase = getSupabaseAdmin();
+
     const { data, error } = await supabase
       .from('match_photos')
       .select('*')
@@ -588,6 +595,7 @@ export async function getRecentResults(limit = 10): Promise<MatchResultRow[]> {
 export async function getTeamProfile(teamId: string): Promise<TeamProfile | null> {
   try {
     const supabase = getSupabaseAdmin();
+
     const { data: team, error: teamError } = await supabase
       .from('teams')
       .select('*')
@@ -602,7 +610,6 @@ export async function getTeamProfile(teamId: string): Promise<TeamProfile | null
     if (!team) return null;
 
     const results: MatchResultRow[] = [];
-
     const winRate = team.matches_played > 0 ? Math.round((team.wins / team.matches_played) * 100) : 0;
 
     return {
@@ -619,6 +626,7 @@ export async function getTeamProfile(teamId: string): Promise<TeamProfile | null
 export async function getAllTeamsMinimal(): Promise<TeamRow[]> {
   try {
     const supabase = getSupabaseAdmin();
+
     const { data, error } = await supabase
       .from('teams')
       .select('*')
@@ -640,6 +648,7 @@ export async function getAllTeamsMinimal(): Promise<TeamRow[]> {
 export async function getAvailabilityById(id: string): Promise<AvailabilityWithTeam | null> {
   try {
     const supabase = getSupabaseAdmin();
+
     const { data, error } = await supabase
       .from('availabilities')
       .select('*')
