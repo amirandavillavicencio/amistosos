@@ -26,7 +26,7 @@ function sharedTime(match: SuggestedMatchCard) {
 }
 
 function teamStatus(match: SuggestedMatchCard) {
-  if (match.status === 'matched') return 'Cruce confirmado';
+  if (match.status === 'matched') return 'Match confirmado';
   if (match.status === 'unconfirmed') return 'Falta la confirmación del otro equipo';
   return null;
 }
@@ -41,8 +41,8 @@ export default function SuggestedMatchPanel({ matches }: { matches?: SuggestedMa
   if (!match) {
     return (
       <aside className="rounded-[2rem] border border-[#c6daf8] bg-white p-5 shadow-sm">
-        <h2 className="font-display text-3xl text-[#0f2f6a]">Cruce disponible</h2>
-        <p className="mt-3 text-sm text-[#2d4f88]">No hay cruces disponibles por ahora.</p>
+        <h2 className="font-display text-3xl text-[#0f2f6a]">Match disponible</h2>
+        <p className="mt-3 text-sm text-[#2d4f88]">No hay matches disponibles por ahora.</p>
         <p className="mt-1 text-sm text-[#2d4f88]">Publica tu disponibilidad o revisa los equipos activos.</p>
       </aside>
     );
@@ -54,7 +54,7 @@ export default function SuggestedMatchPanel({ matches }: { matches?: SuggestedMa
 
   return (
     <aside className={`rounded-[2rem] border bg-white p-5 shadow-sm ${match.status === 'matched' ? 'border-[#53a56f]' : 'border-[#c6daf8]'}`}>
-      <h2 className="font-display text-3xl text-[#0f2f6a]">Cruce disponible</h2>
+      <h2 className="font-display text-3xl text-[#0f2f6a]">Match disponible</h2>
       <p className="mt-2 text-sm font-semibold text-[#2d4f88]">{match.a.club_name} vs {match.b.club_name}</p>
 
       <div className="mt-4 grid gap-3">
@@ -73,7 +73,7 @@ export default function SuggestedMatchPanel({ matches }: { matches?: SuggestedMa
       {status ? <p className="mt-3 rounded-xl bg-[#fff3bf] px-3 py-2 text-sm text-[#6d5600]">{status}</p> : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link href={`/matches/aceptar?matchId=${encodeURIComponent(String(match.id))}`} className="btn-accent">Confirmar cruce</Link>
+        <Link href={`/matches/aceptar?matchId=${encodeURIComponent(String(match.id))}`} className="btn-accent">Confirmar match</Link>
         <Link href={`/publicaciones/${match.a.id}`} className="btn-secondary">Ver detalle</Link>
       </div>
     </aside>
