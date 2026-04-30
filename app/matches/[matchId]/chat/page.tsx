@@ -1,6 +1,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getConversation, getMessages, sendMessage } from '@/app/actions';
+import BackHomeLink from '@/components/back-home-link';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type { ConfirmedMatchRow } from '@/lib/types';
 
@@ -48,6 +49,7 @@ export default async function MatchChatPage({ params, searchParams }: MatchChatP
             />
             <button type="submit" className="btn-accent">Abrir chat de coordinación</button>
           </form>
+          <BackHomeLink className="mt-4" />
         </article>
       </main>
     );
@@ -66,6 +68,7 @@ export default async function MatchChatPage({ params, searchParams }: MatchChatP
         <article className="card-panel mx-auto max-w-2xl p-6 text-center">
           <h1 className="display-serif text-2xl text-ink">Chat no disponible</h1>
           <p className="mt-2 text-sm text-muted">Este chat solo existe para matches aceptados o confirmados.</p>
+          <BackHomeLink className="mt-4" />
         </article>
       </main>
     );
@@ -80,6 +83,7 @@ export default async function MatchChatPage({ params, searchParams }: MatchChatP
         <article className="card-panel mx-auto max-w-2xl p-6 text-center">
           <h1 className="display-serif text-2xl text-ink">Acceso bloqueado</h1>
           <p className="mt-2 text-sm text-muted">Solo los correos de los equipos del match pueden acceder al chat.</p>
+          <BackHomeLink className="mt-4" />
         </article>
       </main>
     );
@@ -116,6 +120,7 @@ export default async function MatchChatPage({ params, searchParams }: MatchChatP
   return (
     <main className="section py-8 sm:py-10">
       <article className="card-panel mx-auto max-w-4xl p-5 sm:p-6">
+        <BackHomeLink className="mb-4" />
         <header className="rounded-2xl border border-line/80 bg-paper/60 p-4">
           <h1 className="display-serif text-2xl text-ink">{clubAName} vs {clubBName}</h1>
           <p className="mt-1 text-sm text-muted">Estado del match: <strong>{match.status}</strong></p>

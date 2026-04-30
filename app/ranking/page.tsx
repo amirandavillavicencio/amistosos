@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import BackHomeLink from '@/components/back-home-link';
 import TeamRankingCard from '@/components/team-ranking-card';
 import { EmptyState, PageHeader, SectionShell } from '@/components/ui-shell';
 import { getClubStatsRanking } from '@/lib/data';
@@ -22,7 +23,7 @@ export default async function RankingPage() {
         eyebrow="Ranking de equipos"
         title="Ranking ELO"
         description="Se actualiza con resultados válidos. Si ganas ante rivales fuertes, subes más puntos."
-        action={<Link href="/" className="btn-secondary">Ir al inicio</Link>}
+        action={<BackHomeLink />}
       />
 
       {topThree.length > 0 ? (

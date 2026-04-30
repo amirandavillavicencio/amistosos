@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import BackHomeLink from '@/components/back-home-link';
 
 export default function MatchConfirmadoPage() {
   return (
@@ -12,7 +13,7 @@ export default function MatchConfirmadoPage() {
 
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <Link href="/explorar" className="btn-accent">Ver matches</Link>
-          <Link href="/" className="btn-secondary">Volver al inicio</Link>
+          <BackHomeLink />
         </div>
       </article>
     </main>

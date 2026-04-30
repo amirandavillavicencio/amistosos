@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import BackHomeLink from '@/components/back-home-link';
 import { PageHeader } from '@/components/ui-shell';
 
 export default function PublicacionExitosaPage({
@@ -47,9 +48,7 @@ export default function PublicacionExitosaPage({
         )}
 
         <div className="flex flex-wrap gap-3">
-          <Link href="/" className="btn-secondary">
-            Volver al inicio
-          </Link>
+          <BackHomeLink />
           <Link href="/explorar" className="btn-accent">
             Explorar equipos
           </Link>

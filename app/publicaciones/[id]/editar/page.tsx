@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import BackHomeLink from '@/components/back-home-link';
 import EditAvailabilityAccess from '@/components/edit-availability-access';
 import { EmptyState, SectionShell, StatusBadge } from '@/components/ui-shell';
 import { getAvailabilityById } from '@/lib/data';
@@ -13,7 +14,10 @@ export default async function EditarPublicacionPage({ params }: { params: { id: 
 
   return (
     <main className="section">
-      <Link href={`/publicaciones/${post.id}`} className="editorial-link">← Volver al detalle</Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link href={`/publicaciones/${post.id}`} className="editorial-link">← Volver al detalle</Link>
+        <BackHomeLink />
+      </div>
 
       <SectionShell className="mt-4">
         <p className="app-eyebrow">Editar publicación</p>

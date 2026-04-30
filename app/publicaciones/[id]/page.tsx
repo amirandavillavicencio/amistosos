@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import BackHomeLink from '@/components/back-home-link';
 import OwnerActions from '@/components/owner-actions';
 import TeamAvatar from '@/components/team-avatar';
 import { SectionShell, StatusBadge } from '@/components/ui-shell';
@@ -45,7 +46,10 @@ export default async function PublicacionDetallePage({ params }: { params: { id:
 
   return (
     <main className="section">
-      <Link href="/explorar" className="editorial-link">← Volver a publicaciones</Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link href="/explorar" className="editorial-link">← Volver a publicaciones</Link>
+        <BackHomeLink />
+      </div>
 
       <SectionShell className="mt-4">
         <p className="app-eyebrow">Detalle de disponibilidad</p>

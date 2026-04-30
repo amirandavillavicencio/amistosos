@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import BackHomeLink from '@/components/back-home-link';
 import PublishForm from '@/components/publish-form';
 import { PageHeader } from '@/components/ui-shell';
 
@@ -11,7 +11,7 @@ export default function PublicarPage() {
         eyebrow="Nueva publicación"
         title="Publicar disponibilidad"
         description="Completa el formulario con datos reales para recibir propuestas compatibles de otros clubes."
-        action={<Link href="/" className="btn-secondary">Volver al inicio</Link>}
+        action={<BackHomeLink />}
       />
       <PublishForm />
     </main>
