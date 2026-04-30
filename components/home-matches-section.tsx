@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import type { SuggestedMatchCard, AvailabilityWithTeam } from '@/lib/types';
+import type { AvailabilityWithTeam, SuggestedMatchCard } from '@/lib/types';
 import { formatBranch, formatCategory, formatComuna, getInitials, hasValidImageUrl } from '@/lib/presentation';
 import { formatWeekdayLabel } from '@/lib/matching';
 
@@ -41,7 +41,16 @@ function sharedTime(match: SuggestedMatchCard): string {
 function matchDay(match: SuggestedMatchCard): string {
   const first = match.sharedWeekdays?.[0];
 
-  return first ? formatWeekdayLabel(first) : 'Por confirmar';
+  if (first) return formatWeekdayLabel(first);
+
+  const weekdayA = String(match.a?.weekday ?? '').trim();
+  const weekdayB = String(match.b?.weekday ?? '').trim();
+
+  if (weekdayA && weekdayA === weekdayB) {
+    return formatWeekdayLabel(weekdayA);
+  }
+
+  return 'Por confirmar';
 }
 
 function courtText(match: SuggestedMatchCard): string {
@@ -151,13 +160,13 @@ function MatchCard({ match }: { match: SuggestedMatchCard }) {
             {statusLabel(match.status)}
           </span>
 
-          <h3 className="mt-3 break-words font-display text-[1.65rem] leading-[1.02] tracking-tight text-[#0a2447] sm:text-[1.9rem]">
+          <h3 className="mt-3 break-words text-xl font-black leading-tight tracking-tight text-[#0a2447] sm:text-2xl">
             {teamAName}{' '}
-            <span className="text-[#2b6bea]">vs</span>{' '}
+            <span className="font-black text-[#2b6bea]">vs</span>{' '}
             {teamBName}
           </h3>
 
-          <p className="mt-2 text-sm text-[#5a7bb5]">
+          <p className="mt-1.5 text-sm text-[#5a7bb5]">
             Coinciden en día, horario y categoría.
           </p>
         </div>
@@ -167,17 +176,11 @@ function MatchCard({ match }: { match: SuggestedMatchCard }) {
         </span>
       </div>
 
-      <div className="relative grid min-w-0 gap-3 md:grid-cols-2">
+      <div className="grid min-w-0 gap-2 rounded-2xl border border-[#dce9fd] bg-white/55 p-2 sm:grid-cols-[minmax(0,1fr)_34px_minmax(0,1fr)] sm:items-stretch">
         <TeamMiniCard team={match.a} />
 
-        <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 md:block">
-          <span className="grid h-10 w-10 place-items-center rounded-full bg-[#2b6bea] font-display text-sm font-black text-white shadow-[0_6px_16px_rgba(43,107,234,0.3)] ring-4 ring-[#f3f8ff]">
-            VS
-          </span>
-        </div>
-
-        <div className="flex justify-center md:hidden">
-          <span className="rounded-full bg-[#2b6bea] px-3 py-1 font-display text-xs font-black text-white shadow-[0_6px_16px_rgba(43,107,234,0.3)]">
+        <div className="flex items-center justify-center">
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-[#2b6bea] font-display text-xs font-black text-white shadow-[0_6px_16px_rgba(43,107,234,0.3)]">
             VS
           </span>
         </div>
@@ -185,7 +188,7 @@ function MatchCard({ match }: { match: SuggestedMatchCard }) {
         <TeamMiniCard team={match.b} />
       </div>
 
-      <div className="mt-4 grid min-w-0 gap-2 sm:grid-cols-2">
+      <div className="mt-3 grid min-w-0 gap-2 sm:grid-cols-2">
         <Meta label="Día común" value={matchDay(match)} />
         <Meta label="Horario" value={sharedTime(match)} />
         <Meta label="Categoría" value={compactCategory(match.ageCategory || match.a?.age_category)} />
@@ -217,16 +220,16 @@ function TeamMiniCard({ team }: { team: AvailabilityWithTeam }) {
   const name = team?.club_name || 'Equipo';
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-2xl border border-[#dce9fd] bg-white p-3 sm:p-4">
-      <div className="flex min-w-0 items-center gap-3">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-[#dce9fd] bg-white p-3">
+      <div className="flex min-w-0 items-center gap-2.5">
         {hasValidImageUrl(team?.logo_url) ? (
           <img
             src={team.logo_url!}
             alt={`Logo de ${name}`}
-            className="h-11 w-11 shrink-0 rounded-xl object-cover"
+            className="h-10 w-10 shrink-0 rounded-xl object-cover"
           />
         ) : (
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#1042a0] font-display text-sm font-black text-white">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#1042a0] font-display text-xs font-black text-white">
             {getInitials(name)}
           </div>
         )}
