@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { createHash, randomBytes } from 'crypto';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
 import { getActiveBannedClubNameKeys, isClubBannedByName, normalizeClubNameKey } from '@/lib/banned-clubs';
@@ -1411,6 +1412,100 @@ export async function getMatchContact(formData: FormData): Promise<
     console.error('[getMatchContact] unexpected error', error);
     return { ok: false, message: 'No pudimos validar el correo en este momento. Intenta nuevamente.' };
   }
+}
+
+export async function confirmMatchWithCode(formData: FormData) {
+  assertHoneypot(formData);
+
+  const matchId = String(formData.get('matchId') || '').trim();
+  const confirmationCode = String(formData.get('confirmationCode') || '').trim().toUpperCase();
+
+  if (!isUuid(matchId)) {
+    redirect('/matches/aceptar?error=match_invalido');
+  }
+
+  if (!confirmationCode) {
+    redirect(`/matches/aceptar?matchId=${encodeURIComponent(matchId)}&error=codigo_requerido`);
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: match, error: matchError } = await supabase
+    .from('suggested_matches')
+    .select('id,post_a_id,post_b_id,status,confirmed_by_a_at,confirmed_by_b_at,matched_at')
+    .eq('id', matchId)
+    .maybeSingle<{
+      id: string;
+      post_a_id: string;
+      post_b_id: string;
+      status: string;
+      confirmed_by_a_at: string | null;
+      confirmed_by_b_at: string | null;
+      matched_at: string | null;
+    }>();
+
+  if (matchError || !match) {
+    redirect(`/matches/aceptar?matchId=${encodeURIComponent(matchId)}&error=match_no_encontrado`);
+  }
+
+  const status = safeString(match.status).toLowerCase();
+  if (status === 'completed' || status === 'archived') {
+    redirect(`/matches/aceptar?matchId=${encodeURIComponent(matchId)}&error=match_cerrado`);
+  }
+
+  const { data: posts } = await supabase
+    .from('availabilities')
+    .select('id,confirmation_code')
+    .in('id', [match.post_a_id, match.post_b_id]);
+
+  const byId = new Map((posts || []).map((post) => [String(post.id), String(post.confirmation_code || '').trim().toUpperCase() || null]));
+  const postACode = byId.get(match.post_a_id) || null;
+  const postBCode = byId.get(match.post_b_id) || null;
+
+  const matchesA = Boolean(postACode) && confirmationCode === postACode;
+  const matchesB = Boolean(postBCode) && confirmationCode === postBCode;
+
+  if (!matchesA && !matchesB) {
+    redirect(`/matches/aceptar?matchId=${encodeURIComponent(matchId)}&error=codigo_invalido`);
+  }
+
+  let confirmedA = Boolean(match.confirmed_by_a_at);
+  let confirmedB = Boolean(match.confirmed_by_b_at);
+
+  if (matchesA && !confirmedA) {
+    const { error } = await supabase
+      .from('suggested_matches')
+      .update({ confirmed_by_a_at: new Date().toISOString() })
+      .eq('id', match.id)
+      .is('confirmed_by_a_at', null);
+    if (!error) confirmedA = true;
+  }
+
+  if (matchesB && !confirmedB) {
+    const { error } = await supabase
+      .from('suggested_matches')
+      .update({ confirmed_by_b_at: new Date().toISOString() })
+      .eq('id', match.id)
+      .is('confirmed_by_b_at', null);
+    if (!error) confirmedB = true;
+  }
+
+  if (confirmedA && confirmedB) {
+    await supabase
+      .from('suggested_matches')
+      .update({
+        status: 'matched',
+        matched_at: match.matched_at || new Date().toISOString()
+      })
+      .eq('id', match.id)
+      .neq('status', 'completed')
+      .neq('status', 'archived');
+  }
+
+  revalidatePath('/matches/aceptar');
+  revalidatePath(`/matches/aceptar?matchId=${matchId}`);
+  revalidatePath('/');
+
+  redirect(`/matches/aceptar?matchId=${encodeURIComponent(matchId)}&ok=1`);
 }
 
 export async function registerMatchResult(formData: FormData) {
