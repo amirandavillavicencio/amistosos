@@ -1,21 +1,47 @@
 const modules = [
-  { title: 'Publica disponibilidad', text: 'Indica días, horario, categoría y si tienes cancha.' },
-  { title: 'Revisa matches', text: 'Mira equipos compatibles y abre el detalle para coordinar.' },
-  { title: 'Confirma con tu código', text: 'Ambos equipos deben validar para confirmar el match.' }
+  {
+    icon: '📋',
+    title: 'Publicaciones activas',
+    text: 'Todos los equipos publicados esperando un rival compatible.',
+    tone: '#eef3ff'
+  },
+  {
+    icon: '💡',
+    title: 'Cómo funciona',
+    text: 'Publica disponibilidad, revisa matches y confirma con tu código.',
+    tone: '#e2f5ec'
+  },
+  {
+    icon: '🏆',
+    title: 'Ranking',
+    text: 'Los resultados alimentan la tabla general de la temporada.',
+    tone: '#fff4cc'
+  }
 ];
 
 export default function HomeModules() {
   return (
-    <section className="rounded-[2rem] border border-[#d8e5fb] bg-white p-5 sm:p-6">
-      <h2 className="font-display text-3xl text-[#0f2f6a]">Resumen rápido</h2>
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        {modules.map((item) => (
-          <article key={item.title} className="rounded-2xl border border-[#d4e2fa] bg-[#f7faff] p-4">
-            <h3 className="font-display text-2xl leading-none text-[#0f2f6a]">{item.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-[#2d4f88]">{item.text}</p>
-          </article>
-        ))}
-      </div>
+    <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {modules.map((item) => (
+        <article
+          key={item.title}
+          className="min-h-[130px] rounded-[22px] border border-[#dce9fd] bg-white p-[22px] transition hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(10,36,71,0.07)]"
+        >
+          <div
+            className="mb-3 grid h-9 w-9 place-items-center rounded-[10px] text-[17px]"
+            style={{ background: item.tone }}
+            aria-hidden="true"
+          >
+            {item.icon}
+          </div>
+          <h3 className="font-display text-2xl font-black uppercase leading-none tracking-tight text-[#0a2447]">
+            {item.title}
+          </h3>
+          <p className="mt-1.5 text-[13.5px] leading-normal text-[#5a7bb5]">
+            {item.text}
+          </p>
+        </article>
+      ))}
     </section>
   );
 }
