@@ -87,7 +87,7 @@ export async function logHomeProductionDiagnostics(): Promise<{ suggestedMatches
       { count: photosCount, error: photosCountError }
     ] = await Promise.all([
       supabase.from('availabilities').select('id', { count: 'exact', head: true }),
-      supabase.from('suggested_matches').select('id', { count: 'exact', head: true }),
+      supabase.from('suggested_matches').select('id', { count: 'exact', head: true }).eq('status', 'active'),
       supabase.from('teams').select('id', { count: 'exact', head: true }),
       supabase.from('match_photos').select('id', { count: 'exact', head: true })
     ]);
@@ -270,9 +270,7 @@ async function getSuggestedMatchesByStatus(
 
     const { data: rows, error } = await supabase
       .from('suggested_matches')
-      .select(
-        'id,post_a_id,post_b_id,status,compatibility_score,schedule_score,location_score,level_score,elo_score,stream_url,stream_submitted_by_post_id,stream_submitted_at,created_at'
-      )
+      .select('id,post_a_id,post_b_id,status,compatibility_score,schedule_score,location_score,level_score,elo_score,created_at')
       .eq('status', status)
       .order('compatibility_score', { ascending: false })
       .order('created_at', { ascending: false })
