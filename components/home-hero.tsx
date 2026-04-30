@@ -15,7 +15,7 @@ export default function HomeHero({
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ffd447]">Amistosos Vóley</p>
           <h1 className="mt-2 font-display text-5xl leading-[0.95] text-white sm:text-6xl lg:text-7xl">Encuentra rival para tu próximo amistoso</h1>
           <p className="mt-4 max-w-2xl text-base text-[#dbe8ff] sm:text-lg">
-            Publica disponibilidad y revisa cruces activos por comuna, categoría, rama y horario.
+            Publica disponibilidad y revisa matches activos por comuna, categoría, rama y horario.
           </p>
 
           <div className="mt-7 flex flex-wrap gap-3">
@@ -28,7 +28,7 @@ export default function HomeHero({
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
           <Metric label="Equipos activos" value={formatPlural(postCount, 'equipo', 'equipos')} />
-          <Metric label="Cruces disponibles" value={formatPlural(suggestedCount, 'cruce', 'cruces')} />
+          <Metric label="Matches disponibles" value={formatPlural(suggestedCount, 'match', 'matches')} />
         </div>
       </div>
     </section>
