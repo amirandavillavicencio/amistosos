@@ -31,7 +31,6 @@ export interface AvailabilityFilters {
 
 const HOME_DIAGNOSTIC_SAMPLE_LIMIT = 50;
 
-
 function isMatchingDebugEnabled(): boolean {
   return String(process.env.DEBUG_MATCHING || '').trim().toLowerCase() === 'true';
 }
@@ -40,7 +39,6 @@ function debugMatchingLog(message: string, payload: Record<string, unknown>) {
   if (!isMatchingDebugEnabled()) return;
   console.log(`[matching:debug] ${message}`, payload);
 }
-
 
 function normalizeStatus(value: unknown): string {
   return String(value ?? '').trim().toLowerCase();
@@ -390,7 +388,6 @@ async function getSuggestedMatchesByStatus(
         }
       });
     }
-
 
     console.log('[getSuggestedMatches] discarded', discardedIds);
     console.log('[getSuggestedMatches] renderable', cards.length);
