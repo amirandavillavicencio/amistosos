@@ -172,6 +172,48 @@ function hashCode(code: string): string {
   return createHash('sha256').update(code).digest('hex');
 }
 
+function normalizeCodeSegment(value: string, fallback: string): string {
+  const normalized = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '')
+    .toUpperCase()
+    .slice(0, 12);
+
+  return normalized || fallback;
+}
+
+function branchCode(value: Branch): string {
+  if (value === 'femenina') return 'FEM';
+  if (value === 'masculina') return 'MAS';
+  return 'MIX';
+}
+
+function categoryCode(value: AgeCategory): string {
+  return value.replace('-', '').toUpperCase();
+}
+
+function randomConfirmationSuffix(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(6);
+  return Array.from(bytes)
+    .map((byte) => alphabet[byte % alphabet.length])
+    .join('');
+}
+
+function generateAvailabilityConfirmationCode(input: {
+  clubName: string;
+  branch: Branch;
+  ageCategory: AgeCategory;
+}): string {
+  return [
+    normalizeCodeSegment(input.clubName, 'EQUIPO'),
+    branchCode(input.branch),
+    categoryCode(input.ageCategory),
+    randomConfirmationSuffix()
+  ].join('-');
+}
+
 async function getRequestIp() {
   const requestHeaders = await headers();
   const forwardedFor = requestHeaders.get('x-forwarded-for');
@@ -842,6 +884,12 @@ export async function createAvailability(formData: FormData) {
       return { ok: false, message: 'Ya tienes 3 publicaciones activas. Cierra una para crear otra.' };
     }
 
+    const confirmationCode = generateAvailabilityConfirmationCode({
+      clubName: club_name,
+      branch,
+      ageCategory: age_category
+    });
+
     const { data: inserted, error } = await supabase
       .from('availabilities')
       .insert({
@@ -862,6 +910,7 @@ export async function createAvailability(formData: FormData) {
         phone,
         instagram,
         logo_url,
+        confirmation_code: confirmationCode,
         status: 'open',
         owner_id: authUser.userId
       })
@@ -891,7 +940,7 @@ export async function createAvailability(formData: FormData) {
     revalidatePath('/explorar');
     revalidatePath('/ranking');
 
-    return { ok: true, id: inserted.id };
+    return { ok: true, id: inserted.id, confirmationCode };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'No se pudo guardar la publicación.';
     return { ok: false, message };
