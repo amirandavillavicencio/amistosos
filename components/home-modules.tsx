@@ -1,20 +1,21 @@
 const modules = [
   { title: 'Publica disponibilidad', text: 'Indica días, horario, categoría y si tienes cancha.' },
-  { title: 'Revisa matches', text: 'Mira equipos que calzan con tus datos de disponibilidad.' },
-  { title: 'Coordina el amistoso', text: 'Si ambos aceptan, el match queda confirmado.' },
-  { title: 'Registra resultados', text: 'Sube el marcador del partido jugado.' },
-  { title: 'Sigue el ranking', text: 'Los resultados van ordenando la tabla general.' }
+  { title: 'Revisa matches', text: 'Mira equipos compatibles y abre el detalle para coordinar.' },
+  { title: 'Confirma con tu código', text: 'Ambos equipos deben validar para confirmar el match.' }
 ];
 
 export default function HomeModules() {
   return (
-    <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {modules.map((item) => (
-        <article key={item.title} className="rounded-[1.6rem] border border-[#d4e2fa] bg-white p-5 shadow-[0_4px_20px_rgba(16,52,111,0.06)]">
-          <h3 className="font-display text-[2rem] leading-none text-[#0f2f6a]">{item.title}</h3>
-          <p className="mt-2 text-sm leading-relaxed text-[#2d4f88]">{item.text}</p>
-        </article>
-      ))}
+    <section className="rounded-[2rem] border border-[#d8e5fb] bg-white p-5 sm:p-6">
+      <h2 className="font-display text-3xl text-[#0f2f6a]">Resumen rápido</h2>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        {modules.map((item) => (
+          <article key={item.title} className="rounded-2xl border border-[#d4e2fa] bg-[#f7faff] p-4">
+            <h3 className="font-display text-2xl leading-none text-[#0f2f6a]">{item.title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-[#2d4f88]">{item.text}</p>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
