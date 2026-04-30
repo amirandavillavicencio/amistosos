@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createAvailability, uploadTeamLogo } from '@/app/actions';
-import AuthControls, { useAuthState } from '@/components/auth-controls';
 import { capitalize } from '@/lib/presentation';
 
 const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
@@ -30,7 +29,6 @@ export default function PublishForm() {
   const [clubName, setClubName] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState<string | null>(null);
-  const { userId, accessToken, loading } = useAuthState();
   const [notes, setNotes] = useState('');
 
   return (
@@ -39,11 +37,6 @@ export default function PublishForm() {
         startTransition(async () => {
           const nextErrors: FieldErrors = {};
           setError(null);
-
-          if (!accessToken) {
-            setError('Debes iniciar sesión para publicar.');
-            return;
-          }
 
           for (const field of requiredFields) {
             if (!String(formData.get(field) || '').trim()) {
@@ -65,7 +58,6 @@ export default function PublishForm() {
           setFieldErrors({});
 
           try {
-            formData.set('access_token', accessToken);
             const logoFile = formData.get('logo');
             if (logoFile instanceof File && logoFile.size > 0) {
               const logoData = new FormData();
@@ -100,9 +92,7 @@ export default function PublishForm() {
       aria-busy={isPending}
       className="app-card grid gap-5 p-4 sm:p-6 md:p-7"
     >
-      <fieldset disabled={isPending || loading} className="grid gap-5 disabled:opacity-80">
-        <AuthControls />
-        {!userId ? <p className="text-sm text-amber-300">Inicia sesión para habilitar el formulario.</p> : null}
+      <fieldset disabled={isPending} className="grid gap-5 disabled:opacity-80">
         <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
 
         <section className="grid gap-3">
@@ -206,7 +196,7 @@ export default function PublishForm() {
         </section>
       </fieldset>
 
-      <button type="submit" disabled={isPending || !userId} className="btn-accent w-full justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-70 md:w-auto">
+      <button type="submit" disabled={isPending} className="btn-accent w-full justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-70 md:w-auto">
         {isPending && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true" />}
         {isPending ? 'Publicando...' : 'Publicar disponibilidad'}
       </button>

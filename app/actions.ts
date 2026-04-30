@@ -857,9 +857,6 @@ export async function createAvailability(formData: FormData) {
     const notes = normalizeOptional(formData.get('notes'));
     const contact_email = normalizeOptional(formData.get('contact_email'));
 
-    const authUser = await getUserIdFromAccessToken(formData.get('access_token'));
-    if (!authUser.ok) return authUser;
-
     if (!club_name || !comuna) {
       throw new Error('Completa todos los campos requeridos.');
     }
@@ -877,7 +874,7 @@ export async function createAvailability(formData: FormData) {
     const { count: activeCount } = await supabase
       .from('availabilities')
       .select('id', { head: true, count: 'exact' })
-      .eq('owner_id', authUser.userId)
+      .eq('contact_email', contact_email)
       .in('status', ['open', 'active', 'published']);
 
     if ((activeCount || 0) >= 3) {
@@ -911,8 +908,7 @@ export async function createAvailability(formData: FormData) {
         instagram,
         logo_url,
         confirmation_code: confirmationCode,
-        status: 'open',
-        owner_id: authUser.userId
+        status: 'open'
       })
       .select('id')
       .single();

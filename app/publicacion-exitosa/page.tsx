@@ -17,7 +17,7 @@ export default function PublicacionExitosaPage({
       <PageHeader
         eyebrow="Publicación lista"
         title="Publicación realizada con éxito"
-        description="Ahora puedes encontrar rivales disponibles"
+        description="Tu equipo ya quedó disponible para encontrar rival"
       />
 
       <section className="app-card grid gap-5 p-5 sm:p-6">
@@ -30,7 +30,7 @@ export default function PublicacionExitosaPage({
           <div className="rounded-2xl border border-[#f4c24d]/60 bg-[#fff4cf] p-4 text-[#12336a] shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7e5a00]">Código de confirmación</p>
             <p className="mt-2 text-sm">
-              Guarda este código{clubName ? ` para ${clubName}` : ''}. Lo vas a necesitar para confirmar matches de este equipo.
+              Guarda este código{clubName ? ` para ${clubName}` : ''}. Lo necesitarás para confirmar matches de este equipo.
             </p>
             <p className="mt-3 select-all break-words rounded-xl border border-[#f4c24d]/70 bg-white px-4 py-3 font-mono text-xl font-bold tracking-wide text-[#0f2f6a]">
               {confirmationCode}
@@ -47,11 +47,11 @@ export default function PublicacionExitosaPage({
         )}
 
         <div className="flex flex-wrap gap-3">
-          <Link href="/explorar" className="btn-accent">
-            Ver matches
+          <Link href="/" className="btn-secondary">
+            Volver al inicio
           </Link>
-          <Link href="/publicar" className="btn-secondary">
-            Publicar otra
+          <Link href="/explorar" className="btn-accent">
+            Explorar equipos
           </Link>
         </div>
       </section>
