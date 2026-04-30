@@ -31,7 +31,6 @@ export interface AvailabilityFilters {
 
 const HOME_DIAGNOSTIC_SAMPLE_LIMIT = 50;
 
-
 function isMatchingDebugEnabled(): boolean {
   return String(process.env.DEBUG_MATCHING || '').trim().toLowerCase() === 'true';
 }
@@ -40,7 +39,6 @@ function debugMatchingLog(message: string, payload: Record<string, unknown>) {
   if (!isMatchingDebugEnabled()) return;
   console.log(`[matching:debug] ${message}`, payload);
 }
-
 
 function normalizeStatus(value: unknown): string {
   return String(value ?? '').trim().toLowerCase();
@@ -230,6 +228,7 @@ export async function getLiveSuggestedMatches(limit = 12): Promise<SuggestedMatc
     }
 
     const openRows = ((data || []) as AvailabilityWithTeam[]).filter((row) => shouldTreatAvailabilityAsOpen(row.status));
+    const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
     const sourcePosts = filterOutBannedAvailabilities(openRows, bannedClubNameKeys);
     const { matches, stats } = buildLiveSuggestedMatches(sourcePosts, limit);
 
@@ -389,7 +388,6 @@ async function getSuggestedMatchesByStatus(
         }
       });
     }
-
 
     console.log('[getSuggestedMatches] discarded', discardedIds);
     console.log('[getSuggestedMatches] renderable', cards.length);
