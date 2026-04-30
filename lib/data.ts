@@ -219,6 +219,7 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
 export async function getLiveSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
   try {
     const supabase = getSupabaseAdmin();
+    const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
     const { data, error } = await supabase
       .from('availabilities')
       .select('*')
