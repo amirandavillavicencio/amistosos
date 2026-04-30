@@ -77,7 +77,7 @@ function summarizeStatusDistribution(rows: Array<{ status?: unknown }>): Record<
   }, {});
 }
 
-export async function logHomeProductionDiagnostics() {
+export async function logHomeProductionDiagnostics(): Promise<{ suggestedMatchesCount: number } | null> {
   try {
     const supabase = getSupabaseAdmin();
 
@@ -123,7 +123,7 @@ export async function logHomeProductionDiagnostics() {
       }
     })();
 
-    console.log('[home:diagnostics] runtime snapshot', {
+    const snapshot = {
       vercelEnv: process.env.VERCEL_ENV || 'unknown',
       vercelBranch: process.env.VERCEL_GIT_COMMIT_REF || 'unknown',
       vercelCommitSha: process.env.VERCEL_GIT_COMMIT_SHA || 'unknown',
@@ -134,9 +134,13 @@ export async function logHomeProductionDiagnostics() {
       teamsCount: teamsCount ?? null,
       matchPhotosCount: photosCount ?? null,
       availabilityStatusDistribution: statusDistribution
-    });
+    };
+
+    console.log('[home:diagnostics] runtime snapshot', snapshot);
+    return { suggestedMatchesCount: Number(snapshot.suggestedMatchesCount ?? 0) };
   } catch (error) {
     console.error('[home:diagnostics] crashed', error);
+    return null;
   }
 }
 
@@ -215,7 +219,6 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
 export async function getLiveSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
   try {
     const supabase = getSupabaseAdmin();
-    const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
     const { data, error } = await supabase
       .from('availabilities')
       .select('*')
@@ -261,7 +264,6 @@ async function getSuggestedMatchesByStatus(
 ): Promise<SuggestedMatchCard[]> {
   try {
     const supabase = getSupabaseAdmin();
-    const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
     const { data: rawRows, error } = await supabase
       .from('suggested_matches')
       .select('id,post_a_id,post_b_id,status,compatibility_score,schedule_score,location_score,level_score,elo_score,stream_url,stream_submitted_by_post_id,stream_submitted_at,created_at')
@@ -319,12 +321,13 @@ async function getSuggestedMatchesByStatus(
       return status === 'active' ? getLiveSuggestedMatches(limit) : [];
     }
 
-    const safePosts = filterOutBannedAvailabilities(posts || [], bannedClubNameKeys);
+    const safePosts = (posts || []) as AvailabilityWithTeam[];
     const postsById = new Map(safePosts.map((post) => [post.id, post]));
 
     const discardedIds: string[] = [];
 
-    console.log('[getSuggestedMatches] raw rows', selected.length);
+    console.log('[getSuggestedMatches] raw rows', rawRows?.length ?? 0);
+    console.log('[getSuggestedMatches] selected', selected.length);
     console.log('[getSuggestedMatches] ids', ids);
     console.log('[getSuggestedMatches] posts found', safePosts.length);
 
@@ -388,10 +391,10 @@ async function getSuggestedMatchesByStatus(
     }
 
 
+    console.log('[getSuggestedMatches] discarded', discardedIds);
     console.log('[getSuggestedMatches] renderable', cards.length);
-    console.log('[getSuggestedMatches] ids descartados si falta algún post', discardedIds);
     debugMatchingLog('suggested_matches final cards', { requestedStatus: status, cardsCount: cards.length });
-    return cards;
+    return cards.slice(0, limit);
   } catch (error) {
     console.error('getSuggestedMatches crashed', error);
     return status === 'active' ? getLiveSuggestedMatches(limit) : [];
