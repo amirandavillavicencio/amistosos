@@ -312,7 +312,6 @@ async function getSuggestedMatchesByStatus(
       .from('availabilities')
       .select('*')
       .in('id', ids)
-      .in('status', [...USABLE_AVAILABILITY_STATUSES])
       .returns<AvailabilityWithTeam[]>();
 
     if (postsError) {
@@ -322,6 +321,13 @@ async function getSuggestedMatchesByStatus(
 
     const safePosts = filterOutBannedAvailabilities(posts || [], bannedClubNameKeys);
     const postsById = new Map(safePosts.map((post) => [post.id, post]));
+
+    const discardedIds: string[] = [];
+
+    console.log('[getSuggestedMatches] raw suggested_matches count', selected.length);
+    console.log('[getSuggestedMatches] availability ids buscados', ids);
+    console.log('[getSuggestedMatches] availabilities encontradas', safePosts.length);
+
     debugMatchingLog('suggested_matches availability join summary', {
       requestedStatus: status,
       requestedIds: ids.length,
@@ -334,8 +340,9 @@ async function getSuggestedMatchesByStatus(
       const a = postsById.get(row.post_a_id);
       const b = postsById.get(row.post_b_id);
       if (!a || !b) {
+        discardedIds.push(row.id);
         debugMatchingLog('suggested_match discarded', {
-          reason: !a && !b ? 'join_failed_both_posts_missing_or_not_open' : !a ? 'join_failed_post_a_missing_or_not_open' : 'join_failed_post_b_missing_or_not_open',
+          reason: !a && !b ? 'join_failed_both_posts_missing' : !a ? 'join_failed_post_a_missing' : 'join_failed_post_b_missing',
           rowId: row.id,
           status: row.status,
           post_a_id: row.post_a_id,
@@ -380,6 +387,9 @@ async function getSuggestedMatchesByStatus(
       });
     }
 
+
+    console.log('[getSuggestedMatches] renderable matches count', cards.length);
+    console.log('[getSuggestedMatches] ids descartados si falta algún post', discardedIds);
     debugMatchingLog('suggested_matches final cards', { requestedStatus: status, cardsCount: cards.length });
     return cards;
   } catch (error) {
