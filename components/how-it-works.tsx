@@ -1,7 +1,7 @@
 export default function HowItWorks() {
   const steps = [
     { title: 'Publica disponibilidad', text: 'Indica cuándo puede jugar tu equipo.' },
-    { title: 'Revisa cruces', text: 'Compara equipos con días, horarios y categoría compatibles.' },
+    { title: 'Revisa matches', text: 'Compara equipos con días, horarios y categoría compatibles.' },
     { title: 'Confirman', text: 'Cada equipo acepta con el correo usado al publicar.' }
   ];
 
