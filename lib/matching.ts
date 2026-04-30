@@ -387,6 +387,132 @@ export function buildSuggestedMatches(availabilities: MatchingAvailability[]): S
   }));
 }
 
+type CreateSuggestedMatchesResult = {
+  ok: true;
+  candidatesCount: number;
+  compatiblePairsCount: number;
+  insertedCount: number;
+  skippedExistingPairs: string[];
+} | {
+  ok: false;
+  error: string;
+};
+
+export async function createSuggestedMatchesForAvailability(newAvailabilityId: string): Promise<CreateSuggestedMatchesResult> {
+  const sourceId = normalizeId(newAvailabilityId);
+  if (!sourceId) {
+    return { ok: false, error: 'invalid_availability_id' };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: sourcePost, error: sourceError } = await supabase
+    .from('availabilities')
+    .select('*')
+    .eq('id', sourceId)
+    .maybeSingle<AvailabilityRow>();
+
+  if (sourceError || !sourcePost) {
+    console.error('createSuggestedMatchesForAvailability source read failed', { sourceId, sourceError });
+    return { ok: false, error: 'source_availability_not_found' };
+  }
+
+  if (!isUsableAvailabilityStatus(sourcePost.status)) {
+    console.log('createSuggestedMatchesForAvailability skipped: source not open/usable', { sourceId, status: sourcePost.status });
+    return { ok: true, candidatesCount: 0, compatiblePairsCount: 0, insertedCount: 0, skippedExistingPairs: [] };
+  }
+
+  const { data: candidates, error: candidatesError } = await supabase
+    .from('availabilities')
+    .select('*')
+    .in('status', [...USABLE_AVAILABILITY_STATUSES])
+    .neq('id', sourceId)
+    .returns<AvailabilityRow[]>();
+
+  if (candidatesError) {
+    console.error('createSuggestedMatchesForAvailability candidates read failed', { sourceId, candidatesError });
+    return { ok: false, error: 'candidates_read_failed' };
+  }
+
+  const candidatePosts = Array.isArray(candidates) ? candidates : [];
+  const compatibleRows: SuggestedMatchInsertRow[] = [];
+
+  for (const candidate of candidatePosts) {
+    if (!canPostsMatch(sourcePost, candidate)) continue;
+
+    const locationScore = sameNormalizedValue(sourcePost.comuna, candidate.comuna)
+      ? 15
+      : (sameNormalizedValue(sourcePost.city, candidate.city) ? 10 : 0);
+
+    const pair = canonicalPairIds(sourcePost.id, candidate.id);
+    compatibleRows.push({
+      post_a_id: pair.post_a_id,
+      post_b_id: pair.post_b_id,
+      compatibility_score: 16 + locationScore,
+      schedule_score: 16,
+      location_score: locationScore,
+      level_score: 0,
+      elo_score: 0,
+      status: 'active'
+    });
+  }
+
+  const pairKeys = [...new Set(compatibleRows.map((row) => canonicalPairKey(row.post_a_id, row.post_b_id)))];
+  const skippedExistingPairs: string[] = [];
+  let insertedCount = 0;
+
+  for (const pairKey of pairKeys) {
+    const [postAId, postBId] = pairKey.split('::');
+    if (!postAId || !postBId) continue;
+
+    const { data: existingRow, error: existingError } = await supabase
+      .from('suggested_matches')
+      .select('id')
+      .or(`and(post_a_id.eq.${postAId},post_b_id.eq.${postBId}),and(post_a_id.eq.${postBId},post_b_id.eq.${postAId})`)
+      .limit(1)
+      .maybeSingle<{ id: string }>();
+
+    if (existingError) {
+      console.error('createSuggestedMatchesForAvailability existing pair read failed', { sourceId, pairKey, existingError });
+      return { ok: false, error: 'existing_pairs_read_failed' };
+    }
+
+    if (existingRow?.id) {
+      skippedExistingPairs.push(pairKey);
+      continue;
+    }
+
+    const row = compatibleRows.find((item) => canonicalPairKey(item.post_a_id, item.post_b_id) === pairKey);
+    if (!row) continue;
+
+    const { error: insertError } = await supabase
+      .from('suggested_matches')
+      .insert(row);
+
+    if (insertError) {
+      console.error('createSuggestedMatchesForAvailability insert failed', { sourceId, pairKey, insertError });
+      return { ok: false, error: 'insert_match_failed' };
+    }
+
+    insertedCount += 1;
+  }
+
+  console.log('createSuggestedMatchesForAvailability completed', {
+    newAvailabilityId: sourceId,
+    candidatesCount: candidatePosts.length,
+    compatiblePairsCount: pairKeys.length,
+    insertedCount,
+    skippedExistingPairs
+  });
+
+  return {
+    ok: true,
+    candidatesCount: candidatePosts.length,
+    compatiblePairsCount: pairKeys.length,
+    insertedCount,
+    skippedExistingPairs
+  };
+}
+
 export function getMatchTier(score: number): 'Match alto' | 'Match medio' | 'Match bajo' {
   if (score >= 80) return 'Match alto';
   if (score >= 60) return 'Match medio';
