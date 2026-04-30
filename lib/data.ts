@@ -219,7 +219,6 @@ export async function getOpenAvailabilities(limit = 18, filters?: AvailabilityFi
 export async function getLiveSuggestedMatches(limit = 12): Promise<SuggestedMatchCard[]> {
   try {
     const supabase = getSupabaseAdmin();
-    const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
     const { data, error } = await supabase
       .from('availabilities')
       .select('*')
@@ -231,6 +230,7 @@ export async function getLiveSuggestedMatches(limit = 12): Promise<SuggestedMatc
     }
 
     const openRows = ((data || []) as AvailabilityWithTeam[]).filter((row) => shouldTreatAvailabilityAsOpen(row.status));
+    const bannedClubNameKeys = await getActiveBannedClubNameKeys(supabase);
     const sourcePosts = filterOutBannedAvailabilities(openRows, bannedClubNameKeys);
     const { matches, stats } = buildLiveSuggestedMatches(sourcePosts, limit);
 
