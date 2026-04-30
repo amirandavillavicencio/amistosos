@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { confirmMatchWithCode } from '@/app/actions';
 import BackHomeLink from '@/components/back-home-link';
 import { getSupabaseAdmin } from '@/lib/supabase';
@@ -31,7 +30,16 @@ function MatchErrorState({ title, message }: { title: string; message: string })
   );
 }
 
-function TeamVersusCard({ label, team, fallbackName }: { label: string; team: AvailabilityWithTeam; fallbackName: string }) {
+function TeamStatusBadge({ confirmed }: { confirmed: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${confirmed ? 'border-emerald-300/80 bg-emerald-100 text-emerald-800' : 'border-sky-300/80 bg-sky-100 text-sky-800'}`}>
+      <span aria-hidden="true">{confirmed ? '✓' : '•'}</span>
+      {confirmed ? 'Confirmado' : 'Pendiente'}
+    </span>
+  );
+}
+
+function TeamVersusCard({ label, team, fallbackName, confirmed }: { label: string; team: AvailabilityWithTeam; fallbackName: string; confirmed: boolean }) {
   const teamName = safeText(team.club_name, fallbackName);
   const comuna = safeText(team.comuna, 'Comuna no informada');
   const instagram = safeText(team.instagram, 'Sin Instagram');
@@ -42,7 +50,10 @@ function TeamVersusCard({ label, team, fallbackName }: { label: string; team: Av
     <article className="relative flex h-full min-h-[340px] flex-col justify-between overflow-hidden rounded-3xl border border-line/80 bg-paper/80 p-6 shadow-xl shadow-black/25 sm:min-h-[390px] sm:p-8">
       <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-accent/15 blur-2xl" aria-hidden="true" />
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent/90">{label}</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent/90">{label}</p>
+          <TeamStatusBadge confirmed={confirmed} />
+        </div>
         <div className="mt-6 flex items-center gap-4">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-line/80 bg-paper text-xl font-black text-accent sm:h-20 sm:w-20 sm:text-2xl">
             {teamName.slice(0, 2).toUpperCase()}
@@ -112,9 +123,9 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
             <p className="text-center text-xs font-semibold uppercase tracking-[0.24em] text-accent">Amistoso coordinable</p>
             <h1 className="mt-3 text-center display-serif text-4xl text-ink sm:text-5xl lg:text-6xl">{safeText(teamA.club_name, 'Equipo A')} <span className="text-accent">VS</span> {safeText(teamB.club_name, 'Equipo B')}</h1>
             <div className="mt-8 grid items-stretch gap-4 lg:grid-cols-[1fr_auto_1fr] lg:gap-7">
-              <TeamVersusCard label="Equipo A" team={teamA} fallbackName="Equipo A" />
+              <TeamVersusCard label="Equipo A" team={teamA} fallbackName="Equipo A" confirmed={confirmedA} />
               <div className="flex items-center justify-center py-1 lg:px-1"><div className="inline-flex h-24 w-24 items-center justify-center rounded-full border border-accent/70 bg-accent/20 text-3xl font-black tracking-[0.2em] text-accent">VS</div></div>
-              <TeamVersusCard label="Equipo B" team={teamB} fallbackName="Equipo B" />
+              <TeamVersusCard label="Equipo B" team={teamB} fallbackName="Equipo B" confirmed={confirmedB} />
             </div>
           </div>
         </section>
@@ -133,10 +144,24 @@ export default async function AcceptMatchPage({ searchParams }: AcceptMatchPageP
           </form>
           {resolved.ok ? <p className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">Confirmación registrada correctamente.</p> : null}
           {resolved.error ? <p className="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{errorByCode[String(resolved.error)] || 'El código no corresponde a este match.'}</p> : null}
-          <div className="mt-5 space-y-2 rounded-xl border border-line/80 bg-panel/50 p-4 text-sm text-ink">
-            <p><span className="font-semibold">Equipo A:</span> {confirmedA ? 'Confirmado' : 'Pendiente'}</p>
-            <p><span className="font-semibold">Equipo B:</span> {confirmedB ? 'Confirmado' : 'Pendiente'}</p>
-            <p className="font-semibold text-accent">{totalConfirmed >= 2 ? 'Match confirmado' : totalConfirmed === 1 ? 'Falta la confirmación del otro equipo' : 'Pendiente de confirmación de ambos equipos'}</p>
+          <div className="mt-5 rounded-2xl border border-line/80 bg-panel/50 p-4">
+            {totalConfirmed >= 2 ? (
+              <div className="rounded-2xl border border-emerald-300/70 bg-gradient-to-r from-emerald-100/90 via-cyan-100/80 to-sky-100/90 p-4 text-emerald-900">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">🔥 Confirmación final</p>
+                <h3 className="mt-1 text-2xl font-black tracking-tight">MATCH CONFIRMADO</h3>
+                <p className="mt-1 text-sm text-emerald-800">Ambos equipos han confirmado su participación.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-white/70 px-3 py-1 text-xs font-semibold">✓ {safeText(teamA.club_name, 'Equipo A')}</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-white/70 px-3 py-1 text-xs font-semibold">✓ {safeText(teamB.club_name, 'Equipo B')}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-sky-700">Confirmación en curso</p>
+                <p className="mt-2">Ya confirmó: <span className="font-semibold">{confirmedA ? safeText(teamA.club_name, 'Equipo A') : confirmedB ? safeText(teamB.club_name, 'Equipo B') : 'Ningún equipo aún'}</span></p>
+                <p className="mt-1">Falta confirmar: <span className="font-semibold">{!confirmedA ? safeText(teamA.club_name, 'Equipo A') : !confirmedB ? safeText(teamB.club_name, 'Equipo B') : 'Ninguno'}</span></p>
+              </div>
+            )}
           </div>
         </section>
       </div>

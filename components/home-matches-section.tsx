@@ -78,9 +78,19 @@ function statusLabel(status: SuggestedMatchCard['status']): string {
   return 'Match disponible';
 }
 
-export default function HomeMatchesSection({ matches }: { matches: SuggestedMatchCard[] }) {
-  const visibleMatches = matches.slice(0, 4);
-  const total = matches.length;
+function confirmationState(match: SuggestedMatchCard) {
+  const teamAConfirmed = Boolean(match.confirmedByAAt);
+  const teamBConfirmed = Boolean(match.confirmedByBAt);
+  const bothConfirmed = teamAConfirmed && teamBConfirmed;
+  const isMatched = match.status === 'matched' || bothConfirmed;
+  const isCompleted = match.status === 'completed';
+  const statusVariant = isCompleted ? 'completed' : isMatched ? 'matched' : 'active';
+  return { teamAConfirmed, teamBConfirmed, bothConfirmed, isMatched, isCompleted, statusVariant };
+}
+
+export default function HomeMatchesSection({ activeMatches, matchedMatches, completedMatches }: { activeMatches: SuggestedMatchCard[]; matchedMatches: SuggestedMatchCard[]; completedMatches: SuggestedMatchCard[] }) {
+  const visibleMatches = [...activeMatches.slice(0, 4), ...matchedMatches.slice(0, 4), ...completedMatches.slice(0, 2)];
+  const total = visibleMatches.length;
   const label = total === 1 ? '1 match' : `${total} matches`;
 
   return (
@@ -89,7 +99,7 @@ export default function HomeMatchesSection({ matches }: { matches: SuggestedMatc
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="font-display text-[2.65rem] uppercase leading-[0.9] tracking-tight text-[#0a2447] sm:text-[3.1rem]">
-              Matches disponibles
+              Matches del sistema
             </h2>
 
             <span className="inline-flex items-center rounded-lg bg-[#2b6bea] px-3 py-1 text-xs font-bold text-white">
@@ -98,7 +108,7 @@ export default function HomeMatchesSection({ matches }: { matches: SuggestedMatc
           </div>
 
           <p className="mt-2 max-w-2xl text-sm text-[#5a7bb5]">
-            Partidos sugeridos con día, categoría, rama y horario compatible.
+            Activos para coordinar, confirmados por ambos equipos y resultados completados.
           </p>
         </div>
 
@@ -142,24 +152,25 @@ export default function HomeMatchesSection({ matches }: { matches: SuggestedMatc
 
 function MatchCard({ match }: { match: SuggestedMatchCard }) {
   const isActive = match.status === 'active';
-  const isConfirmed = match.status === 'matched';
+  const { isMatched, isCompleted, statusVariant } = confirmationState(match);
 
   const teamAName = match.a?.club_name || 'Equipo A';
   const teamBName = match.b?.club_name || 'Equipo B';
   const score = Math.round(Number(match.totalScore || 0));
 
   return (
-    <article className="flex min-w-0 flex-col justify-between rounded-[22px] border-[1.5px] border-[#c0d4f5] bg-[#f3f8ff] p-5 transition hover:-translate-y-0.5 hover:border-[#1a55c8] hover:shadow-[0_16px_40px_rgba(10,36,71,0.12)]">
+    <article className={`relative flex min-w-0 flex-col justify-between rounded-[22px] border-[1.5px] bg-[#f3f8ff] p-5 transition hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(10,36,71,0.12)] ${statusVariant === 'matched' ? 'border-transparent bg-gradient-to-br from-emerald-50 via-cyan-50 to-sky-50 shadow-[0_0_0_1px_rgba(5,150,105,0.45),0_0_0_5px_rgba(56,189,248,0.1),0_16px_40px_rgba(16,185,129,0.16)]' : statusVariant === 'completed' ? 'border-[#b8cadf]' : 'border-[#c0d4f5] hover:border-[#1a55c8]'}`}>
       <div>
         <div className="mb-4 flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
             <span
               className={`inline-flex rounded-lg px-3 py-1 text-[11.5px] font-bold ${
-                isConfirmed ? 'bg-[#e2f5ec] text-[#1a7045]' : 'bg-[#fff4cc] text-[#7a5500]'
+                statusVariant === 'matched' ? 'bg-[#dff7ea] text-[#14633f]' : statusVariant === 'completed' ? 'bg-[#e9eef5] text-[#37526f]' : 'bg-[#fff4cc] text-[#7a5500]'
               }`}
             >
-              {statusLabel(match.status)}
+              {statusVariant === 'matched' ? '✅ Confirmado' : statusLabel(match.status)}
             </span>
+            {statusVariant === 'matched' ? <span className="ml-2 inline-flex rounded-full border border-emerald-300/80 bg-white/80 px-2 py-0.5 text-[11px] font-bold text-emerald-700">🔥</span> : null}
 
             <h3 className="mt-3 font-display text-[1.45rem] font-black uppercase leading-[1.05] tracking-tight text-[#0a2447] sm:text-[1.65rem]">
               {teamAName}
@@ -192,6 +203,9 @@ function MatchCard({ match }: { match: SuggestedMatchCard }) {
           <Meta label="Cancha" value={courtText(match)} />
         </div>
       </div>
+
+      {isMatched ? <p className="mt-3 text-xs font-semibold text-emerald-700">Ambos equipos confirmaron su participación.</p> : null}
+      {isCompleted ? <p className="mt-3 text-xs font-semibold text-slate-600">Partido finalizado.</p> : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {isActive ? (

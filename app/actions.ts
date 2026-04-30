@@ -1448,7 +1448,7 @@ export async function confirmMatchWithCode(formData: FormData) {
   }
 
   const status = safeString(match.status).toLowerCase();
-  if (status === 'completed' || status === 'archived') {
+  if (status === 'completed' || status === 'archived' || status === 'expired') {
     redirect(`/matches/aceptar?matchId=${encodeURIComponent(matchId)}&error=match_cerrado`);
   }
 
@@ -1498,7 +1498,8 @@ export async function confirmMatchWithCode(formData: FormData) {
       })
       .eq('id', match.id)
       .neq('status', 'completed')
-      .neq('status', 'archived');
+      .neq('status', 'archived')
+      .neq('status', 'expired');
   }
 
   revalidatePath('/matches/aceptar');

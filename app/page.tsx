@@ -5,7 +5,7 @@ import PostCard from '@/components/post-card';
 import HowItWorks from '@/components/how-it-works';
 import HomeModules from '@/components/home-modules';
 import HomeCTA from '@/components/home-cta';
-import { getOpenAvailabilities, getSuggestedMatches, logHomeProductionDiagnostics } from '@/lib/data';
+import { getCompletedSuggestedMatches, getMatchedSuggestedMatches, getOpenAvailabilities, getSuggestedMatches, logHomeProductionDiagnostics } from '@/lib/data';
 import type { AvailabilityWithTeam, SuggestedMatchCard } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -15,11 +15,20 @@ export default async function HomePage() {
   const diagnostics = await logHomeProductionDiagnostics();
 
   let activeSuggestedMatches: SuggestedMatchCard[] = [];
+  let matchedSuggestedMatches: SuggestedMatchCard[] = [];
+  let completedSuggestedMatches: SuggestedMatchCard[] = [];
   let openAvailabilities: AvailabilityWithTeam[] = [];
 
   try {
-    const [activeMatches, availabilities] = await Promise.all([getSuggestedMatches(8), getOpenAvailabilities(8)]);
+    const [activeMatches, matchedMatches, completedMatches, availabilities] = await Promise.all([
+      getSuggestedMatches(8),
+      getMatchedSuggestedMatches(8),
+      getCompletedSuggestedMatches(8),
+      getOpenAvailabilities(8)
+    ]);
     activeSuggestedMatches = Array.isArray(activeMatches) ? activeMatches : [];
+    matchedSuggestedMatches = Array.isArray(matchedMatches) ? matchedMatches : [];
+    completedSuggestedMatches = Array.isArray(completedMatches) ? completedMatches : [];
     openAvailabilities = Array.isArray(availabilities) ? availabilities : [];
   } catch (error) {
     console.error('HomePage data load failed', error);
@@ -79,7 +88,7 @@ export default async function HomePage() {
         </aside>
       </section>
 
-      <HomeMatchesSection matches={activeSuggestedMatches} />
+      <HomeMatchesSection activeMatches={activeSuggestedMatches} matchedMatches={matchedSuggestedMatches} completedMatches={completedSuggestedMatches} />
 
       <section className="mt-4 rounded-[1.75rem] border border-[#c6daf8] bg-[#eaf2ff] p-4 shadow-[0_10px_28px_rgba(10,36,71,0.05)] sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

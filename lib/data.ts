@@ -270,7 +270,7 @@ async function getSuggestedMatchesByStatus(
 
     const { data: rows, error } = await supabase
       .from('suggested_matches')
-      .select('id,post_a_id,post_b_id,status,compatibility_score,schedule_score,location_score,level_score,elo_score,created_at')
+      .select('id,post_a_id,post_b_id,status,compatibility_score,schedule_score,location_score,level_score,elo_score,created_at,confirmed_by_a_at,confirmed_by_b_at,matched_at')
       .eq('status', status)
       .order('compatibility_score', { ascending: false })
       .order('created_at', { ascending: false })
@@ -362,6 +362,9 @@ async function getSuggestedMatchesByStatus(
         id: row.id,
         pairKey: `${row.post_a_id}::${row.post_b_id}`,
         status: row.status,
+        confirmedByAAt: row.confirmed_by_a_at ?? null,
+        confirmedByBAt: row.confirmed_by_b_at ?? null,
+        matchedAt: row.matched_at ?? null,
         totalScore: compatibilityScore,
         scheduleScore,
         locationScore,
