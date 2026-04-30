@@ -27,13 +27,13 @@ function sharedTime(match: SuggestedMatchCard): string {
   const bEnd = timeToMinutes(match.b?.end_time);
 
   if (aStart === null || aEnd === null || bStart === null || bEnd === null) {
-    return 'Horario por confirmar';
+    return 'Por confirmar';
   }
 
   const start = Math.max(aStart, bStart);
   const end = Math.min(aEnd, bEnd);
 
-  if (end <= start) return 'Horario por confirmar';
+  if (end <= start) return 'Por confirmar';
 
   return `${minutesToLabel(start)} – ${minutesToLabel(end)}`;
 }
@@ -84,27 +84,25 @@ export default function HomeMatchesSection({ matches }: { matches: SuggestedMatc
   const label = total === 1 ? '1 match' : `${total} matches`;
 
   return (
-    <section className="mt-4 rounded-[28px] border border-[#dce9fd] bg-white p-5 shadow-[0_12px_36px_rgba(10,36,71,0.07)] sm:p-6">
-      <header className="mb-5 flex flex-col gap-4 border-b border-[#dce9fd] pb-5 md:flex-row md:items-start md:justify-between">
+    <section className="rounded-[28px] border border-[#dce9fd] bg-white p-[26px] shadow-[0_12px_36px_rgba(10,36,71,0.07)] max-sm:p-4">
+      <header className="mb-5 flex items-start justify-between gap-4 border-b border-[#dce9fd] pb-[18px] max-md:flex-col">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="font-display text-[2.65rem] uppercase leading-[0.9] tracking-tight text-[#0a2447] sm:text-[3.1rem]">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h2 className="font-display text-[42px] font-black uppercase leading-[0.9] tracking-[-0.02em] text-[#0a2447] max-sm:text-4xl">
               Matches disponibles
             </h2>
-
-            <span className="inline-flex items-center rounded-lg bg-[#2b6bea] px-3 py-1 text-xs font-bold text-white">
+            <span className="inline-flex items-center rounded-lg bg-[#2b6bea] px-2.5 py-1 text-xs font-bold text-white">
               {label}
             </span>
           </div>
-
-          <p className="mt-2 max-w-2xl text-sm text-[#5a7bb5]">
+          <p className="mt-1.5 text-sm text-[#5a7bb5]">
             Partidos sugeridos con día, categoría, rama y horario compatible.
           </p>
         </div>
 
         <Link
           href="/explorar"
-          className="inline-flex w-fit items-center rounded-xl border border-[#c0d4f5] bg-white px-4 py-2.5 text-sm font-semibold text-[#1042a0] transition hover:border-[#1a55c8] hover:bg-[#f3f8ff]"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-[#c0d4f5] bg-white px-[18px] py-2.5 text-[13.5px] font-semibold text-[#1042a0] transition hover:-translate-y-0.5 hover:border-[#1a55c8] hover:bg-[#f3f8ff]"
         >
           Ver todos →
         </Link>
@@ -118,18 +116,16 @@ export default function HomeMatchesSection({ matches }: { matches: SuggestedMatc
         </div>
       ) : (
         <div className="rounded-[22px] border border-dashed border-[#c0d4f5] bg-[#f3f8ff] p-6 text-center">
-          <p className="font-display text-3xl uppercase leading-none text-[#0a2447]">
+          <p className="font-display text-3xl font-black uppercase leading-none text-[#0a2447]">
             No hay matches disponibles por ahora
           </p>
-
           <p className="mx-auto mt-2 max-w-xl text-sm text-[#5a7bb5]">
             Publica una disponibilidad o revisa los equipos activos para encontrar rivales compatibles.
           </p>
-
           <div className="mt-4 flex justify-center">
             <Link
               href="/publicar"
-              className="inline-flex items-center rounded-xl bg-[#f9c900] px-4 py-2.5 text-sm font-bold text-[#0a2447] shadow-[0_4px_14px_rgba(249,201,0,0.35)] transition hover:bg-[#ffd114]"
+              className="inline-flex items-center rounded-xl bg-[#f9c900] px-[18px] py-2.5 text-[13.5px] font-bold text-[#0a2447] shadow-[0_4px_14px_rgba(249,201,0,0.35)] transition hover:-translate-y-0.5 hover:bg-[#ffd114]"
             >
               Publicar equipo
             </Link>
@@ -149,7 +145,7 @@ function MatchCard({ match }: { match: SuggestedMatchCard }) {
   const score = Math.round(Number(match.totalScore || 0));
 
   return (
-    <article className="flex min-w-0 flex-col justify-between rounded-[22px] border-[1.5px] border-[#c0d4f5] bg-[#f3f8ff] p-5 transition hover:-translate-y-0.5 hover:border-[#1a55c8] hover:shadow-[0_16px_40px_rgba(10,36,71,0.12)]">
+    <article className="flex min-w-0 flex-col justify-between rounded-[22px] border-[1.5px] border-[#c0d4f5] bg-[#f3f8ff] p-5 transition hover:-translate-y-0.5 hover:border-[#1a55c8] hover:shadow-[0_16px_40px_rgba(10,36,71,0.12)] max-sm:p-4">
       <div>
         <div className="mb-4 flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
@@ -161,15 +157,15 @@ function MatchCard({ match }: { match: SuggestedMatchCard }) {
               {statusLabel(match.status)}
             </span>
 
-            <h3 className="mt-3 font-display text-[1.45rem] font-black uppercase leading-[1.05] tracking-tight text-[#0a2447] sm:text-[1.65rem]">
+            <h3 className="mt-3 font-display text-[22px] font-extrabold uppercase leading-[1.08] tracking-[0.01em] text-[#0a2447] sm:text-[24px]">
               {teamAName}
               <br />
               <span className="text-[#2b6bea]">vs</span> {teamBName}
             </h3>
           </div>
 
-          <span className="shrink-0 rounded-[10px] bg-[#0a2447] px-3 py-2 text-[13px] font-black tracking-wide text-[#f9c900]">
-            {score} pts
+          <span className="shrink-0 rounded-[10px] bg-[#0a2447] px-3 py-2 text-[13px] font-extrabold tracking-wide text-[#f9c900]">
+            ⚡ {score} pts
           </span>
         </div>
 
@@ -177,7 +173,7 @@ function MatchCard({ match }: { match: SuggestedMatchCard }) {
           <TeamMiniCard team={match.a} />
 
           <div className="flex items-center justify-center">
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-[#2b6bea] font-display text-[13px] font-black tracking-wider text-white shadow-[0_4px_14px_rgba(43,107,234,0.35)]">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#2b6bea] font-display text-[13px] font-black tracking-wider text-white shadow-[0_4px_14px_rgba(43,107,234,0.35)] max-sm:h-[18px] max-sm:w-[30px] max-sm:rounded max-sm:text-[10px]">
               VS
             </span>
           </div>
@@ -185,7 +181,7 @@ function MatchCard({ match }: { match: SuggestedMatchCard }) {
           <TeamMiniCard team={match.b} />
         </div>
 
-        <div className="mt-3 grid min-w-0 gap-2 sm:grid-cols-4">
+        <div className="mt-3 grid min-w-0 gap-2 sm:grid-cols-4 max-lg:grid-cols-2">
           <Meta label="Día común" value={matchDay(match)} />
           <Meta label="Horario" value={sharedTime(match)} />
           <Meta label="Categoría" value={compactCategory(match.ageCategory || match.a?.age_category)} />
@@ -197,7 +193,7 @@ function MatchCard({ match }: { match: SuggestedMatchCard }) {
         {isActive ? (
           <Link
             href={`/matches/aceptar?matchId=${encodeURIComponent(String(match.id))}`}
-            className="inline-flex items-center rounded-xl bg-[#f9c900] px-4 py-2.5 text-sm font-bold text-[#0a2447] shadow-[0_4px_14px_rgba(249,201,0,0.3)] transition hover:-translate-y-0.5 hover:bg-[#ffd114] hover:shadow-[0_6px_20px_rgba(249,201,0,0.4)]"
+            className="inline-flex items-center rounded-xl bg-[#f9c900] px-[18px] py-2.5 text-[13.5px] font-bold text-[#0a2447] shadow-[0_4px_14px_rgba(249,201,0,0.3)] transition hover:-translate-y-0.5 hover:bg-[#ffd114] hover:shadow-[0_6px_20px_rgba(249,201,0,0.4)]"
           >
             Confirmar match
           </Link>
@@ -205,7 +201,7 @@ function MatchCard({ match }: { match: SuggestedMatchCard }) {
 
         <Link
           href={`/publicaciones/${match.a.id}`}
-          className="inline-flex items-center rounded-xl border border-[#c0d4f5] bg-white px-4 py-2.5 text-sm font-semibold text-[#1042a0] transition hover:-translate-y-0.5 hover:border-[#1a55c8] hover:bg-[#f3f8ff]"
+          className="inline-flex items-center rounded-xl border border-[#c0d4f5] bg-white px-[18px] py-2.5 text-[13.5px] font-semibold text-[#1042a0] transition hover:-translate-y-0.5 hover:border-[#1a55c8] hover:bg-[#f3f8ff]"
         >
           Ver detalle
         </Link>
@@ -234,7 +230,7 @@ function TeamMiniCard({ team }: { team: AvailabilityWithTeam }) {
 
         <div className="min-w-0">
           <p className="truncate text-[13px] font-bold leading-tight text-[#0a2447]">{name}</p>
-          <p className="mt-0.5 truncate text-[11.5px] text-[#5a7bb5]">{formatComuna(team?.comuna)}</p>
+          <p className="mt-0.5 truncate text-[11.5px] text-[#5a7bb5]">📍 {formatComuna(team?.comuna)}</p>
         </div>
       </div>
 
@@ -242,7 +238,7 @@ function TeamMiniCard({ team }: { team: AvailabilityWithTeam }) {
         <Pill>{compactCategory(team?.age_category)}</Pill>
         <Pill>{formatBranch(team?.branch)}</Pill>
         <Pill tone={team?.has_court ? 'green' : 'orange'}>
-          {team?.has_court ? 'Tiene cancha' : 'Busca cancha'}
+          {team?.has_court ? '✓ Tiene cancha' : '⚑ Busca cancha'}
         </Pill>
       </div>
     </div>
