@@ -6,7 +6,7 @@ import { createHash, randomBytes } from 'crypto';
 import { confidenceFromHistory, resolveMatchOutcome, updateElo } from '@/lib/elo';
 import { getActiveBannedClubNameKeys, isClubBannedByName, normalizeClubNameKey } from '@/lib/banned-clubs';
 import { sendMatchNotificationEmails } from '@/lib/email/send-match-notification';
-import { USABLE_AVAILABILITY_STATUSES } from '@/lib/matching';
+import { createSuggestedMatchesForAvailability, USABLE_AVAILABILITY_STATUSES } from '@/lib/matching';
 import { hasTimeOverlap, normalizeBranch, normalizeCategory, parseWeekdays } from '@/lib/format';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type {
@@ -930,7 +930,13 @@ export async function createAvailability(formData: FormData) {
       return { ok: false, message: error?.message || 'No se pudo guardar la publicación.' };
     }
 
-    await rebuildSuggestedMatches();
+    const createMatchesResult = await createSuggestedMatchesForAvailability(inserted.id);
+    if (!createMatchesResult.ok) {
+      console.error('createAvailability createSuggestedMatchesForAvailability failed', {
+        newAvailabilityId: inserted.id,
+        error: createMatchesResult.error
+      });
+    }
 
     revalidatePath('/');
     revalidatePath('/explorar');
@@ -1024,7 +1030,6 @@ export async function updateAvailability(formData: FormData) {
       return { ok: false, message: 'No pudimos desactivar la publicación.' };
     }
 
-    await rebuildSuggestedMatches();
 
     revalidatePath('/');
     revalidatePath('/explorar');
