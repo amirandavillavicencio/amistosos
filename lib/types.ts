@@ -62,6 +62,9 @@ export interface SuggestedMatchRow {
   level_score: number;
   elo_score: number;
   status: 'active' | 'matched' | 'completed' | 'archived' | 'expired' | 'unconfirmed';
+  confirmed_by_a_at?: string | null;
+  confirmed_by_b_at?: string | null;
+  matched_at?: string | null;
   stream_url?: string | null;
   stream_submitted_by_post_id?: string | null;
   stream_submitted_at?: string | null;
@@ -138,6 +141,9 @@ export interface SuggestedMatchCard {
   id: string;
   pairKey: string;
   status: 'active' | 'matched' | 'completed' | 'archived' | 'expired' | 'unconfirmed';
+  confirmedByAAt?: string | null;
+  confirmedByBAt?: string | null;
+  matchedAt?: string | null;
   streamUrl?: string | null;
   streamSubmittedByPostId?: string | null;
   streamSubmittedAt?: string | null;
