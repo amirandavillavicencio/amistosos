@@ -87,7 +87,11 @@ export default function PublishForm() {
 
             setClubName('');
             setNotes('');
-            router.push('/publicacion-exitosa');
+            const query = new URLSearchParams({
+              code: result.confirmationCode || '',
+              club: String(formData.get('club_name') || '')
+            });
+            router.push(`/publicacion-exitosa?${query.toString()}`);
           } catch (err) {
             setError(err instanceof Error ? err.message : 'Ocurrió un error inesperado');
           }
