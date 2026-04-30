@@ -165,7 +165,7 @@ export default function SuggestedMatchCardView({
   const hasSuggestedMatchId = Boolean(suggestedMatchId) && !suggestedMatchId.includes('::');
   const isActiveSuggestedMatch = match.status === 'active';
   const isConfirmedMatch = match.status === 'matched';
-  const matchBadge = isConfirmedMatch ? 'Cruce confirmado' : 'Cruce disponible';
+  const matchBadge = isConfirmedMatch ? 'Match confirmado' : 'Match disponible';
   const wrapperClass = isConfirmedMatch
     ? 'border-[#ef8b6d] bg-white shadow-[0_0_0_1px_rgba(239,139,109,0.35),0_14px_35px_rgba(190,40,40,0.22)]'
     : 'border-[#f4c24d] bg-white shadow-[0_0_0_1px_rgba(244,194,77,0.45),0_14px_35px_rgba(223,170,28,0.2)]';
@@ -213,7 +213,7 @@ export default function SuggestedMatchCardView({
       <footer className="mt-6 flex flex-wrap gap-3">
         {teamA.postId && teamB.postId && hasSuggestedMatchId && isActiveSuggestedMatch ? (
           <Link href={`/matches/aceptar?matchId=${encodeURIComponent(suggestedMatchId)}`} className="btn-accent text-sm">
-            Confirmar cruce
+            Confirmar match
           </Link>
         ) : null}
         {teamA.postId ? (
